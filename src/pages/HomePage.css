@@ -1,0 +1,123 @@
+.landing-page {
+  margin-top: 64px;
+  min-height: calc(100vh - 64px);
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0d4a3a 100%);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.landing-bg {
+  position: absolute;
+  inset: 0;
+  background: url('https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=1600') center / cover;
+  opacity: 0.22;
+}
+
+.landing-content {
+  position: relative;
+  z-index: 2;
+  max-width: 1100px;
+  width: 100%;
+  padding: 80px 48px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  align-items: center;
+}
+
+.landing-left h1 {
+  font-size: 46px;
+  font-weight: 900;
+  color: white;
+  line-height: 1.25;
+  margin-bottom: 16px;
+}
+
+.landing-left h1 em {
+  color: #34D399;
+  font-style: normal;
+}
+
+.landing-left p {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.7;
+  margin-bottom: 36px;
+}
+
+.landing-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #e0f2fe;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 20px;
+  margin-bottom: 20px;
+}
+
+.landing-cta {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.btn-cta-main {
+  padding: 16px 36px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #3B82F6, #1d4ed8);
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+  transition: transform 0.2s;
+}
+.btn-cta-main:hover { transform: translateY(-2px); }
+
+.btn-cta-sub {
+  padding: 16px 28px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  background: transparent;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.landing-right {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.landing-stat {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  padding: 22px;
+  color: white;
+}
+
+.stat-num {
+  font-size: 28px;
+  font-weight: 900;
+  color: #34D399;
+}
+
+.stat-lbl {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.65);
+  margin-top: 5px;
+  line-height: 1.4;
+  white-space: pre-line;
+}

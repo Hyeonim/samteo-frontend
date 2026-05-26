@@ -1,0 +1,176 @@
+import { useState, useEffect, useRef } from 'react'
+
+const FIXED_EXPENSES = 380000
+const FOOD = 300000
+const TRANSPORT = 80000
+
+const CHART_DATA = [
+  { month: '1월', income: 65, expense: 45, projected: false },
+  { month: '2월', income: 80, expense: 50, projected: false },
+  { month: '3월', income: 90, expense: 57, projected: false },
+  { month: '4월', income: 110, expense: 64, projected: false },
+  { month: '5월', income: 100, expense: 60, projected: true },
+  { month: '6월', income: 115, expense: 62, projected: true },
+]
+
+export default function Step4Budget({ selectedJobs, selectedHotel }) {
+  const [activeJobId, setActiveJobId] = useState(selectedJobs[0]?.id ?? null)
+  const sliderRef = useRef(null)
+
+  useEffect(() => {
+    if (selectedJobs.length > 0 && !selectedJobs.find((j) => j.id === activeJobId)) {
+      setActiveJobId(selectedJobs[0].id)
+    }
+    if (selectedJobs.length === 0) setActiveJobId(null)
+  }, [selectedJobs])
+
+  const activeJob = selectedJobs.find((j) => j.id === activeJobId) ?? null
+  const total = activeJob ? Math.max(0, activeJob.salary - selectedHotel.price - FIXED_EXPENSES) : 0
+
+  function scrollSlider(dir) {
+    sliderRef.current?.scrollBy({ left: dir * 250, behavior: 'smooth' })
+  }
+
+  return (
+    <div className="step-card">
+      <div className="step-title">이번 달 체류 가계부 시뮬레이션</div>
+      <div className="step-subtitle">내가 고른 조건으로 정산된 최종 자립 손익 계산서입니다.</div>
+
+      {/* 상단 선택 정보 */}
+      <div className="budget-top-info">
+        <div className="budget-top-label">
+          {selectedJobs.length > 0
+            ? `선택한 알바 ${selectedJobs.length}개 · 알바를 클릭하면 해당 기준 가계부를 확인해요`
+            : 'Step 2에서 알바를 선택하면 여기에 표시됩니다'}
+        </div>
+        {selectedJobs.length === 0 ? (
+          <div className="job-chip-empty">
+            <span style={{ fontSize: 20 }}>💼</span>
+            Step 2에서 알바를 선택하면 여기에 표시됩니다.
+          </div>
+        ) : (
+          <div className="job-slider-carousel">
+            <button className="slider-arrow" onClick={() => scrollSlider(-1)} aria-label="이전">‹</button>
+            <div className="job-slider" ref={sliderRef}>
+              {selectedJobs.map((j) => (
+                <div
+                  key={j.id}
+                  className={`job-chip${activeJobId === j.id ? ' active' : ''}`}
+                  onClick={() => setActiveJobId(j.id)}
+                >
+                  <span className="job-chip-emoji">{j.emoji}</span>
+                  <div>
+                    <div className="job-chip-name">{j.name}</div>
+                    <div className="job-chip-sub">{j.type} · {j.priceLabel}{j.unit}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button className="slider-arrow" onClick={() => scrollSlider(1)} aria-label="다음">›</button>
+          </div>
+        )}
+        <div className="hotel-chip">
+          <span style={{ fontSize: 18 }}>🏠</span>
+          <div>
+            <div className="hotel-chip-name">{selectedHotel.name}</div>
+            <div className="hotel-chip-price">월 {selectedHotel.price.toLocaleString()}원</div>
+          </div>
+        </div>
+      </div>
+
+      {!activeJob ? (
+        <div className="step-empty-state">
+          <div style={{ fontSize: 44, marginBottom: 12 }}>📒</div>
+          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>알바를 선택하면 가계부가 표시됩니다</div>
+          <div style={{ fontSize: 13, color: '#bbb' }}>이전 단계로 돌아가 알바를 선택해 주세요</div>
+        </div>
+      ) : (
+        <div className="budget-layout">
+          <div className="summary-box">
+            <div className="srow">
+              <div className="slabel">📅 근무일</div>
+              <div className="svalue sv-blue">22일</div>
+            </div>
+            <div className="srow">
+              <div className="slabel">⏰ 일일 근무</div>
+              <div className="svalue">8시간</div>
+            </div>
+            <div className="srow">
+              <div className="slabel">📈 총 급여 (알바)</div>
+              <div className="svalue sv-green">+₩{activeJob.salary.toLocaleString()}</div>
+            </div>
+            <div className="srow">
+              <div className="slabel">🏠 숙박비</div>
+              <div className="svalue sv-red">-₩{selectedHotel.price.toLocaleString()}</div>
+            </div>
+            <div className="srow">
+              <div className="slabel">🍽️ 식비 (30일)</div>
+              <div className="svalue sv-red">-₩{FOOD.toLocaleString()}</div>
+            </div>
+            <div className="srow">
+              <div className="slabel">🚌 교통비</div>
+              <div className="svalue sv-red">-₩{TRANSPORT.toLocaleString()}</div>
+            </div>
+            <div className="stotal">
+              <div className="t-lbl">예상 월 실수령액</div>
+              <div className="t-amt">₩{total.toLocaleString()}</div>
+            </div>
+          </div>
+
+          <div className="budget-right">
+            <div className="budget-chart-title">📊 월간 수입 &amp; 지출 추이</div>
+            <div className="bar-chart">
+              {CHART_DATA.map((d) => (
+                <div key={d.month} className="bar-group">
+                  <div className="bars">
+                    <div className="bar income" style={{ height: d.income, opacity: d.projected ? 0.45 : 1 }} />
+                    <div className="bar expense" style={{ height: d.expense, opacity: d.projected ? 0.45 : 1 }} />
+                  </div>
+                  <div className="bar-month">{d.month}</div>
+                </div>
+              ))}
+            </div>
+            <div className="chart-legend">
+              <div className="cl-item">
+                <div className="cl-dot" style={{ background: '#3B82F6' }} />
+                수입
+              </div>
+              <div className="cl-item">
+                <div className="cl-dot" style={{ background: '#FCA5A5' }} />
+                지출
+              </div>
+              <div style={{ fontSize: 10, color: '#bbb', marginLeft: 'auto' }}>단위: 만원 · 5월~ 예상치</div>
+            </div>
+            <div className="analysis-list">
+              <div className="ai-item">
+                <div className="ai-icon ai-green">💰</div>
+                <div>
+                  <div className="ai-title">{activeJob.name} 급여 기준</div>
+                  <div className="ai-desc">
+                    월급 <strong>₩{activeJob.salary.toLocaleString()}</strong>에서 숙박비·식비·교통비를 공제하면 실수령액은 <strong>₩{total.toLocaleString()}</strong>입니다.
+                  </div>
+                </div>
+              </div>
+              <div className="ai-item">
+                <div className="ai-icon ai-blue">📍</div>
+                <div>
+                  <div className="ai-title">근무 위치</div>
+                  <div className="ai-desc">{activeJob.location}</div>
+                </div>
+              </div>
+              <div className="ai-item">
+                <div className="ai-icon ai-orange">🚌</div>
+                <div>
+                  <div className="ai-title">출퇴근 소요 시간</div>
+                  <div className="ai-desc">
+                    {selectedHotel.name} → {activeJob.name}: 카카오 모빌리티 대중교통 검증 완료.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
