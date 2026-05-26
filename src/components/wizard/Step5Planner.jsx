@@ -97,13 +97,6 @@ export default function Step5Planner({ selectedJobs, selectedHotel }) {
             <button className="slider-arrow" onClick={() => scrollSlider(1)} aria-label="다음">›</button>
           </div>
         )}
-        <div className="hotel-chip">
-          <span style={{ fontSize: 18 }}>🏠</span>
-          <div>
-            <div className="hotel-chip-name">{selectedHotel.name}</div>
-            <div className="hotel-chip-price">월 {selectedHotel.price.toLocaleString()}원</div>
-          </div>
-        </div>
       </div>
 
       {!activeJob ? (
