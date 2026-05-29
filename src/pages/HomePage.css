@@ -1,0 +1,237 @@
+.home {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Hero ── */
+.hero {
+  position: relative;
+  min-height: calc(100vh - 64px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: linear-gradient(135deg, #faf8ff 0%, #eff6ff 50%, #ecfdf5 100%);
+  padding: 4rem 2rem;
+}
+
+.hero__inner {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  max-width: 640px;
+}
+
+.hero__badge {
+  display: inline-block;
+  background: white;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 999px;
+  padding: 0.35rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #6b7280;
+  letter-spacing: 0.08em;
+  margin-bottom: 1.5rem;
+}
+
+.hero__title {
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  font-weight: 800;
+  color: #111827;
+  line-height: 1.25;
+  margin: 0 0 1.25rem;
+}
+
+.hero__title--grad {
+  background: linear-gradient(90deg, #7c3aed, #2563eb, #059669);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero__desc {
+  font-size: 1.1rem;
+  color: #4b5563;
+  line-height: 1.7;
+  margin: 0 0 2.25rem;
+}
+
+.hero__cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.875rem;
+  flex-wrap: wrap;
+}
+
+.hero__welcome {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #7c3aed;
+  margin-right: 0.25rem;
+}
+
+/* ── Orbs ── */
+.hero__visual { position: absolute; inset: 0; pointer-events: none; }
+
+.hero__orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.25;
+}
+
+.hero__orb--1 {
+  width: 400px; height: 400px;
+  background: #7c3aed;
+  top: -10%; left: -8%;
+}
+
+.hero__orb--2 {
+  width: 350px; height: 350px;
+  background: #2563eb;
+  bottom: -5%; right: 5%;
+}
+
+.hero__orb--3 {
+  width: 250px; height: 250px;
+  background: #059669;
+  top: 30%; right: 20%;
+}
+
+/* ── Buttons ── */
+.btn-primary {
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 0.8rem 1.75rem;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.3);
+}
+
+.btn-primary:hover {
+  opacity: 0.92;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
+}
+
+.btn-secondary {
+  background: white;
+  color: #374151;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 0.8rem 1.75rem;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.1s;
+}
+
+.btn-secondary:hover {
+  border-color: #7c3aed;
+  color: #7c3aed;
+  transform: translateY(-2px);
+}
+
+/* ── Features ── */
+.features {
+  padding: 5rem 2rem;
+  background: white;
+  text-align: center;
+}
+
+.features__title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #111827;
+  margin: 0 0 3rem;
+}
+
+.features__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.feature-card {
+  background: #fafafa;
+  border: 1.5px solid #f3f4f6;
+  border-radius: 16px;
+  padding: 2rem 1.5rem;
+  text-align: left;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.07);
+}
+
+.feature-card__icon {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.feature-card__badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+}
+
+.feature-card__title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 0.6rem;
+}
+
+.feature-card__desc {
+  font-size: 0.88rem;
+  color: #6b7280;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ── CTA Banner ── */
+.cta-banner {
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  padding: 5rem 2rem;
+  text-align: center;
+  color: white;
+}
+
+.cta-banner__title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  margin: 0 0 0.75rem;
+}
+
+.cta-banner__desc {
+  font-size: 1rem;
+  opacity: 0.85;
+  margin: 0 0 2rem;
+}
+
+.cta-banner .btn-primary {
+  background: white;
+  color: #7c3aed;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+}
+
+.cta-banner .btn-primary:hover {
+  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+}
