@@ -15,6 +15,11 @@ function LoginPage() {
   const [loading, setLoading] = useState(false)
 
   const handleKakaoLogin = () => {
+    if (!KAKAO_REST_API_KEY) {
+      setError('카카오 로그인 설정이 비어 있습니다. 프론트엔드의 .env.local 파일에 VITE_KAKAO_REST_API_KEY를 설정해 주세요.')
+      return
+    }
+
     const kakaoAuthUrl =
       `https://kauth.kakao.com/oauth/authorize` +
       `?client_id=${KAKAO_REST_API_KEY}` +
@@ -88,7 +93,7 @@ function LoginPage() {
 
         <div className="login-divider"><span>또는</span></div>
 
-        <button className="kakao-btn" onClick={handleKakaoLogin}>
+        <button className="kakao-btn" onClick={handleKakaoLogin} type="button">
           <svg className="kakao-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
             <path d="M12 3C6.477 3 2 6.477 2 10.938c0 2.837 1.754 5.332 4.395 6.797l-1.12 4.09a.375.375 0 0 0 .545.42l4.734-3.134A11.75 11.75 0 0 0 12 19.5c5.523 0 10-3.813 10-8.562S17.523 3 12 3Z" fill="#3C1E1E" />
           </svg>

@@ -1,16 +1,17 @@
-# React + Vite
+# Samteo Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Environment variables
 
-Currently, two official plugins are available:
+Create or update `.env.local` before testing Kakao login.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```properties
+VITE_KAKAO_REST_API_KEY=your_kakao_rest_api_key
+VITE_KAKAO_REDIRECT_URI=http://localhost:8080/login/oauth2/code/kakao
+VITE_API_URL=http://localhost:8080
+```
 
-## React Compiler
+These values must match the backend and Kakao developer console settings:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- `VITE_KAKAO_REST_API_KEY` = backend `kakao.client.id`
+- `VITE_KAKAO_REDIRECT_URI` = backend `kakao.redirect.uri`
+- Kakao console Redirect URI = `http://localhost:8080/login/oauth2/code/kakao`
