@@ -501,7 +501,7 @@
 .acc-pos { font-size: 10px; color: #10B981; font-weight: 700; }
 .acc-neg { font-size: 10px; color: #F97316; font-weight: 700; }
 
-.map-wrapper { flex: 1; min-width: 0; }
+.map-wrapper { flex: 1; min-width: 0; height: 100%; }
 
 /* Leaflet popup overrides */
 .lf-popup .leaflet-popup-content-wrapper {

@@ -1,7 +1,4 @@
 import { useState, useEffect, useRef } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
 
 const HOTELS = [
   {
@@ -78,41 +75,14 @@ const HOTELS = [
 
 const DISTRICTS = [...new Set(HOTELS.map((h) => h.district))]
 
-function makeIcon(color, size, glow) {
-  const s = glow ? size + 4 : size
-  const shadow = glow
-    ? `box-shadow:0 0 0 5px ${color}44,0 2px 8px rgba(0,0,0,0.25);`
-    : 'box-shadow:0 2px 8px rgba(0,0,0,0.22);'
-  return L.divIcon({
-    className: '',
-    html: `<div style="width:${s}px;height:${s}px;border-radius:50%;background:${color};border:2.5px solid white;${shadow}"></div>`,
-    iconSize: [s, s],
-    iconAnchor: [s / 2, s / 2],
-    popupAnchor: [0, -(s / 2 + 4)],
-  })
-}
-
-function makeJobIcon(emoji) {
-  return L.divIcon({
-    className: '',
-    html: `<div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#f59e0b,#d97706);border:3px solid white;box-shadow:0 0 0 5px rgba(245,158,11,0.3),0 4px 12px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;font-size:22px;">${emoji}</div>`,
-    iconSize: [44, 44],
-    iconAnchor: [22, 22],
-    popupAnchor: [0, -26],
-  })
-}
-
-function MapFlyTo({ lat, lng }) {
-  const map = useMap()
-  useEffect(() => {
-    map.flyTo([lat, lng], 15, { duration: 0.8 })
-  }, [lat, lng])
-  return null
-}
-
 export default function Step3Accommodation({ selectedJobs, selectedHotel, onSelect }) {
   const [activeJobId, setActiveJobId] = useState(null)
   const sliderRef = useRef(null)
+  const mapRef = useRef(null)
+  const kakaoMapRef = useRef(null)
+  const markersRef = useRef([])
+  const jobMarkerRef = useRef(null)
+  const infoWindowsRef = useRef([])
 
   const activeJob = selectedJobs.find((j) => j.id === activeJobId) ?? null
 
@@ -126,6 +96,111 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
     }
   }, [selectedJobs, activeJobId])
 
+  useEffect(() => {
+    const initMap = () => {
+      if (kakaoMapRef.current) return
+      window.kakao.maps.load(() => {
+        const container = mapRef.current
+        if (!container || kakaoMapRef.current) return
+
+        const map = new window.kakao.maps.Map(container, {
+          center: new window.kakao.maps.LatLng(35.8714, 128.6014),
+          level: 5,
+        })
+        kakaoMapRef.current = map
+
+        HOTELS.forEach((h) => {
+          const position = new window.kakao.maps.LatLng(h.lat, h.lng)
+
+          const markerContent = `<div style="width:14px;height:14px;border-radius:50%;background:${h.color};border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.22);cursor:pointer;"></div>`
+          const marker = new window.kakao.maps.CustomOverlay({
+            position,
+            content: markerContent,
+            xAnchor: 0.5,
+            yAnchor: 0.5,
+          })
+          marker.setMap(map)
+
+          const infoContent = `
+            <div style="padding:10px 14px;border-radius:10px;background:white;box-shadow:0 4px 16px rgba(0,0,0,0.15);min-width:160px;font-family:sans-serif;">
+              <div style="font-weight:700;font-size:13px;color:#1e293b;">${h.name}</div>
+              <div style="font-size:11px;color:#64748b;margin-top:2px;">${h.location}</div>
+              <div style="font-size:12px;color:#3B82F6;font-weight:600;margin-top:4px;">월 ${h.price.toLocaleString()}원</div>
+            </div>`
+          const infoWindow = new window.kakao.maps.CustomOverlay({
+            position,
+            content: infoContent,
+            xAnchor: 0.5,
+            yAnchor: 1.6,
+            zIndex: 10,
+          })
+
+          marker.__info = infoWindow
+          infoWindowsRef.current.push(infoWindow)
+          markersRef.current.push(marker)
+        })
+      })
+    }
+
+    if (window.kakao) {
+      initMap()
+    } else {
+      const script = document.querySelector('script[src*="dapi.kakao.com"]')
+      script?.addEventListener('load', initMap)
+      return () => script?.removeEventListener('load', initMap)
+    }
+  }, [])
+
+  // 선택된 숙소 마커 강조 + 지도 이동
+  useEffect(() => {
+    if (!markersRef.current.length || !kakaoMapRef.current) return
+    markersRef.current.forEach((m, i) => {
+      const h = HOTELS[i]
+      if (!h) return
+      const selected = selectedHotel.name === h.name
+      const s = selected ? 20 : 14
+      const shadow = selected
+        ? `box-shadow:0 0 0 5px ${h.color}44,0 2px 8px rgba(0,0,0,0.25);`
+        : 'box-shadow:0 2px 8px rgba(0,0,0,0.22);'
+      const content = `<div style="width:${s}px;height:${s}px;border-radius:50%;background:${h.color};border:2.5px solid white;${shadow}cursor:pointer;"></div>`
+      m.setContent(content)
+
+      if (selected) {
+        m.__info.setMap(kakaoMapRef.current)
+        kakaoMapRef.current.panTo(new window.kakao.maps.LatLng(h.lat, h.lng))
+      } else {
+        m.__info.setMap(null)
+      }
+    })
+  }, [selectedHotel])
+
+  // 알바 위치로 이동
+  useEffect(() => {
+    if (!kakaoMapRef.current) return
+
+    if (jobMarkerRef.current) {
+      jobMarkerRef.current.setMap(null)
+      jobMarkerRef.current = null
+    }
+
+    if (activeJob) {
+      const position = new window.kakao.maps.LatLng(activeJob.lat, activeJob.lng)
+      kakaoMapRef.current.panTo(position)
+
+      const jobContent = `
+        <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#f59e0b,#d97706);border:3px solid white;box-shadow:0 0 0 5px rgba(245,158,11,0.3),0 4px 12px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;font-size:22px;">${activeJob.emoji}</div>`
+      const jobMarker = new window.kakao.maps.CustomOverlay({
+        position,
+        content: jobContent,
+        xAnchor: 0.5,
+        yAnchor: 0.5,
+        zIndex: 20,
+      })
+      jobMarker.setMap(kakaoMapRef.current)
+      jobMarkerRef.current = jobMarker
+    }
+  }, [activeJob])
+
   return (
     <div className="step-card">
       <div className="step-title">출퇴근 1시간 이내 숙소를 지도에서 선택해 주세요</div>
@@ -133,7 +208,6 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
         관광공사 데이터 기반 엄선 체류지 · Haversine 반경 필터 + 카카오 대중교통 검증 완료
       </div>
 
-      {/* 선택한 알바 슬라이더 */}
       <div className="job-slider-wrap">
         <div className="job-slider-label">
           {selectedJobs.length > 0
@@ -147,13 +221,7 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
           </div>
         ) : (
           <div className="job-slider-carousel">
-            <button
-              className="slider-arrow"
-              onClick={() => scrollSlider(-1)}
-              aria-label="이전"
-            >
-              ‹
-            </button>
+            <button className="slider-arrow" onClick={() => scrollSlider(-1)} aria-label="이전">‹</button>
             <div className="job-slider" ref={sliderRef}>
               {selectedJobs.map((j) => (
                 <div
@@ -170,13 +238,7 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
                 </div>
               ))}
             </div>
-            <button
-              className="slider-arrow"
-              onClick={() => scrollSlider(1)}
-              aria-label="다음"
-            >
-              ›
-            </button>
+            <button className="slider-arrow" onClick={() => scrollSlider(1)} aria-label="다음">›</button>
           </div>
         )}
         {activeJob && (
@@ -246,51 +308,7 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
         </div>
 
         <div className="map-wrapper">
-          <MapContainer
-            center={[35.8714, 128.6014]}
-            zoom={13}
-            style={{ width: '100%', height: '100%' }}
-          >
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              maxZoom={19}
-              attribution='© <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>'
-            />
-            {HOTELS.map((h) => (
-              <Marker
-                key={h.name}
-                position={[h.lat, h.lng]}
-                icon={makeIcon(h.color, 14, selectedHotel.name === h.name)}
-                eventHandlers={{ mouseover: (e) => e.target.openPopup() }}
-              >
-                <Popup className="lf-popup">
-                  <div className="pop-inner">
-                    <div className="pop-name">{h.name}</div>
-                    <div className="pop-info">{h.location}</div>
-                    <div className="pop-price">월 {h.price.toLocaleString()}원</div>
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
-            {activeJob && (
-              <>
-                <MapFlyTo lat={activeJob.lat} lng={activeJob.lng} />
-                <Marker
-                  position={[activeJob.lat, activeJob.lng]}
-                  icon={makeJobIcon(activeJob.emoji)}
-                  eventHandlers={{ mouseover: (e) => e.target.openPopup() }}
-                >
-                  <Popup className="lf-popup">
-                    <div className="pop-inner">
-                      <div className="pop-name">{activeJob.emoji} {activeJob.name}</div>
-                      <div className="pop-info">{activeJob.location}</div>
-                      <div className="pop-price">월급 {activeJob.salary.toLocaleString()}원</div>
-                    </div>
-                  </Popup>
-                </Marker>
-              </>
-            )}
-          </MapContainer>
+          <div ref={mapRef} style={{ width: '100%', height: '560px' }} />
         </div>
       </div>
     </div>
