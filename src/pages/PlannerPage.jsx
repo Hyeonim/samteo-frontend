@@ -13,7 +13,7 @@ export default function PlannerPage() {
   const [currentStep, setCurrentStep] = useState(1)
   const [selectedRegion, setSelectedRegion] = useState('서울')
   const [selectedJobs, setSelectedJobs] = useState([])
-  const [selectedHotel, setSelectedHotel] = useState({ name: '대구 도심 호스텔', price: 450000 })
+  const [selectedHotel, setSelectedHotel] = useState({ id: 'acc-1', name: '대구 도심 호스텔', price: 450000 })
 
   useEffect(() => {
     setSelectedJobs([])

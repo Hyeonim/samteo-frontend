@@ -1,88 +1,53 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 
-const HOTELS = [
-  {
-    name: '대구 도심 호스텔',
-    price: 450000,
-    location: '중구 동인동 · 반월당역 도보 4분',
-    tags: [{ label: '숙소 별도', type: 'gray' }, { label: '지하철 12분', type: 'green' }],
-    pos: '▲ 가처분 +93만',
-    posType: 'pos',
-    bg: 'linear-gradient(135deg,#1e3a5f,#2d5a8e)',
-    lat: 35.868,
-    lng: 128.591,
-    color: '#3B82F6',
-    rank: 1,
-    district: '중구',
-  },
-  {
-    name: '동성로 스마트 고시텔',
-    price: 380000,
-    location: '중구 남일동 · 중앙로역 도보 2분',
-    tags: [{ label: '숙소 별도', type: 'gray' }, { label: '도보 22분', type: 'green' }],
-    pos: '▲ 가처분 +105만',
-    posType: 'pos',
-    bg: 'linear-gradient(135deg,#f093fb,#f5576c)',
-    lat: 35.8715,
-    lng: 128.5865,
-    color: '#10B981',
-    rank: null,
-    district: '중구',
-  },
-  {
-    name: '수성 제이즈 스테이',
-    price: 600000,
-    location: '수성구 황금동 · 수성못역 도보 5분',
-    tags: [{ label: '숙식 제공', type: 'blue' }, { label: '버스 28분', type: 'green' }],
-    pos: '▲ 가처분 +160만',
-    posType: 'pos',
-    bg: 'linear-gradient(135deg,#667eea,#764ba2)',
-    lat: 35.8563,
-    lng: 128.6297,
-    color: '#F97316',
-    rank: null,
-    district: '수성구',
-  },
-  {
-    name: '팔공산 게스트하우스',
-    price: 500000,
-    location: '동구 둔산동 · 팔공산 버스 정류장 5분',
-    tags: [{ label: '숙식 제공', type: 'blue' }, { label: '한달살기 전용', type: 'gray' }],
-    pos: '▲ 가처분 +145만',
-    posType: 'pos',
-    bg: 'linear-gradient(135deg,#43e97b,#38f9d7)',
-    lat: 35.912,
-    lng: 128.663,
-    color: '#EF4444',
-    rank: null,
-    district: '동구',
-  },
-  {
-    name: '반월당 메트로 게하',
-    price: 580000,
-    location: '중구 덕산동 · 반월당역 환승센터',
-    tags: [{ label: '숙소 별도', type: 'gray' }, { label: '버스 18분', type: 'green' }],
-    pos: '▼ 가처분 -12만',
-    posType: 'neg',
-    bg: 'linear-gradient(135deg,#4facfe,#00f2fe)',
-    lat: 35.8658,
-    lng: 128.5948,
-    color: '#8B5CF6',
-    rank: null,
-    district: '중구',
-  },
-]
+const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
 
-const DISTRICTS = [...new Set(HOTELS.map((h) => h.district))]
+async function fetchTransitRoute(accommodationId, jobId) {
+  const res = await fetch(`${API_BASE}/api/planner/commute-route`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ accommodationId, jobId }),
+  })
+  if (!res.ok) throw new Error('route fetch failed')
+  const data = await res.json()
+  return data.data ?? data.result ?? data
+}
+
+async function fetchLane(mapObj) {
+  const res = await fetch(`${API_BASE}/api/planner/load-lane?mapObject=${encodeURIComponent(mapObj)}`)
+  if (!res.ok) throw new Error('loadLane failed')
+  return res.json()
+}
 
 export default function Step3Accommodation({ selectedJobs, selectedHotel, onSelect }) {
+  const [hotels, setHotels] = useState([])
   const [activeJobId, setActiveJobId] = useState(null)
+  const [routeInfo, setRouteInfo] = useState(null)
+  const [routeLoading, setRouteLoading] = useState(false)
   const sliderRef = useRef(null)
   const mapRef = useRef(null)
   const kakaoMapRef = useRef(null)
   const markersRef = useRef([])
   const jobMarkerRef = useRef(null)
   const infoWindowsRef = useRef([])
+  const routePolylinesRef = useRef([])
+  const selectedJobsRef = useRef(selectedJobs)
+  selectedJobsRef.current = selectedJobs
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/planner/accommodations`)
+      .then((r) => r.json())
+      .then((res) => {
+        const data = res.data ?? res.result ?? res
+        setHotels(data.map((h) => ({
+          ...h,
+          lat: parseFloat(h.lat ?? h.latitude),
+          lng: parseFloat(h.lng ?? h.longitude),
+          price: h.monthlyPrice ?? h.price,
+        })))
+      })
+      .catch(() => {})
+  }, [])
 
   const activeJob = selectedJobs.find((j) => j.id === activeJobId) ?? null
 
@@ -98,46 +63,28 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
 
   useEffect(() => {
     const initMap = () => {
+      console.log('[MAP] initMap 호출 — kakaoMapRef:', !!kakaoMapRef.current)
       if (kakaoMapRef.current) return
       window.kakao.maps.load(() => {
         const container = mapRef.current
+        console.log('[MAP] kakao.maps.load 콜백 — container:', !!container, 'kakaoMapRef:', !!kakaoMapRef.current)
         if (!container || kakaoMapRef.current) return
 
+        console.log('[MAP] container 크기:', container.offsetWidth, 'x', container.offsetHeight)
         const map = new window.kakao.maps.Map(container, {
           center: new window.kakao.maps.LatLng(35.8714, 128.6014),
           level: 5,
         })
         kakaoMapRef.current = map
+        map.relayout()
+        console.log('[MAP] 지도 생성 완료')
 
-        HOTELS.forEach((h) => {
-          const position = new window.kakao.maps.LatLng(h.lat, h.lng)
-
-          const markerContent = `<div style="width:14px;height:14px;border-radius:50%;background:${h.color};border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.22);cursor:pointer;"></div>`
-          const marker = new window.kakao.maps.CustomOverlay({
-            position,
-            content: markerContent,
-            xAnchor: 0.5,
-            yAnchor: 0.5,
+        // 타일이 그려진 후(2 프레임) 첫 번째 알바 자동 선택
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            const first = selectedJobsRef.current[0]
+            if (first) setActiveJobId(first.id)
           })
-          marker.setMap(map)
-
-          const infoContent = `
-            <div style="padding:10px 14px;border-radius:10px;background:white;box-shadow:0 4px 16px rgba(0,0,0,0.15);min-width:160px;font-family:sans-serif;">
-              <div style="font-weight:700;font-size:13px;color:#1e293b;">${h.name}</div>
-              <div style="font-size:11px;color:#64748b;margin-top:2px;">${h.location}</div>
-              <div style="font-size:12px;color:#3B82F6;font-weight:600;margin-top:4px;">월 ${h.price.toLocaleString()}원</div>
-            </div>`
-          const infoWindow = new window.kakao.maps.CustomOverlay({
-            position,
-            content: infoContent,
-            xAnchor: 0.5,
-            yAnchor: 1.6,
-            zIndex: 10,
-          })
-
-          marker.__info = infoWindow
-          infoWindowsRef.current.push(infoWindow)
-          markersRef.current.push(marker)
         })
       })
     }
@@ -149,13 +96,64 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
       script?.addEventListener('load', initMap)
       return () => script?.removeEventListener('load', initMap)
     }
+
+    return () => {
+      console.log('[MAP] cleanup 실행 — kakaoMapRef 초기화')
+      kakaoMapRef.current = null
+      markersRef.current = []
+      infoWindowsRef.current = []
+      routePolylinesRef.current = []
+    }
   }, [])
+
+  // 숙소 데이터가 로드되면 지도에 마커 배치
+  useEffect(() => {
+    if (!kakaoMapRef.current || hotels.length === 0) return
+
+    // 기존 마커 제거
+    markersRef.current.forEach((m) => m.setMap(null))
+    infoWindowsRef.current.forEach((iw) => iw.setMap(null))
+    markersRef.current = []
+    infoWindowsRef.current = []
+
+    hotels.forEach((h) => {
+      if (!h.lat || !h.lng || isNaN(h.lat) || isNaN(h.lng)) return
+      const position = new window.kakao.maps.LatLng(h.lat, h.lng)
+
+      const markerContent = `<div style="width:14px;height:14px;border-radius:50%;background:${h.color ?? '#3B82F6'};border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.22);cursor:pointer;"></div>`
+      const marker = new window.kakao.maps.CustomOverlay({
+        position,
+        content: markerContent,
+        xAnchor: 0.5,
+        yAnchor: 0.5,
+      })
+      marker.setMap(kakaoMapRef.current)
+
+      const infoContent = `
+        <div style="padding:10px 14px;border-radius:10px;background:white;box-shadow:0 4px 16px rgba(0,0,0,0.15);min-width:160px;font-family:sans-serif;">
+          <div style="font-weight:700;font-size:13px;color:#1e293b;">${h.name}</div>
+          <div style="font-size:11px;color:#64748b;margin-top:2px;">${h.location}</div>
+          <div style="font-size:12px;color:#3B82F6;font-weight:600;margin-top:4px;">월 ${(h.price ?? 0).toLocaleString()}원</div>
+        </div>`
+      const infoWindow = new window.kakao.maps.CustomOverlay({
+        position,
+        content: infoContent,
+        xAnchor: 0.5,
+        yAnchor: 1.6,
+        zIndex: 10,
+      })
+
+      marker.__info = infoWindow
+      infoWindowsRef.current.push(infoWindow)
+      markersRef.current.push(marker)
+    })
+  }, [hotels])
 
   // 선택된 숙소 마커 강조 + 지도 이동
   useEffect(() => {
     if (!markersRef.current.length || !kakaoMapRef.current) return
     markersRef.current.forEach((m, i) => {
-      const h = HOTELS[i]
+      const h = hotels[i]
       if (!h) return
       const selected = selectedHotel.name === h.name
       const s = selected ? 20 : 14
@@ -173,6 +171,173 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
       }
     })
   }, [selectedHotel])
+
+  const clearRoute = useCallback(() => {
+    routePolylinesRef.current.forEach((p) => p.setMap(null))
+    routePolylinesRef.current = []
+  }, [])
+
+  const drawPolyline = useCallback((coords, color, dashed = false) => {
+    if (!kakaoMapRef.current || coords.length < 2) return
+    const path = coords
+      .map((c) => new window.kakao.maps.LatLng(Number(c.y), Number(c.x)))
+      .filter((ll) => !isNaN(ll.getLat()) && !isNaN(ll.getLng()))
+    if (path.length < 2) return
+    const polyline = new window.kakao.maps.Polyline({
+      path,
+      strokeWeight: dashed ? 3 : 6,
+      strokeColor: color,
+      strokeOpacity: dashed ? 0.5 : 0.85,
+      strokeStyle: dashed ? 'shortdash' : 'solid',
+    })
+    polyline.setMap(kakaoMapRef.current)
+    routePolylinesRef.current.push(polyline)
+  }, [])
+
+  // 경로 조회 및 지도 표시
+  useEffect(() => {
+    if (!activeJob) {
+      clearRoute()
+      setRouteInfo(null)
+      return
+    }
+
+    const hotel = hotels.find((h) => h.name === selectedHotel.name)
+    if (!hotel || !kakaoMapRef.current) return
+
+    const dLat = hotel.lat - activeJob.lat
+    const dLng = hotel.lng - activeJob.lng
+    const distKm = Math.sqrt(dLat * dLat + dLng * dLng) * 111
+
+    if (distKm > 50) {
+      setRouteInfo({ error: '해당 알바는 다른 지역이에요. 같은 지역 알바를 선택해주세요.' })
+      return
+    }
+    if (distKm < 1) {
+      setRouteInfo({ walk: true, distKm })
+      return
+    }
+
+    let cancelled = false
+    setRouteLoading(true)
+    setRouteInfo(null)
+    clearRoute()
+
+    ;(async () => {
+      try {
+        const routeRes = await fetchTransitRoute(hotel.id, activeJob.id)
+        if (cancelled) return
+
+        const rawOdsay = routeRes.raw ?? routeRes
+        if (rawOdsay.error) {
+          const code = String(rawOdsay.error.code)
+          if (code === '-8') {
+            setRouteInfo({ walk: true, distKm })
+          } else {
+            setRouteInfo({ error: `경로 조회 실패 (${rawOdsay.error.message ?? code})` })
+          }
+          return
+        }
+
+        if (!rawOdsay.result?.path?.length) {
+          setRouteInfo({ error: '대중교통 경로를 찾을 수 없습니다 (거리가 너무 가깝거나 경로 없음)' })
+          return
+        }
+
+        const best = rawOdsay.result.path[0]
+        const { totalTime, payment, busTransitCount, subwayTransitCount } = best.info
+
+        for (const sp of best.subPath) {
+          if (cancelled) return
+
+          const sx = Number(sp.startX), sy = Number(sp.startY)
+          const ex = Number(sp.endX), ey = Number(sp.endY)
+          const hasCoords = !isNaN(sx) && !isNaN(sy) && !isNaN(ex) && !isNaN(ey) && (sx || sy)
+
+          if (sp.trafficType === 3) {
+            if (hasCoords) drawPolyline([{ x: sx, y: sy }, { x: ex, y: ey }], '#94A3B8', true)
+          } else {
+            const color = sp.trafficType === 1 ? '#3B82F6' : '#10B981'
+            let drew = false
+
+            // 1순위: loadLane (상세 도로 좌표)
+            if (sp.mapObj) {
+              try {
+                const laneData = await fetchLane(sp.mapObj)
+                if (cancelled) return
+                const lanes = laneData.result?.lane ?? []
+                for (const lane of lanes) {
+                  const coords = lane.section.flatMap((s) => s.graphPos ?? [])
+                  if (coords.length > 0) { drawPolyline(coords, color); drew = true }
+                }
+              } catch { /* 아래 fallback 사용 */ }
+            }
+
+            // 2순위: passStopList 정류장/역 좌표 연결
+            if (!drew) {
+              const stations = sp.passStopList?.stations ?? []
+              if (stations.length >= 2) {
+                const coords = stations.map((s) => ({ x: Number(s.x), y: Number(s.y) }))
+                drawPolyline(coords, color)
+                drew = true
+              }
+            }
+
+            // 3순위: 출발-도착 직선
+            if (!drew && hasCoords) {
+              drawPolyline([{ x: sx, y: sy }, { x: ex, y: ey }], color)
+            }
+          }
+        }
+
+        if (!cancelled) {
+          const steps = best.subPath.map((sp) => {
+            if (sp.trafficType === 3) {
+              return { type: 'walk', time: sp.sectionTime, distance: sp.distance }
+            } else if (sp.trafficType === 1) {
+              return {
+                type: 'subway',
+                time: sp.sectionTime,
+                lineName: sp.lane?.[0]?.name ?? '지하철',
+                start: sp.startName,
+                end: sp.endName,
+                stops: sp.stationCount,
+              }
+            } else {
+              return {
+                type: 'bus',
+                time: sp.sectionTime,
+                busNo: sp.lane?.[0]?.busNo ?? sp.lane?.[0]?.name ?? '버스',
+                start: sp.startName,
+                end: sp.endName,
+                stops: sp.stationCount,
+              }
+            }
+          })
+          setRouteInfo({
+            totalTime,
+            payment,
+            subwayCount: subwayTransitCount,
+            busCount: busTransitCount,
+            steps,
+          })
+
+          // 숙소 + 알바 둘 다 보이도록 지도 조정
+          const bounds = new window.kakao.maps.LatLngBounds()
+          bounds.extend(new window.kakao.maps.LatLng(hotel.lat, hotel.lng))
+          bounds.extend(new window.kakao.maps.LatLng(activeJob.lat, activeJob.lng))
+          kakaoMapRef.current.setBounds(bounds, 80, 80, 80, 80)
+          if (kakaoMapRef.current.getLevel() > 7) kakaoMapRef.current.setLevel(7)
+        }
+      } catch {
+        if (!cancelled) setRouteInfo({ error: '경로 조회 중 오류가 발생했습니다' })
+      } finally {
+        if (!cancelled) setRouteLoading(false)
+      }
+    })()
+
+    return () => { cancelled = true }
+  }, [activeJob, selectedHotel, clearRoute, drawPolyline])
 
   // 알바 위치로 이동
   useEffect(() => {
@@ -248,6 +413,73 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
             <button className="job-active-close" onClick={() => setActiveJobId(null)}>✕</button>
           </div>
         )}
+        {activeJob && (
+          <div className="route-info-bar">
+            {routeLoading && (
+              <div className="route-loading">
+                <span className="route-spinner" />
+                <span>ODsay 대중교통 경로 조회 중...</span>
+              </div>
+            )}
+            {!routeLoading && routeInfo && !routeInfo.error && (
+              <>
+                <div className="route-summary">
+                  {routeInfo.subwayCount > 0 && <span className="route-badge subway">🚇 지하철 {routeInfo.subwayCount}회</span>}
+                  {routeInfo.busCount > 0 && <span className="route-badge bus">🚌 버스 {routeInfo.busCount}회</span>}
+                  <span className="route-divider" />
+                  <span className="route-time">🕐 총 {routeInfo.totalTime}분</span>
+                  {routeInfo.payment > 0 && <span className="route-fare">₩ {routeInfo.payment.toLocaleString()}원</span>}
+                </div>
+                {routeInfo.steps?.length > 0 && (
+                  <div className="route-steps">
+                    {routeInfo.steps.map((s, i) => (
+                      <div key={i} className="route-step">
+                        {s.type === 'walk' && (
+                          <>
+                            <span className="rs-icon walk">🚶</span>
+                            <span className="rs-text">도보 {s.time}분{s.distance >= 100 ? ` (${Math.round(s.distance)}m)` : ''}</span>
+                          </>
+                        )}
+                        {s.type === 'subway' && (
+                          <>
+                            <span className="rs-icon subway">🚇</span>
+                            <span className="rs-text">
+                              <strong>{s.lineName}</strong> · {s.start} → {s.end}
+                              <span className="rs-meta">{s.stops}정거장 · {s.time}분</span>
+                            </span>
+                          </>
+                        )}
+                        {s.type === 'bus' && (
+                          <>
+                            <span className="rs-icon bus">🚌</span>
+                            <span className="rs-text">
+                              <strong>{s.busNo}번</strong> · {s.start} → {s.end}
+                              <span className="rs-meta">{s.stops}정거장 · {s.time}분</span>
+                            </span>
+                          </>
+                        )}
+                        {i < routeInfo.steps.length - 1 && <span className="rs-arrow">↓</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+            {!routeLoading && routeInfo?.walk && (
+              <div className="route-summary">
+                <span className="rs-icon walk">🚶</span>
+                <span style={{ fontWeight: 700, color: '#0369a1' }}>
+                  도보 약 {Math.max(1, Math.round(routeInfo.distKm * 1000 / 80))}분
+                </span>
+                <span className="route-divider" />
+                <span style={{ color: '#64748b', fontSize: 11 }}>{Math.round(routeInfo.distKm * 1000)}m · 대중교통 불필요</span>
+              </div>
+            )}
+            {!routeLoading && routeInfo?.error && (
+              <span className="route-error">{routeInfo.error}</span>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="map-step-layout">
@@ -260,18 +492,18 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
             </div>
           </div>
           <div className="map-result-info">
-            <span>숙소 {HOTELS.length}개 표시 중</span>
+            <span>숙소 {hotels.length}개 표시 중</span>
             <span style={{ color: '#3B82F6', cursor: 'pointer', fontWeight: 600 }}>거리순 ▾</span>
           </div>
           <div className="acc-list">
-            {DISTRICTS.map((d) => (
+            {[...new Set(hotels.map((h) => h.district))].map((d) => (
               <div key={d}>
                 <div className="acc-sec">📍 {d}</div>
-                {HOTELS.filter((h) => h.district === d).map((h) => (
+                {hotels.filter((h) => h.district === d).map((h) => (
                   <div
                     key={h.name}
                     className={`acc-card${selectedHotel.name === h.name ? ' selected' : ''}`}
-                    onClick={() => onSelect({ name: h.name, price: h.price })}
+                    onClick={() => onSelect({ id: h.id, name: h.name, price: h.price })}
                   >
                     <div style={{ position: 'relative', flexShrink: 0 }}>
                       <div className="acc-img-box" style={{ background: h.bg }} />
@@ -291,8 +523,8 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
                       <div className="acc-name">{h.name}</div>
                       <div className="acc-location">{h.location}</div>
                       <div className="acc-tags">
-                        {h.tags.map((t) => (
-                          <span key={t.label} className={`at at-${t.type}`}>{t.label}</span>
+                        {(h.tags ?? []).map((t) => (
+                          <span key={t} className="at at-gray">{t}</span>
                         ))}
                       </div>
                       <div className="acc-price-row">

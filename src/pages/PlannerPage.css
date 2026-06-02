@@ -420,6 +420,78 @@
 }
 .job-active-close:hover { background: #f0f0f0; color: #555; }
 
+.route-info-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 8px;
+  padding: 10px 16px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #0369a1;
+  min-height: 38px;
+}
+.route-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+}
+.route-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #cbd5e1;
+  border-top-color: #3B82F6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.route-badge {
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 11px;
+}
+.route-badge.subway { background: #dbeafe; color: #1d4ed8; }
+.route-badge.bus { background: #d1fae5; color: #065f46; }
+.route-divider { width: 1px; height: 16px; background: #bae6fd; flex-shrink: 0; }
+.route-time { font-weight: 800; font-size: 13px; color: #0c4a6e; }
+.route-fare { color: #475569; font-size: 12px; }
+.route-legend { margin-left: auto; color: #64748b; font-size: 11px; }
+.route-error { color: #dc2626; font-size: 12px; }
+.route-summary { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.route-steps {
+  width: 100%;
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-top: 1px solid #e0f2fe;
+  padding-top: 10px;
+}
+.route-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  color: #1e293b;
+  position: relative;
+}
+.rs-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+.rs-text { flex: 1; line-height: 1.5; }
+.rs-text strong { font-weight: 700; }
+.rs-meta { margin-left: 6px; color: #64748b; font-size: 11px; }
+.rs-arrow {
+  font-size: 11px;
+  color: #94a3b8;
+  padding-left: 22px;
+  line-height: 1;
+}
+
 /* ── STEP 3: ACCOMMODATION + MAP ── */
 .map-step-layout {
   display: flex;
