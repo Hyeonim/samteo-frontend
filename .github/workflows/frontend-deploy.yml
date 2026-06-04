@@ -29,13 +29,12 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: 도커 이미지 빌드 및 푸시
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          # 아래처럼 주소를 하드코딩해서 소문자 hyeonim 으로 직접 박아버리는 게 가장 확실합니다!
-          tags: ghcr.io/hyeonim/samteo-frontend:latest
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: ghcr.io/hyeonim/samteo-frontend:latest
 
     - name: AWS EC2 서버에 원격 접속하여 배포 명령어 실행
       uses: appleboy/ssh-action@v1.0.3
@@ -44,19 +43,9 @@ jobs:
         username: ubuntu                     # EC2 우분투 기본 계정명
         key: ${{ secrets.AWS_PRIVATE_KEY }}    # 1단계에서 깃허브에 등록한 .pem 키
         script: |
-          # 1. 깃허브 계정명을 도커 주소 규격에 맞게 소문자로 변환
-          ACTOR_LOWER=$(echo "${{ github.actor }}" | tr '[:upper:]' '[:lower:]')
-          
-          # 2. AWS 서버 안에서 GHCR 도커 로그인을 수행
-          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-          
-          # 3. 기존에 돌고 있던 프론트엔드 컨테이너가 있다면 안전하게 중지 및 삭제
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u hyeonim --password-stdin
           docker stop samteo-frontend || true
           docker rm samteo-frontend || true
-          
-          # 4. 방금 깃허브가 구워낸 따끈따끈한 최신 이미지를 pull 받아서 3000번 포트로 실행
-          docker pull ghcr.io/$ACTOR_LOWER/samteo-frontend:latest
-          docker run -d --name samteo-frontend -p 3000:80 ghcr.io/$ACTOR_LOWER/samteo-frontend:latest
-          
-          # 5. 용량 차지를 방지하기 위해 쓰이지 않는 옛날 버전 이미지 파기
+          docker pull ghcr.io/hyeonim/samteo-frontend:latest
+          docker run -d --name samteo-frontend -p 3000:80 ghcr.io/hyeonim/samteo-frontend:latest
           docker image prune -f
