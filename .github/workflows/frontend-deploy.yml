@@ -29,13 +29,13 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: 도커 이미지 빌드 및 푸시
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./Dockerfile
-        push: true
-        # 이미지 이름 소문자 처리를 위해 빌드 타겟 지정
-        tags: ghcr.io/${{ github.actor }}/samteo-frontend:latest
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          # 아래처럼 주소를 하드코딩해서 소문자 hyeonim 으로 직접 박아버리는 게 가장 확실합니다!
+          tags: ghcr.io/hyeonim/samteo-frontend:latest
 
     - name: AWS EC2 서버에 원격 접속하여 배포 명령어 실행
       uses: appleboy/ssh-action@v1.0.3
