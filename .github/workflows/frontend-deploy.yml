@@ -40,7 +40,7 @@ jobs:
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.AWS_HOST }}         # 1단계에서 깃허브에 등록한 비밀키
-        username: ubuntu                     # EC2 우분투 기본 계정명
+        username: ec2-user
         key: ${{ secrets.EC2_SSH_KEY }}    # 1단계에서 깃허브에 등록한 .pem 키
         script: |
           echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u hyeonim --password-stdin
