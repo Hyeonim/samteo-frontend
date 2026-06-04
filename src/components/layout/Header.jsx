@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import './Header.css'
 
@@ -11,10 +11,16 @@ function Header() {
     navigate('/')
   }
 
+  const links = [
+    { to: '/jobs', label: '일자리' },
+    { to: '/my-planner', label: '내 플래너' },
+    { to: '/community', label: '커뮤니티' },
+  ]
+
   return (
     <nav className="nav">
       <Link to="/" className="nav-logo">
-        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true">
           <rect width="40" height="40" rx="12" fill="url(#navGrad)" />
           <defs>
             <linearGradient id="navGrad" x1="0" y1="0" x2="40" y2="40">
@@ -34,11 +40,15 @@ function Header() {
       </Link>
 
       <div className="nav-links">
-        <a href="#">지역 탐색</a>
-        <a href="#">일자리</a>
-        <a href="#">숙소 찾기</a>
-        <a href="#">내 플래너</a>
-        <a href="#">커뮤니티</a>
+        {links.map((link) => (
+          <NavLink
+            key={link.to}
+            to={link.to}
+            className={({ isActive }) => (isActive ? 'active' : undefined)}
+          >
+            {link.label}
+          </NavLink>
+        ))}
       </div>
 
       <div className="nav-actions">
