@@ -41,7 +41,7 @@ jobs:
       with:
         host: ${{ secrets.AWS_HOST }}         # 1단계에서 깃허브에 등록한 비밀키
         username: ubuntu                     # EC2 우분투 기본 계정명
-        key: ${{ secrets.AWS_PRIVATE_KEY }}    # 1단계에서 깃허브에 등록한 .pem 키
+        key: ${{ secrets.EC2_SSH_KEY }}    # 1단계에서 깃허브에 등록한 .pem 키
         script: |
           echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u hyeonim --password-stdin
           docker stop samteo-frontend || true
