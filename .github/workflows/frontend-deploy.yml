@@ -1,0 +1,62 @@
+name: Frontend CI/CD
+
+on:
+  push:
+    branches: [ "main" ] # 본인이 사용하는 메인 브랜치 이름 (master일 경우 master로 변경)
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 저장소 코드 가져오기
+      uses: actions/checkout@v4
+
+    # ⭐ 중요: 리액트 빌드할 때 백엔드 API 주소를 주입하는 단계입니다.
+    # 본인의 실제 AWS 서버 주소(Caddy가 열어줄 주소)에 맞게 수정하셔도 됩니다.
+    - name: Vite 환경 변수 파일(.env) 생성
+      run: |
+        echo "VITE_API_URL=https://samteo.com" > .env
+        echo "VITE_KAKAO_REST_API_KEY=${{ secrets.KAKAO_REST_API_KEY }}" >> .env
+        echo "VITE_KAKAO_MAP_KEY=${{ secrets.KAKAO_MAP_KEY }}" >> .env
+        echo "VITE_KAKAO_REDIRECT_URI=https://samteo.com/login/oauth2/code/kakao" >> .env
+
+    - name: GitHub Container Registry(GHCR) 로그인
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 도커 이미지 빌드 및 푸시
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        # 이미지 이름 소문자 처리를 위해 빌드 타겟 지정
+        tags: ghcr.io/${{ github.actor }}/samteo-frontend:latest
+
+    - name: AWS EC2 서버에 원격 접속하여 배포 명령어 실행
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.AWS_HOST }}         # 1단계에서 깃허브에 등록한 비밀키
+        username: ubuntu                     # EC2 우분투 기본 계정명
+        key: ${{ secrets.AWS_PRIVATE_KEY }}    # 1단계에서 깃허브에 등록한 .pem 키
+        script: |
+          # 1. 깃허브 계정명을 도커 주소 규격에 맞게 소문자로 변환
+          ACTOR_LOWER=$(echo "${{ github.actor }}" | tr '[:upper:]' '[:lower:]')
+          
+          # 2. AWS 서버 안에서 GHCR 도커 로그인을 수행
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          
+          # 3. 기존에 돌고 있던 프론트엔드 컨테이너가 있다면 안전하게 중지 및 삭제
+          docker stop samteo-frontend || true
+          docker rm samteo-frontend || true
+          
+          # 4. 방금 깃허브가 구워낸 따끈따끈한 최신 이미지를 pull 받아서 3000번 포트로 실행
+          docker pull ghcr.io/$ACTOR_LOWER/samteo-frontend:latest
+          docker run -d --name samteo-frontend -p 3000:80 ghcr.io/$ACTOR_LOWER/samteo-frontend:latest
+          
+          # 5. 용량 차지를 방지하기 위해 쓰이지 않는 옛날 버전 이미지 파기
+          docker image prune -f
