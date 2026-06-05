@@ -47,5 +47,5 @@ jobs:
           docker stop samteo-frontend || true
           docker rm samteo-frontend || true
           docker pull ghcr.io/hyeonim/samteo-frontend:latest
-          docker run -d --name samteo-frontend -p 80:80 ghcr.io/hyeonim/samteo-frontend:latest
+          docker run -d --name samteo-frontend -p 3000:80 ghcr.io/hyeonim/samteo-frontend:latest
           docker image prune -f
