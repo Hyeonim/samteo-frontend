@@ -49,13 +49,13 @@ function HomePage() {
               <>
                 <span className="hero__welcome">{user.name}님, 환영해요!</span>
                 <button className="btn-primary" onClick={() => navigate('/planner')}>
-                  내 플래너 시작
+                  내 플래너 시작하기
                 </button>
               </>
             ) : (
               <>
                 <button className="btn-primary" onClick={() => navigate('/login')}>
-                  시작하기
+                  시작
                 </button>
                 <button className="btn-secondary" onClick={() => navigate('/register')}>
                   회원가입
