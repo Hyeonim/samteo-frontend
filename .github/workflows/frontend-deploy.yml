@@ -13,13 +13,13 @@ jobs:
       uses: actions/checkout@v4
 
     # ⭐ 중요: 리액트 빌드할 때 백엔드 API 주소를 주입하는 단계입니다.
-    # 본인의 실제 AWS 서버 주소(Caddy가 열어줄 주소)에 맞게 수정하셔도 됩니다.
+    # .com으로 되어 있던 부분을 현재 실제 도메인인 .org로 수정했습니다.
     - name: Vite 환경 변수 파일(.env) 생성
       run: |
-        echo "VITE_API_URL=https://samteo.com" > .env
+        echo "VITE_API_URL=https://samteo.org" > .env
         echo "VITE_KAKAO_REST_API_KEY=${{ secrets.KAKAO_REST_API_KEY }}" >> .env
         echo "VITE_KAKAO_MAP_KEY=${{ secrets.KAKAO_MAP_KEY }}" >> .env
-        echo "VITE_KAKAO_REDIRECT_URI=https://samteo.com/login/oauth2/code/kakao" >> .env
+        echo "VITE_KAKAO_REDIRECT_URI=https://samteo.org/login/oauth2/code/kakao" >> .env
 
     - name: GitHub Container Registry(GHCR) 로그인
       uses: docker/login-action@v3
@@ -47,5 +47,8 @@ jobs:
           docker stop samteo-frontend || true
           docker rm samteo-frontend || true
           docker pull ghcr.io/hyeonim/samteo-frontend:latest
-          docker run -d --name samteo-frontend -p 3000:80 ghcr.io/hyeonim/samteo-frontend:latest
+          
+          # 👇 이 부분에 --network samteo-net 옵션을 확실하게 추가했습니다!
+          docker run -d --name samteo-frontend -p 3000:80 --network samteo-net ghcr.io/hyeonim/samteo-frontend:latest
+          
           docker image prune -f
