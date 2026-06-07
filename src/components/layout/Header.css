@@ -57,6 +57,11 @@
   color: #7c3aed;
 }
 
+.nav-links a.active {
+  color: #2563eb;
+  font-weight: 800;
+}
+
 .nav-actions {
   display: flex;
   align-items: center;
