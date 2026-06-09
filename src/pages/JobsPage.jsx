@@ -53,6 +53,40 @@ const RECOMMEND_TABS = [
   { id: 'salary', label: '수입 좋은' },
 ]
 
+function getRegionLabel(regionId, fallback) {
+  const labels = {
+    junggu: '대구 중구',
+    donggu: '대구 동구',
+    suseong: '대구 수성구',
+    dalseo: '대구 달서구',
+    bukgu: '대구 북구',
+  }
+  return labels[regionId] ?? fallback ?? regionId
+}
+
+function inferCityId(regionId) {
+  if (['junggu', 'donggu', 'suseong', 'dalseo', 'bukgu'].includes(regionId)) return 'daegu'
+  return regionId
+}
+
+function getCityLabel(cityId) {
+  const labels = {
+    daegu: '대구',
+    seoul: '서울',
+    busan: '부산',
+    jeju: '제주',
+    gangneung: '강릉',
+    jeonju: '전주',
+    gyeongju: '경주',
+    incheon: '인천',
+    yeosu: '여수',
+    sokcho: '속초',
+    gwangju: '광주',
+    daejeon: '대전',
+  }
+  return labels[cityId] ?? cityId
+}
+
 function unwrap(res) {
   return res.data ?? res.result ?? res
 }
@@ -63,12 +97,14 @@ function normalizeJob(job, index) {
   const tags = job.tags ?? []
   const popularity = Number(job.popularity ?? job.viewCount ?? 92 - index * 7)
   const daysLeft = Number(job.daysLeft ?? (tags.includes('마감 임박') ? 1 : 3 + index))
+  const regionId = job.regionId ?? 'junggu'
   const normalized = {
     ...job,
     name: job.name ?? job.title,
     title: job.title ?? job.name,
-    regionId: job.regionId ?? 'junggu',
-    region: job.region ?? job.district ?? '대구',
+    regionId,
+    cityId: job.cityId ?? inferCityId(regionId),
+    region: getRegionLabel(regionId, job.region ?? job.district),
     type: job.type ?? job.category ?? '추천',
     salary,
     monthlySalary: salary,
@@ -138,7 +174,10 @@ export default function JobsPage() {
     navigate('/planner', {
       state: {
         startStep: 3,
+        selectedCity: job.cityId,
+        selectedCityName: getCityLabel(job.cityId),
         selectedRegion: job.regionId,
+        selectedRegionName: getRegionLabel(job.regionId, job.region),
         selectedJob: job,
       },
     })

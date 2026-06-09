@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 const REGIONS = [
   {
@@ -114,15 +114,17 @@ const REGIONS = [
 export default function Step1Region({ selectedRegion, onSelect }) {
   const [search, setSearch] = useState('')
 
-  const filtered = search.trim()
-    ? REGIONS.filter((r) => r.name.includes(search.trim()) || r.desc.includes(search.trim()))
-    : REGIONS
+  const filtered = useMemo(() => {
+    const q = search.trim()
+    if (!q) return REGIONS
+    return REGIONS.filter((r) => `${r.name} ${r.desc}`.includes(q))
+  }, [search])
 
   return (
     <div className="step-card">
       <div className="step-title">어디서 한 달 동안 체류하고 싶으신가요?</div>
       <div className="step-subtitle">
-        관심 있는 지역을 선택하면 해당 지역 숙소·일자리를 바로 매칭합니다.
+        먼저 체류할 도시를 고르면, 다음 단계에서 실제 일자리 주소를 기준으로 구·군을 검증합니다.
       </div>
 
       <div className="region-search-wrap">
@@ -130,7 +132,7 @@ export default function Step1Region({ selectedRegion, onSelect }) {
         <input
           className="region-search-input"
           type="text"
-          placeholder="지역명을 검색하세요  (예: 제주, 강릉)"
+          placeholder="지역명을 검색하세요  (예: 대구, 제주, 강릉)"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -150,8 +152,8 @@ export default function Step1Region({ selectedRegion, onSelect }) {
           {filtered.map((r) => (
             <div
               key={r.id}
-              className={`region-card${selectedRegion === r.name ? ' selected' : ''}`}
-              onClick={() => onSelect(r.name)}
+              className={`region-card${selectedRegion === r.id ? ' selected' : ''}`}
+              onClick={() => onSelect(r.id, r.name)}
             >
               <div className="rg-bg" style={{ background: r.bg }} />
               <div className="rg-emoji">{r.emoji}</div>

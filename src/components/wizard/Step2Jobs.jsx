@@ -1,10 +1,132 @@
 import { useState, useEffect, useMemo } from 'react'
-
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
+import { api } from '../../api'
 
 const BG_CYCLE = ['pi1', 'pi2', 'pi3']
 
-export default function Step2Jobs({ region, selectedJobs, onToggle }) {
+const CITY_LABELS = {
+  seoul: '서울',
+  busan: '부산',
+  daegu: '대구',
+  jeju: '제주',
+  gangneung: '강릉',
+  jeonju: '전주',
+  gyeongju: '경주',
+  incheon: '인천',
+  yeosu: '여수',
+  sokcho: '속초',
+  gwangju: '광주',
+  daejeon: '대전',
+}
+
+const DAEGU_REGION_LABELS = {
+  junggu: '중구',
+  donggu: '동구',
+  suseong: '수성구',
+  dalseo: '달서구',
+  bukgu: '북구',
+}
+
+const DAEGU_DISTRICT_REGION_IDS = {
+  중구: 'junggu',
+  동구: 'donggu',
+  수성구: 'suseong',
+  달서구: 'dalseo',
+  북구: 'bukgu',
+}
+
+const ENGLISH_DISTRICTS = {
+  'Jung-gu': '중구',
+  'Dong-gu': '동구',
+  'Suseong-gu': '수성구',
+  'Dalseo-gu': '달서구',
+  'Buk-gu': '북구',
+}
+
+function unwrap(res) {
+  return res.data ?? res.result ?? res
+}
+
+function parseDistrict(text) {
+  if (!text) return null
+
+  for (const [english, korean] of Object.entries(ENGLISH_DISTRICTS)) {
+    if (text.includes(english)) return korean
+  }
+
+  const compact = text.replace(/\s+/g, ' ')
+  const match = compact.match(/([가-힣]+구|[가-힣]+군|[가-힣]+시)/)
+  return match?.[1] ?? null
+}
+
+function inferCityId(job, addressText) {
+  if (job.cityId) return job.cityId
+  if (job.regionId && DAEGU_REGION_LABELS[job.regionId]) return 'daegu'
+  if (!addressText) return null
+
+  const cityMatchers = {
+    seoul: ['서울', '서울특별시'],
+    busan: ['부산', '부산광역시'],
+    daegu: ['대구', '대구광역시'],
+    jeju: ['제주', '제주특별자치도'],
+    gangneung: ['강릉'],
+    jeonju: ['전주'],
+    gyeongju: ['경주'],
+    incheon: ['인천', '인천광역시'],
+    yeosu: ['여수'],
+    sokcho: ['속초'],
+    gwangju: ['광주', '광주광역시'],
+    daejeon: ['대전', '대전광역시'],
+  }
+
+  return Object.entries(cityMatchers)
+    .find(([, aliases]) => aliases.some((alias) => addressText.includes(alias)))?.[0] ?? null
+}
+
+function normalizeJob(job) {
+  const addressText = [
+    job.address,
+    job.location,
+    job.locationDesc,
+    job.district,
+    job.region,
+  ].filter(Boolean).join(' ')
+
+  const cityId = inferCityId(job, addressText)
+  const district = DAEGU_REGION_LABELS[job.regionId] ?? parseDistrict(addressText)
+  const districtRegionId = job.regionId ?? DAEGU_DISTRICT_REGION_IDS[district] ?? district
+  const salary = Number(job.monthlySalary ?? job.salary ?? job.wage ?? 0)
+
+  return {
+    ...job,
+    cityId,
+    cityName: CITY_LABELS[cityId] ?? cityId,
+    district,
+    districtRegionId,
+    name: job.name ?? job.title,
+    title: job.title ?? job.name,
+    type: job.type ?? job.category ?? '추천',
+    lat: parseFloat(job.lat ?? job.latitude),
+    lng: parseFloat(job.lng ?? job.longitude),
+    salary,
+    monthlySalary: salary,
+    priceLabel: job.priceLabel ?? (salary ? `${salary.toLocaleString()}원` : '-'),
+    unit: job.unit ?? '/월',
+    sub: job.sub ?? job.workingDays ?? '',
+    desc: job.desc ?? job.company ?? addressText,
+    location: job.location ?? addressText,
+    tags: job.tags ?? [],
+    emoji: job.emoji ?? 'JOB',
+  }
+}
+
+export default function Step2Jobs({
+  cityId,
+  cityName = CITY_LABELS[cityId] ?? cityId,
+  selectedDistrictId,
+  selectedJobs,
+  onDistrictSelect,
+  onToggle,
+}) {
   const [jobs, setJobs] = useState([])
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
@@ -14,47 +136,61 @@ export default function Step2Jobs({ region, selectedJobs, onToggle }) {
     setLoading(true)
     setSearch('')
     setActiveType('전체')
-    fetch(`${API_BASE}/api/planner/jobs?regionId=${encodeURIComponent(region)}`)
-      .then((r) => r.json())
-      .then((res) => {
-        const data = res.data ?? res.result ?? res
-        setJobs(data.map((j) => ({
-          ...j,
-          lat: parseFloat(j.lat ?? j.latitude),
-          lng: parseFloat(j.lng ?? j.longitude),
-          salary: j.monthlySalary ?? j.salary,
-        })))
-      })
+    api.get('/api/planner/jobs')
+      .then((res) => setJobs(unwrap(res).map(normalizeJob)))
       .catch(() => setJobs([]))
       .finally(() => setLoading(false))
-  }, [region])
+  }, [cityId])
+
+  const cityJobs = useMemo(
+    () => jobs.filter((job) => job.cityId === cityId),
+    [jobs, cityId]
+  )
+
+  const districts = useMemo(() => {
+    const map = new Map()
+    cityJobs.forEach((job) => {
+      if (!job.districtRegionId || !job.district) return
+      map.set(job.districtRegionId, job.district)
+    })
+    return [...map.entries()].map(([id, name]) => ({ id, name }))
+  }, [cityJobs])
 
   const availableTypes = useMemo(
-    () => ['전체', ...new Set(jobs.map((j) => j.type))],
-    [jobs]
+    () => ['전체', ...new Set(cityJobs.map((j) => j.type).filter(Boolean))],
+    [cityJobs]
   )
 
   const filtered = useMemo(() => {
-    return jobs.filter((j) => {
+    return cityJobs.filter((j) => {
+      const matchDistrict = !selectedDistrictId || j.districtRegionId === selectedDistrictId
       const matchType = activeType === '전체' || j.type === activeType
       const q = search.trim()
-      const matchSearch = !q || j.name?.includes(q) || j.desc?.includes(q) || j.type?.includes(q)
-      return matchType && matchSearch
+      const body = `${j.name ?? ''} ${j.desc ?? ''} ${j.location ?? ''} ${j.type ?? ''} ${(j.tags ?? []).join(' ')}`
+      const matchSearch = !q || body.includes(q)
+      return matchDistrict && matchType && matchSearch
     })
-  }, [jobs, activeType, search])
+  }, [cityJobs, selectedDistrictId, activeType, search])
+
+  function selectJob(job) {
+    if (!selectedDistrictId && job.districtRegionId) {
+      onDistrictSelect(job.districtRegionId, job.district)
+    }
+    onToggle(job)
+  }
 
   return (
     <div className="step-card">
       <div className="step-title">
-        <span className="job-region-tag">{region}</span> 출퇴근 1시간 안의 알바 자리만 골라왔어요!
+        <span className="job-region-tag">{cityName}</span> 일자리 주소를 검증했어요
       </div>
       <div className="step-subtitle" style={{ color: '#ef4444', fontWeight: 600 }}>
-        ⚠️ 자체 원둘레 필터링 및 대중교통 다익스트라 알고리즘 검증 완료
+        실제 일자리 주소에서 도시와 구·군을 추출해 체류 지역을 좁혀갑니다.
       </div>
 
       {selectedJobs.length > 0 && (
         <div className="job-selected-count">
-          ✓ {selectedJobs.length}개 선택됨 · 중복 알바도 가능해요!
+          ✓ {selectedJobs.length}개 선택됨 · 선택한 일자리의 구·군을 기준으로 다음 단계를 진행합니다.
         </div>
       )}
 
@@ -63,7 +199,7 @@ export default function Step2Jobs({ region, selectedJobs, onToggle }) {
         <input
           className="region-search-input"
           type="text"
-          placeholder={`${region} 내 일자리 검색  (예: 카페, 숙식제공)`}
+          placeholder={`${cityName} 일자리 검색  (예: 카페, 숙식제공, 구암로)`}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -71,6 +207,26 @@ export default function Step2Jobs({ region, selectedJobs, onToggle }) {
           <button className="region-search-clear" onClick={() => setSearch('')}>✕</button>
         )}
       </div>
+
+      {districts.length > 0 && (
+        <div className="job-filter-bar">
+          <div
+            className={`jchip ${!selectedDistrictId ? 'active' : 'def'}`}
+            onClick={() => onDistrictSelect(null, null)}
+          >
+            전체 구·군
+          </div>
+          {districts.map((district) => (
+            <div
+              key={district.id}
+              className={`jchip ${selectedDistrictId === district.id ? 'active' : 'def'}`}
+              onClick={() => onDistrictSelect(district.id, district.name)}
+            >
+              {district.name}
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="job-filter-bar">
         {availableTypes.map((t) => (
@@ -87,13 +243,19 @@ export default function Step2Jobs({ region, selectedJobs, onToggle }) {
       {loading ? (
         <div className="region-empty">
           <div style={{ fontSize: 32, marginBottom: 8 }}>⏳</div>
-          <div style={{ fontWeight: 700 }}>알바 목록 불러오는 중...</div>
+          <div style={{ fontWeight: 700 }}>일자리 목록을 검증하는 중...</div>
+        </div>
+      ) : cityJobs.length === 0 ? (
+        <div className="region-empty">
+          <div style={{ fontSize: 32, marginBottom: 8 }}>😥</div>
+          <div style={{ fontWeight: 700, marginBottom: 4 }}>{cityName}에서 검증된 일자리가 없습니다</div>
+          <div style={{ fontSize: 13, color: '#aaa' }}>다른 도시를 선택하거나 일자리 데이터 수집 범위를 확인해 주세요</div>
         </div>
       ) : filtered.length === 0 ? (
         <div className="region-empty">
           <div style={{ fontSize: 32, marginBottom: 8 }}>😥</div>
           <div style={{ fontWeight: 700, marginBottom: 4 }}>검색 결과가 없습니다</div>
-          <div style={{ fontSize: 13, color: '#aaa' }}>다른 키워드나 업종으로 검색해 보세요</div>
+          <div style={{ fontSize: 13, color: '#aaa' }}>다른 키워드나 구·군으로 검색해 보세요</div>
         </div>
       ) : (
         <div className="pkg-grid">
@@ -104,14 +266,14 @@ export default function Step2Jobs({ region, selectedJobs, onToggle }) {
               <div
                 key={job.id}
                 className={`pkg-card${isSelected ? ' selected' : ''}`}
-                onClick={() => onToggle(job)}
+                onClick={() => selectJob(job)}
               >
                 {job.best && <div className="pkg-best">⭐ BEST</div>}
                 {isSelected && <div className="pkg-check-badge">✓</div>}
                 <div className={`pkg-img ${bg}`}>
                   <div className="pkg-img-label">{job.emoji}</div>
                   <div className="pkg-img-overlay">
-                    <div className="pkg-location">{job.location}</div>
+                    <div className="pkg-location">{job.district ? `${cityName} ${job.district}` : job.location}</div>
                   </div>
                 </div>
                 <div className="pkg-body">
@@ -131,7 +293,7 @@ export default function Step2Jobs({ region, selectedJobs, onToggle }) {
                     </div>
                     <button
                       className={`pkg-btn${isSelected ? ' sel' : ''}`}
-                      onClick={(e) => { e.stopPropagation(); onToggle(job) }}
+                      onClick={(e) => { e.stopPropagation(); selectJob(job) }}
                     >
                       {isSelected ? '✓ 선택됨' : '선택하기'}
                     </button>

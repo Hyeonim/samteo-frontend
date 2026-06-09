@@ -37,25 +37,81 @@ function prepareSeedJob(job) {
   }
 }
 
+function getCityLabel(cityId, fallback) {
+  const labels = {
+    seoul: '서울',
+    busan: '부산',
+    daegu: '대구',
+    jeju: '제주',
+    gangneung: '강릉',
+    jeonju: '전주',
+    gyeongju: '경주',
+    incheon: '인천',
+    yeosu: '여수',
+    sokcho: '속초',
+    gwangju: '광주',
+    daejeon: '대전',
+  }
+  return labels[cityId] ?? fallback ?? cityId
+}
+
+function getDistrictLabel(regionId, fallback) {
+  const labels = {
+    junggu: '대구 중구',
+    donggu: '대구 동구',
+    suseong: '대구 수성구',
+    dalseo: '대구 달서구',
+    bukgu: '대구 북구',
+  }
+  return labels[regionId] ?? fallback ?? regionId
+}
+
+function inferCityId(regionId, fallback) {
+  if (fallback) return fallback
+  if (['junggu', 'donggu', 'suseong', 'dalseo', 'bukgu'].includes(regionId)) return 'daegu'
+  return regionId ?? 'daegu'
+}
+
 export default function PlannerPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const seedJob = prepareSeedJob(location.state?.selectedJob)
-  const seedRegion = location.state?.selectedRegion ?? seedJob?.regionId ?? 'junggu'
+  const seedDistrictId = location.state?.selectedRegion ?? seedJob?.districtRegionId ?? seedJob?.regionId ?? null
+  const seedCityId = inferCityId(seedDistrictId, location.state?.selectedCity ?? seedJob?.cityId)
+  const seedCityName = getCityLabel(seedCityId, location.state?.selectedCityName)
+  const seedDistrictName = seedDistrictId
+    ? getDistrictLabel(seedDistrictId, location.state?.selectedRegionName ?? seedJob?.region)
+    : null
   const seedStep = seedJob ? Number(location.state?.startStep ?? 3) : 1
 
   const [currentStep, setCurrentStep] = useState(Math.min(Math.max(seedStep, 1), TOTAL))
-  const [selectedRegion, setSelectedRegion] = useState(seedRegion)
+  const [selectedCity, setSelectedCity] = useState(seedCityId)
+  const [selectedCityName, setSelectedCityName] = useState(seedCityName)
+  const [selectedRegion, setSelectedRegion] = useState(seedDistrictId)
+  const [selectedRegionName, setSelectedRegionName] = useState(seedDistrictName)
   const [selectedJobs, setSelectedJobs] = useState(seedJob ? [seedJob] : [])
   const [selectedHotel, setSelectedHotel] = useState(DEFAULT_HOTEL)
   const [saving, setSaving] = useState(false)
 
-  function selectRegion(region) {
-    setSelectedRegion(region)
+  function selectCity(cityId, cityName) {
+    setSelectedCity(cityId)
+    setSelectedCityName(getCityLabel(cityId, cityName))
+    setSelectedRegion(null)
+    setSelectedRegionName(null)
+    setSelectedJobs([])
+  }
+
+  function selectDistrict(regionId, regionName) {
+    setSelectedRegion(regionId)
+    setSelectedRegionName(regionId ? getDistrictLabel(regionId, regionName) : null)
     setSelectedJobs([])
   }
 
   function toggleJob(job) {
+    if (!selectedRegion && job.districtRegionId) {
+      setSelectedRegion(job.districtRegionId)
+      setSelectedRegionName(getDistrictLabel(job.districtRegionId, job.district))
+    }
     setSelectedJobs((prev) => {
       const exists = prev.find((j) => j.id === job.id)
       return exists ? prev.filter((j) => j.id !== job.id) : [...prev, job]
@@ -65,6 +121,10 @@ export default function PlannerPage() {
   function moveStep(dir) {
     const next = currentStep + dir
     if (next < 1 || next > TOTAL) return
+    if (currentStep === 2 && dir > 0 && !selectedRegion) {
+      alert('일자리 주소를 기준으로 구·군을 먼저 선택해 주세요.')
+      return
+    }
     setCurrentStep(next)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -75,15 +135,22 @@ export default function PlannerPage() {
       setCurrentStep(2)
       return
     }
+    if (!selectedRegion) {
+      alert('선택한 일자리의 구·군 정보를 확인해 주세요.')
+      setCurrentStep(2)
+      return
+    }
 
     setSaving(true)
     const totalSalary = selectedJobs.reduce((sum, job) => sum + Number(job.salary ?? job.monthlySalary ?? 0), 0)
     const accommodationCost = Number(selectedHotel.price ?? selectedHotel.monthlyPrice ?? 0)
     const planner = {
       id: `planner-${Date.now()}`,
-      title: `${selectedRegion} 체류 플래너`,
+      title: `${selectedRegionName ?? selectedCityName} 체류 플래너`,
+      cityId: selectedCity,
+      cityName: selectedCityName,
       regionId: selectedRegion,
-      regionName: selectedRegion,
+      regionName: selectedRegionName ?? selectedCityName,
       jobs: selectedJobs.map((job) => ({
         id: job.id,
         name: job.name ?? job.title,
@@ -123,8 +190,16 @@ export default function PlannerPage() {
   const isLastStep = currentStep === TOTAL
 
   const stepContent = [
-    <Step1Region key={1} selectedRegion={selectedRegion} onSelect={selectRegion} />,
-    <Step2Jobs key={2} region={selectedRegion} selectedJobs={selectedJobs} onToggle={toggleJob} />,
+    <Step1Region key={1} selectedRegion={selectedCity} onSelect={selectCity} />,
+    <Step2Jobs
+      key={2}
+      cityId={selectedCity}
+      cityName={selectedCityName}
+      selectedDistrictId={selectedRegion}
+      selectedJobs={selectedJobs}
+      onDistrictSelect={selectDistrict}
+      onToggle={toggleJob}
+    />,
     <Step3Accommodation key={3} selectedJobs={selectedJobs} selectedHotel={selectedHotel} onSelect={setSelectedHotel} />,
     <Step4Budget key={4} selectedJobs={selectedJobs} selectedHotel={selectedHotel} />,
     <Step5Planner key={5} selectedJobs={selectedJobs} selectedHotel={selectedHotel} />,
