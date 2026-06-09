@@ -3,10 +3,40 @@ import { useNavigate } from 'react-router-dom'
 import { deleteStoredPlanner, getStoredPlanners, saveStoredPlanner } from '../utils/plannerStorage'
 import './ExplorePages.css'
 
-const DAYS = ['월', '화', '수', '목', '금', '토', '일']
+const CALENDAR_DAYS = [
+  { label: '일', value: 6, weekend: 'sun' },
+  { label: '월', value: 0 },
+  { label: '화', value: 1 },
+  { label: '수', value: 2 },
+  { label: '목', value: 3 },
+  { label: '금', value: 4 },
+  { label: '토', value: 5, weekend: 'sat' },
+]
 const HOURS = Array.from({ length: 18 }, (_, index) => index + 6)
 const COLORS = ['#ef7f72', '#6b9ee8', '#9ac768', '#6ec7bd', '#f3bf58', '#9b7ae5', '#f59e73']
 const VIEW_LABELS = { day: '일간', week: '주간', month: '월간' }
+const HOLIDAYS = {
+  '2026-01-01': '신정',
+  '2026-02-16': '설날',
+  '2026-02-17': '설날',
+  '2026-02-18': '설날',
+  '2026-03-01': '삼일절',
+  '2026-03-02': '대체공휴일',
+  '2026-05-05': '어린이날',
+  '2026-05-24': '부처님오신날',
+  '2026-05-25': '대체공휴일',
+  '2026-06-03': '지방선거',
+  '2026-06-06': '현충일',
+  '2026-08-15': '광복절',
+  '2026-08-17': '대체공휴일',
+  '2026-09-24': '추석',
+  '2026-09-25': '추석',
+  '2026-09-26': '추석',
+  '2026-10-03': '개천절',
+  '2026-10-05': '대체공휴일',
+  '2026-10-09': '한글날',
+  '2026-12-25': '성탄절',
+}
 
 function formatDate(value) {
   if (!value) return '-'
@@ -91,7 +121,7 @@ function getMonthDays() {
   const today = new Date()
   const first = new Date(today.getFullYear(), today.getMonth(), 1)
   const last = new Date(today.getFullYear(), today.getMonth() + 1, 0)
-  const offset = (first.getDay() + 6) % 7
+  const offset = first.getDay()
   const cells = []
 
   for (let index = 0; index < offset; index += 1) {
@@ -99,7 +129,16 @@ function getMonthDays() {
   }
   for (let date = 1; date <= last.getDate(); date += 1) {
     const day = new Date(today.getFullYear(), today.getMonth(), date)
-    cells.push({ date, day: (day.getDay() + 6) % 7 })
+    const nativeDay = day.getDay()
+    const scheduleDay = nativeDay === 0 ? 6 : nativeDay - 1
+    const dateKey = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(date)}`
+    cells.push({
+      date,
+      dateKey,
+      day: scheduleDay,
+      weekend: nativeDay === 0 ? 'sun' : nativeDay === 6 ? 'sat' : null,
+      holiday: HOLIDAYS[dateKey] ?? null,
+    })
   }
   return { label: `${today.getFullYear()}년 ${today.getMonth() + 1}월`, cells }
 }
@@ -328,13 +367,13 @@ export default function MyPlannerPage() {
                       {viewMode === 'day' && (
                         <div className="day-view">
                           <div className="day-picker">
-                            {DAYS.map((day, index) => (
+                            {CALENDAR_DAYS.map((day) => (
                               <button
-                                key={day}
-                                className={selectedDay === index ? 'active' : ''}
-                                onClick={() => setSelectedDay(index)}
+                                key={day.label}
+                                className={`${selectedDay === day.value ? 'active' : ''}${day.weekend ? ` ${day.weekend}` : ''}`}
+                                onClick={() => setSelectedDay(day.value)}
                               >
-                                {day}
+                                {day.label}
                               </button>
                             ))}
                           </div>
@@ -355,17 +394,23 @@ export default function MyPlannerPage() {
                         <div className="week-view">
                           <div className="week-head">
                             <span />
-                            {DAYS.map((day, index) => (
-                              <button key={day} onClick={() => { setSelectedDay(index); startCreate(index) }}>{day}</button>
+                            {CALENDAR_DAYS.map((day) => (
+                              <button
+                                key={day.label}
+                                className={day.weekend ?? ''}
+                                onClick={() => { setSelectedDay(day.value); startCreate(day.value) }}
+                              >
+                                {day.label}
+                              </button>
                             ))}
                           </div>
                           <div className="timetable">
                             <div className="time-rail">
                               {HOURS.map((hour) => <span key={hour}>{hour}</span>)}
                             </div>
-                            {DAYS.map((day, dayIndex) => (
-                              <div className="day-column" key={day} onDoubleClick={() => startCreate(dayIndex)}>
-                                {schedule.filter((event) => event.day === dayIndex).map((event) => (
+                            {CALENDAR_DAYS.map((day) => (
+                              <div className={`day-column ${day.weekend ?? ''}`} key={day.label} onDoubleClick={() => startCreate(day.value)}>
+                                {schedule.filter((event) => event.day === day.value).map((event) => (
                                   <ScheduleBlock key={event.id} event={event} compact onClick={startEdit} />
                                 ))}
                               </div>
@@ -378,17 +423,20 @@ export default function MyPlannerPage() {
                         <div className="month-view">
                           <div className="month-title">{month.label}</div>
                           <div className="month-grid">
-                            {DAYS.map((day) => <div className="month-weekday" key={day}>{day}</div>)}
+                            {CALENDAR_DAYS.map((day) => (
+                              <div className={`month-weekday ${day.weekend ?? ''}`} key={day.label}>{day.label}</div>
+                            ))}
                             {month.cells.map((cell, index) => {
                               const events = cell ? schedule.filter((event) => event.day === cell.day) : []
                               return (
                                 <button
-                                  className={`month-cell${cell?.day === selectedDay ? ' active' : ''}`}
+                                  className={`month-cell${cell?.day === selectedDay ? ' active' : ''}${cell?.weekend ? ` ${cell.weekend}` : ''}${cell?.holiday ? ' holiday' : ''}`}
                                   key={`${cell?.date ?? 'blank'}-${index}`}
                                   disabled={!cell}
                                   onClick={() => cell && setSelectedDay(cell.day)}
                                 >
                                   {cell && <strong>{cell.date}</strong>}
+                                  {cell?.holiday && <small>{cell.holiday}</small>}
                                   {events.slice(0, 3).map((event) => (
                                     <span key={event.id} style={{ background: event.color ?? '#6b9ee8' }}>{event.title}</span>
                                   ))}
@@ -419,7 +467,7 @@ export default function MyPlannerPage() {
                           onChange={(event) => setForm((prev) => ({ ...prev, day: Number(event.target.value) }))}
                           disabled={form.locked}
                         >
-                          {DAYS.map((day, index) => <option value={index} key={day}>{day}요일</option>)}
+                          {CALENDAR_DAYS.map((day) => <option value={day.value} key={day.label}>{day.label}요일</option>)}
                         </select>
                       </label>
                       <div className="editor-time-row">

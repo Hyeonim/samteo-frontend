@@ -347,6 +347,14 @@
   box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
 }
 
+.day-picker button.sun {
+  color: #e11d48;
+}
+
+.day-picker button.sat {
+  color: #2563eb;
+}
+
 .week-head {
   display: grid;
   grid-template-columns: 54px repeat(7, minmax(76px, 1fr));
@@ -372,6 +380,16 @@
 
 .week-head button:last-child {
   border-right: none;
+}
+
+.week-head button.sun {
+  background: #fff1f2;
+  color: #e11d48;
+}
+
+.week-head button.sat {
+  background: #eff6ff;
+  color: #2563eb;
 }
 
 .day-view {
@@ -420,6 +438,14 @@
 
 .day-column:last-child {
   border-right: none;
+}
+
+.day-column.sun {
+  background: rgba(255, 241, 242, 0.72);
+}
+
+.day-column.sat {
+  background: rgba(239, 246, 255, 0.84);
 }
 
 .schedule-block {
@@ -553,6 +579,16 @@
   text-align: center;
 }
 
+.month-weekday.sun {
+  background: #fff1f2;
+  color: #e11d48;
+}
+
+.month-weekday.sat {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
 .month-cell {
   min-height: 108px;
   border: none;
@@ -567,6 +603,24 @@
   background: #eff6ff;
 }
 
+.month-cell.sun,
+.month-cell.holiday {
+  background: #fff7f8;
+}
+
+.month-cell.sat {
+  background: #f8fbff;
+}
+
+.month-cell.sun strong,
+.month-cell.holiday strong {
+  color: #e11d48;
+}
+
+.month-cell.sat strong {
+  color: #2563eb;
+}
+
 .month-cell:disabled {
   background: #f8fafc;
 }
@@ -576,6 +630,21 @@
   margin-bottom: 6px;
   color: #0f172a;
   font-size: 12px;
+}
+
+.month-cell small {
+  display: inline-block;
+  max-width: 100%;
+  margin-bottom: 4px;
+  border-radius: 999px;
+  background: #ffe4e6;
+  color: #be123c;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .month-cell span {
