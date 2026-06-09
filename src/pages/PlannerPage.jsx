@@ -69,7 +69,7 @@ function getDistrictLabel(regionId, fallback) {
 function inferCityId(regionId, fallback) {
   if (fallback) return fallback
   if (['junggu', 'donggu', 'suseong', 'dalseo', 'bukgu'].includes(regionId)) return 'daegu'
-  return regionId ?? 'daegu'
+  return regionId ?? null
 }
 
 export default function PlannerPage() {
@@ -119,12 +119,22 @@ export default function PlannerPage() {
   }
 
   function moveStep(dir) {
+    if (dir === 1) {
+      if (currentStep === 1 && !selectedCity) {
+        alert('지역을 선택해 주세요.')
+        return
+      }
+      if (currentStep === 2 && selectedJobs.length === 0) {
+        alert('일자리를 하나 이상 선택해 주세요.')
+        return
+      }
+      if (currentStep === 2 && !selectedRegion) {
+        alert('일자리 주소를 기준으로 구·군을 먼저 선택해 주세요.')
+        return
+      }
+    }
     const next = currentStep + dir
     if (next < 1 || next > TOTAL) return
-    if (currentStep === 2 && dir > 0 && !selectedRegion) {
-      alert('일자리 주소를 기준으로 구·군을 먼저 선택해 주세요.')
-      return
-    }
     setCurrentStep(next)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
