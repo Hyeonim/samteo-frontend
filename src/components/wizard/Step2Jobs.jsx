@@ -42,6 +42,66 @@ const ENGLISH_DISTRICTS = {
   'Buk-gu': '북구',
 }
 
+function translateCategory(value) {
+  const labels = {
+    'Food and Beverage': '카페·식음료',
+    Accommodation: '숙박',
+    Tourism: '관광',
+    Store: '매장',
+    'Food Service': '외식',
+    Logistics: '물류',
+    Event: '행사',
+    Mobility: '이동서비스',
+    Shopping: '판매',
+  }
+  return labels[value] ?? value ?? '추천'
+}
+
+function translateTag(value) {
+  const labels = {
+    cafe: '카페',
+    beginner: '초보 가능',
+    'day-shift': '주간',
+    stay: '숙박업',
+    cleaning: '객실관리',
+    'guest-service': '고객응대',
+    tourism: '관광',
+    'language-plus': '외국어 우대',
+    weekend: '주말',
+    night: '야간',
+    store: '매장',
+    'short-term': '단기',
+    'meal-support': '식사 제공',
+    service: '서비스',
+    'local-food': '로컬푸드',
+    logistics: '물류',
+    standing: '입식근무',
+    event: '행사',
+    'team-work': '팀근무',
+    desk: '데스크',
+    'driver-license-plus': '운전면허 우대',
+    sales: '판매',
+    morning: '오전',
+    hotel: '호텔',
+  }
+  return labels[value] ?? value
+}
+
+function jobEmoji(category) {
+  const labels = {
+    '카페·식음료': '☕',
+    숙박: '🏠',
+    관광: '🧭',
+    매장: '🏪',
+    외식: '🍽',
+    물류: '📦',
+    행사: '🎪',
+    이동서비스: '🚗',
+    판매: '🛍',
+  }
+  return labels[category] ?? '💼'
+}
+
 function unwrap(res) {
   return res.data ?? res.result ?? res
 }
@@ -95,6 +155,7 @@ function normalizeJob(job) {
   const district = DAEGU_REGION_LABELS[job.regionId] ?? parseDistrict(addressText)
   const districtRegionId = job.regionId ?? DAEGU_DISTRICT_REGION_IDS[district] ?? district
   const salary = Number(job.monthlySalary ?? job.salary ?? job.wage ?? 0)
+  const type = translateCategory(job.type ?? job.category)
 
   return {
     ...job,
@@ -104,18 +165,18 @@ function normalizeJob(job) {
     districtRegionId,
     name: job.name ?? job.title,
     title: job.title ?? job.name,
-    type: job.type ?? job.category ?? '추천',
+    type,
     lat: parseFloat(job.lat ?? job.latitude),
     lng: parseFloat(job.lng ?? job.longitude),
     salary,
     monthlySalary: salary,
-    priceLabel: job.priceLabel ?? (salary ? `${salary.toLocaleString()}원` : '-'),
-    unit: job.unit ?? '/월',
-    sub: job.sub ?? job.workingDays ?? '',
+    priceLabel: salary ? `${salary.toLocaleString()}원` : '-',
+    unit: job.unit === '/month' ? '/월' : (job.unit ?? '/월'),
+    sub: job.sub === 'dummy job data' ? '샘플 일자리 데이터' : (job.sub ?? job.workingDays ?? ''),
     desc: job.desc ?? job.company ?? addressText,
     location: job.location ?? addressText,
-    tags: job.tags ?? [],
-    emoji: job.emoji ?? 'JOB',
+    tags: (job.tags ?? []).map(translateTag),
+    emoji: !job.emoji || job.emoji === 'JOB' ? jobEmoji(type) : job.emoji,
   }
 }
 

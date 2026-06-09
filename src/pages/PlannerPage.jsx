@@ -165,6 +165,9 @@ export default function PlannerPage() {
         id: job.id,
         name: job.name ?? job.title,
         type: job.type ?? job.category,
+        company: job.company ?? job.desc ?? '',
+        workingDays: job.workingDays ?? job.sub ?? job.schedule ?? '',
+        schedule: job.schedule ?? job.workingDays ?? job.sub ?? '',
         salary: Number(job.salary ?? job.monthlySalary ?? 0),
       })),
       accommodation: {

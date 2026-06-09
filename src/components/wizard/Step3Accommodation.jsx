@@ -1,22 +1,13 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { api } from '../../api'
 
 async function fetchTransitRoute(accommodationId, jobId) {
-  const res = await fetch(`${API_BASE}/api/planner/commute-route`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ accommodationId, jobId }),
-  })
-  if (!res.ok) throw new Error('route fetch failed')
-  const data = await res.json()
+  const data = await api.post('/api/planner/commute-route', { accommodationId, jobId })
   return data.data ?? data.result ?? data
 }
 
 async function fetchLane(mapObj) {
-  const res = await fetch(`${API_BASE}/api/planner/load-lane?mapObject=${encodeURIComponent(mapObj)}`)
-  if (!res.ok) throw new Error('loadLane failed')
-  return res.json()
+  return api.get(`/api/planner/load-lane?mapObject=${encodeURIComponent(mapObj)}`)
 }
 
 export default function Step3Accommodation({ selectedJobs, selectedHotel, onSelect }) {
@@ -24,6 +15,7 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
   const [activeJobId, setActiveJobId] = useState(null)
   const [routeInfo, setRouteInfo] = useState(null)
   const [routeLoading, setRouteLoading] = useState(false)
+  const [mapReady, setMapReady] = useState(false)
   const sliderRef = useRef(null)
   const mapRef = useRef(null)
   const kakaoMapRef = useRef(null)
@@ -35,8 +27,7 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
   selectedJobsRef.current = selectedJobs
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/planner/accommodations`)
-      .then((r) => r.json())
+    api.get('/api/planner/accommodations')
       .then((res) => {
         const data = res.data ?? res.result ?? res
         setHotels(data.map((h) => ({
@@ -50,6 +41,16 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
   }, [])
 
   const activeJob = selectedJobs.find((j) => j.id === activeJobId) ?? null
+  const selectedRegionIds = useMemo(
+    () => [...new Set(selectedJobs.map((job) => job.districtRegionId ?? job.regionId).filter(Boolean))],
+    [selectedJobs]
+  )
+  const visibleHotels = useMemo(() => (
+    selectedRegionIds.length === 0
+      ? hotels
+      : hotels.filter((hotel) => selectedRegionIds.includes(hotel.regionId))
+  ), [hotels, selectedRegionIds])
+  const noMatchedHotels = selectedRegionIds.length > 0 && visibleHotels.length === 0
 
   function scrollSlider(dir) {
     sliderRef.current?.scrollBy({ left: dir * 250, behavior: 'smooth' })
@@ -77,6 +78,7 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
         })
         kakaoMapRef.current = map
         map.relayout()
+        setMapReady(true)
         console.log('[MAP] 지도 생성 완료')
 
         // 타일이 그려진 후(2 프레임) 첫 번째 알바 자동 선택
@@ -99,6 +101,7 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
 
     return () => {
       console.log('[MAP] cleanup 실행 — kakaoMapRef 초기화')
+      setMapReady(false)
       kakaoMapRef.current = null
       markersRef.current = []
       infoWindowsRef.current = []
@@ -108,7 +111,7 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
 
   // 숙소 데이터가 로드되면 지도에 마커 배치
   useEffect(() => {
-    if (!kakaoMapRef.current || hotels.length === 0) return
+    if (!mapReady || !kakaoMapRef.current) return
 
     // 기존 마커 제거
     markersRef.current.forEach((m) => m.setMap(null))
@@ -116,7 +119,7 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
     markersRef.current = []
     infoWindowsRef.current = []
 
-    hotels.forEach((h) => {
+    visibleHotels.forEach((h) => {
       if (!h.lat || !h.lng || isNaN(h.lat) || isNaN(h.lng)) return
       const position = new window.kakao.maps.LatLng(h.lat, h.lng)
 
@@ -147,20 +150,21 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
       infoWindowsRef.current.push(infoWindow)
       markersRef.current.push(marker)
     })
-  }, [hotels])
+  }, [mapReady, visibleHotels])
 
   // 선택된 숙소 마커 강조 + 지도 이동
   useEffect(() => {
-    if (!markersRef.current.length || !kakaoMapRef.current) return
+    if (!mapReady || !markersRef.current.length || !kakaoMapRef.current) return
     markersRef.current.forEach((m, i) => {
-      const h = hotels[i]
+      const h = visibleHotels[i]
       if (!h) return
       const selected = selectedHotel.name === h.name
       const s = selected ? 20 : 14
+      const markerColor = h.color ?? '#3B82F6'
       const shadow = selected
-        ? `box-shadow:0 0 0 5px ${h.color}44,0 2px 8px rgba(0,0,0,0.25);`
+        ? `box-shadow:0 0 0 5px ${markerColor}44,0 2px 8px rgba(0,0,0,0.25);`
         : 'box-shadow:0 2px 8px rgba(0,0,0,0.22);'
-      const content = `<div style="width:${s}px;height:${s}px;border-radius:50%;background:${h.color};border:2.5px solid white;${shadow}cursor:pointer;"></div>`
+      const content = `<div style="width:${s}px;height:${s}px;border-radius:50%;background:${markerColor};border:2.5px solid white;${shadow}cursor:pointer;"></div>`
       m.setContent(content)
 
       if (selected) {
@@ -170,7 +174,7 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
         m.__info.setMap(null)
       }
     })
-  }, [selectedHotel])
+  }, [mapReady, selectedHotel, visibleHotels])
 
   const clearRoute = useCallback(() => {
     routePolylinesRef.current.forEach((p) => p.setMap(null))
@@ -202,8 +206,8 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
       return
     }
 
-    const hotel = hotels.find((h) => h.name === selectedHotel.name)
-    if (!hotel || !kakaoMapRef.current) return
+    const hotel = visibleHotels.find((h) => h.name === selectedHotel.name)
+    if (!hotel || !mapReady || !kakaoMapRef.current) return
 
     const dLat = hotel.lat - activeJob.lat
     const dLng = hotel.lng - activeJob.lng
@@ -337,11 +341,20 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
     })()
 
     return () => { cancelled = true }
-  }, [activeJob, selectedHotel, clearRoute, drawPolyline])
+  }, [activeJob, selectedHotel, clearRoute, drawPolyline, mapReady, visibleHotels])
+
+  useEffect(() => {
+    if (visibleHotels.length === 0) return
+    const stillVisible = visibleHotels.some((hotel) => hotel.name === selectedHotel.name)
+    if (!stillVisible) {
+      const first = visibleHotels[0]
+      onSelect({ id: first.id, name: first.name, price: first.price })
+    }
+  }, [visibleHotels, selectedHotel.name, onSelect])
 
   // 알바 위치로 이동
   useEffect(() => {
-    if (!kakaoMapRef.current) return
+    if (!mapReady || !kakaoMapRef.current) return
 
     if (jobMarkerRef.current) {
       jobMarkerRef.current.setMap(null)
@@ -364,7 +377,7 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
       jobMarker.setMap(kakaoMapRef.current)
       jobMarkerRef.current = jobMarker
     }
-  }, [activeJob])
+  }, [mapReady, activeJob])
 
   return (
     <div className="step-card">
@@ -492,14 +505,19 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
             </div>
           </div>
           <div className="map-result-info">
-            <span>숙소 {hotels.length}개 표시 중</span>
+            <span>숙소 {visibleHotels.length}개 표시 중</span>
             <span style={{ color: '#3B82F6', cursor: 'pointer', fontWeight: 600 }}>거리순 ▾</span>
           </div>
           <div className="acc-list">
-            {[...new Set(hotels.map((h) => h.district))].map((d) => (
+            {noMatchedHotels && (
+              <div className="acc-empty-notice">
+                선택한 일자리 근처에 매칭되는 숙소가 아직 없습니다. 숙소를 선택하지 않아도 다음 단계로 이동할 수 있어요.
+              </div>
+            )}
+            {!noMatchedHotels && [...new Set(visibleHotels.map((h) => h.district))].map((d) => (
               <div key={d}>
                 <div className="acc-sec">📍 {d}</div>
-                {hotels.filter((h) => h.district === d).map((h) => (
+                {visibleHotels.filter((h) => h.district === d).map((h) => (
                   <div
                     key={h.name}
                     className={`acc-card${selectedHotel.name === h.name ? ' selected' : ''}`}
