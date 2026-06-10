@@ -15,28 +15,6 @@ const CALENDAR_DAYS = [
 const HOURS = Array.from({ length: 18 }, (_, index) => index + 6)
 const COLORS = ['#ef7f72', '#6b9ee8', '#9ac768', '#6ec7bd', '#f3bf58', '#9b7ae5', '#f59e73']
 const VIEW_LABELS = { day: '일간', week: '주간', month: '월간' }
-const HOLIDAYS = {
-  '2026-01-01': '신정',
-  '2026-02-16': '설날',
-  '2026-02-17': '설날',
-  '2026-02-18': '설날',
-  '2026-03-01': '삼일절',
-  '2026-03-02': '대체공휴일',
-  '2026-05-05': '어린이날',
-  '2026-05-24': '부처님오신날',
-  '2026-05-25': '대체공휴일',
-  '2026-06-03': '지방선거',
-  '2026-06-06': '현충일',
-  '2026-08-15': '광복절',
-  '2026-08-17': '대체공휴일',
-  '2026-09-24': '추석',
-  '2026-09-25': '추석',
-  '2026-09-26': '추석',
-  '2026-10-03': '개천절',
-  '2026-10-05': '대체공휴일',
-  '2026-10-09': '한글날',
-  '2026-12-25': '성탄절',
-}
 
 function formatDate(value) {
   if (!value) return '-'
@@ -135,13 +113,11 @@ function getMonthDays() {
     const day = new Date(today.getFullYear(), today.getMonth(), date)
     const nativeDay = day.getDay()
     const scheduleDay = nativeDay === 0 ? 6 : nativeDay - 1
-    const dateKey = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(date)}`
     cells.push({
       date,
-      dateKey,
       day: scheduleDay,
       weekend: nativeDay === 0 ? 'sun' : nativeDay === 6 ? 'sat' : null,
-      holiday: HOLIDAYS[dateKey] ?? null,
+      holiday: null,
     })
   }
   return { label: `${today.getFullYear()}년 ${today.getMonth() + 1}월`, cells }

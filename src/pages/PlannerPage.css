@@ -799,7 +799,6 @@
 .leg-dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
 .ld-work { background: #1e3a5f; }
 .ld-rest { background: #f59e0b; }
-.ld-festival { background: #10B981; }
 .ld-today { background: #3B82F6; }
 
 .cal-body { padding: 12px 16px 16px; }
@@ -823,16 +822,13 @@
 .cal-day.empty { cursor: default; }
 .cal-day.work { background: #EFF6FF; border-color: #BFDBFE; }
 .cal-day.rest { background: #FFFBEB; border-color: #FDE68A; }
-.cal-day.festival { background: #ECFDF5; border-color: #A7F3D0; }
 .cal-day.today { border-color: #3B82F6 !important; }
 .day-num { font-size: 11px; font-weight: 700; color: #333; }
 .cal-day.work .day-num { color: #1e3a5f; }
 .cal-day.rest .day-num { color: #d97706; }
-.cal-day.festival .day-num { color: #059669; }
 .day-badge { font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px; }
 .b-work { background: #1e3a5f; color: white; }
 .b-rest { background: #f59e0b; color: white; }
-.b-festival { background: #10B981; color: white; }
 .b-today { background: #3B82F6; color: white; }
 .day-evt { font-size: 9px; color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

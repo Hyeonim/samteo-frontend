@@ -3,48 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import './ExplorePages.css'
 
-const FALLBACK_JOBS = [
-  {
-    id: 'job-001',
-    name: '동성로 카페 스태프',
-    company: 'Samteo Cafe',
-    regionId: 'junggu',
-    region: '대구 중구',
-    type: '서비스',
-    monthlySalary: 2200000,
-    workingDays: '주 5일',
-    commuteMinutes: 18,
-    employmentType: '단기 계약',
-    tags: ['초보 가능', '오전 근무', '역세권'],
-  },
-  {
-    id: 'job-002',
-    name: '관광 안내 보조',
-    company: 'Daegu Tour',
-    regionId: 'donggu',
-    region: '대구 동구',
-    type: '관광',
-    monthlySalary: 2400000,
-    workingDays: '주 5일',
-    commuteMinutes: 25,
-    employmentType: '시즌 근무',
-    tags: ['외국어 우대', '마감 임박', '인기'],
-  },
-  {
-    id: 'job-003',
-    name: '게스트하우스 운영 보조',
-    company: 'Stay Local',
-    regionId: 'suseong',
-    region: '대구 수성구',
-    type: '숙박',
-    monthlySalary: 2300000,
-    workingDays: '주 4일',
-    commuteMinutes: 15,
-    employmentType: '파트타임',
-    tags: ['숙소 연계', '인기', '생활비 절약'],
-  },
-]
-
 const RECOMMEND_TABS = [
   { id: 'all', label: '전체 추천' },
   { id: 'popular', label: '인기' },
@@ -211,7 +169,7 @@ export default function JobsPage() {
   useEffect(() => {
     api.get('/api/planner/jobs')
       .then((res) => setJobs(unwrap(res).map(normalizeJob)))
-      .catch(() => setJobs(FALLBACK_JOBS.map(normalizeJob)))
+      .catch(() => setJobs([]))
       .finally(() => setLoading(false))
   }, [])
 

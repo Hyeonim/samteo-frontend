@@ -14,9 +14,9 @@ const TOTAL = 5
 const FIXED_EXPENSES = 380000
 
 const DEFAULT_HOTEL = {
-  id: 'acc-001',
-  name: '대구 다운타운 호스텔',
-  price: 450000,
+  id: null,
+  name: '',
+  price: 0,
 }
 
 function prepareSeedJob(job) {
@@ -187,7 +187,7 @@ export default function PlannerPage() {
       await api.post('/api/planner', {
         regionId: planner.regionId,
         jobIds: planner.jobs.map((job) => job.id),
-        accommodationId: planner.accommodation.id,
+        accommodationId: planner.accommodation.id ?? null,
         stayMonth: 1,
       })
     } catch {

@@ -1,31 +1,27 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 
 const FIXED_EXPENSES = 380000
 const FOOD = 300000
 const TRANSPORT = 80000
 
-const CHART_DATA = [
-  { month: '1월', income: 65, expense: 45, projected: false },
-  { month: '2월', income: 80, expense: 50, projected: false },
-  { month: '3월', income: 90, expense: 57, projected: false },
-  { month: '4월', income: 110, expense: 64, projected: false },
-  { month: '5월', income: 100, expense: 60, projected: true },
-  { month: '6월', income: 115, expense: 62, projected: true },
-]
-
 export default function Step4Budget({ selectedJobs, selectedHotel }) {
   const [activeJobId, setActiveJobId] = useState(selectedJobs[0]?.id ?? null)
   const sliderRef = useRef(null)
 
-  useEffect(() => {
-    if (selectedJobs.length > 0 && !selectedJobs.find((j) => j.id === activeJobId)) {
-      setActiveJobId(selectedJobs[0].id)
-    }
-    if (selectedJobs.length === 0) setActiveJobId(null)
-  }, [selectedJobs])
-
-  const activeJob = selectedJobs.find((j) => j.id === activeJobId) ?? null
+  const activeJob = selectedJobs.find((j) => j.id === activeJobId) ?? selectedJobs[0] ?? null
   const total = activeJob ? Math.max(0, activeJob.salary - selectedHotel.price - FIXED_EXPENSES) : 0
+  const chartData = activeJob
+    ? Array.from({ length: 6 }, (_, index) => {
+      const month = `${index + 1}개월`
+      const expense = Number(selectedHotel.price ?? 0) + FIXED_EXPENSES
+      return {
+        month,
+        income: Math.max(24, Math.round(Number(activeJob.salary ?? 0) / 30000)),
+        expense: Math.max(18, Math.round(expense / 30000)),
+        projected: index > 0,
+      }
+    })
+    : []
 
   function scrollSlider(dir) {
     sliderRef.current?.scrollBy({ left: dir * 250, behavior: 'smooth' })
@@ -55,7 +51,7 @@ export default function Step4Budget({ selectedJobs, selectedHotel }) {
               {selectedJobs.map((j) => (
                 <div
                   key={j.id}
-                  className={`job-chip${activeJobId === j.id ? ' active' : ''}`}
+                  className={`job-chip${activeJob?.id === j.id ? ' active' : ''}`}
                   onClick={() => setActiveJobId(j.id)}
                 >
                   <span className="job-chip-emoji">{j.emoji}</span>
@@ -113,7 +109,7 @@ export default function Step4Budget({ selectedJobs, selectedHotel }) {
           <div className="budget-right">
             <div className="budget-chart-title">📊 월간 수입 &amp; 지출 추이</div>
             <div className="bar-chart">
-              {CHART_DATA.map((d) => (
+              {chartData.map((d) => (
                 <div key={d.month} className="bar-group">
                   <div className="bars">
                     <div className="bar income" style={{ height: d.income, opacity: d.projected ? 0.45 : 1 }} />

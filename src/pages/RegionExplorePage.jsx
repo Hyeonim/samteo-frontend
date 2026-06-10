@@ -3,27 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import './ExplorePages.css'
 
-const FALLBACK_REGIONS = [
-  {
-    id: 'junggu',
-    name: '대구 중구',
-    summary: '동성로와 대구역 중심의 도심 생활권입니다.',
-    hotPlaceScore: 96,
-    housingCostScore: 62,
-    tags: ['도심', '교통', '문화'],
-    recommendationReasons: ['단기 일자리 접근성이 좋습니다.', '도보와 대중교통 생활에 적합합니다.'],
-  },
-  {
-    id: 'donggu',
-    name: '대구 동구',
-    summary: '동대구역과 공항 접근성이 좋은 이동 중심 지역입니다.',
-    hotPlaceScore: 88,
-    housingCostScore: 70,
-    tags: ['역세권', '관광', '교통'],
-    recommendationReasons: ['관광 서비스 일자리와 잘 맞습니다.', '다른 지역 이동이 편합니다.'],
-  },
-]
-
 function unwrap(res) {
   return res.data ?? res.result ?? res
 }
@@ -37,7 +16,7 @@ export default function RegionExplorePage() {
   useEffect(() => {
     api.get('/api/regions')
       .then((res) => setRegions(unwrap(res)))
-      .catch(() => setRegions(FALLBACK_REGIONS))
+      .catch(() => setRegions([]))
       .finally(() => setLoading(false))
   }, [])
 
@@ -77,7 +56,7 @@ export default function RegionExplorePage() {
         {loading ? (
           <div className="directory-empty">지역 정보를 불러오는 중입니다.</div>
         ) : filtered.length === 0 ? (
-          <div className="directory-empty">검색 조건에 맞는 지역이 없습니다.</div>
+          <div className="directory-empty">표시할 지역 데이터가 없습니다.</div>
         ) : (
           <section className="directory-grid">
             {filtered.map((region) => (
@@ -90,8 +69,8 @@ export default function RegionExplorePage() {
                   <span className="directory-badge">{region.badge ?? '추천'}</span>
                 </div>
                 <div className="directory-metrics">
-                  <div className="directory-metric"><span>핫플 점수</span><strong>{region.hotPlaceScore ?? '-'}점</strong></div>
-                  <div className="directory-metric"><span>주거비 점수</span><strong>{region.housingCostScore ?? '-'}점</strong></div>
+                  <div className="directory-metric"><span>핫플 점수</span><strong>{region.hotPlaceScore ?? '-'}</strong></div>
+                  <div className="directory-metric"><span>주거비 점수</span><strong>{region.housingCostScore ?? '-'}</strong></div>
                 </div>
                 <div className="directory-tags">
                   {(region.tags ?? region.recommendationReasons ?? []).slice(0, 5).map((tag) => (

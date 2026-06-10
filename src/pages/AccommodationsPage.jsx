@@ -3,29 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import './ExplorePages.css'
 
-const FALLBACK_ACCOMMODATIONS = [
-  {
-    id: 'acc-001',
-    name: '대구 다운타운 호스텔',
-    district: '중구',
-    address: '동성로 인근',
-    monthlyPrice: 450000,
-    deposit: 300000,
-    commuteMinutes: 20,
-    tags: ['공유주방', '역세권'],
-  },
-  {
-    id: 'acc-002',
-    name: '동대구 스테이',
-    district: '동구',
-    address: '동대구역 인근',
-    monthlyPrice: 520000,
-    deposit: 500000,
-    commuteMinutes: 18,
-    tags: ['개인실', '교통 편리'],
-  },
-]
-
 function unwrap(res) {
   return res.data ?? res.result ?? res
 }
@@ -39,7 +16,7 @@ export default function AccommodationsPage() {
   useEffect(() => {
     api.get('/api/planner/accommodations')
       .then((res) => setItems(unwrap(res)))
-      .catch(() => setItems(FALLBACK_ACCOMMODATIONS))
+      .catch(() => setItems([]))
       .finally(() => setLoading(false))
   }, [])
 
