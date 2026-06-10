@@ -57,6 +57,10 @@ function minutesToTime(value) {
   return `${pad(Math.floor(value / 60))}:${pad(value % 60)}`
 }
 
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value))
+}
+
 function parseJobTime(job, index) {
   const text = [job.workingDays, job.sub, job.schedule, job.time].filter(Boolean).join(' ')
   const times = [...text.matchAll(/(\d{1,2}:\d{2})/g)].map((match) => match[1])
@@ -154,7 +158,10 @@ function ScheduleBlock({ event, compact = false, onClick }) {
       type="button"
       className={`schedule-block ${event.type}${compact ? ' compact' : ''}`}
       style={{ top, height, background: event.color ?? '#6b9ee8' }}
-      onClick={() => onClick(event)}
+      onClick={(clickEvent) => {
+        clickEvent.stopPropagation()
+        onClick(event)
+      }}
     >
       <strong>{event.title}</strong>
       {!compact && <span>{event.start} - {event.end}</span>}
@@ -175,6 +182,7 @@ export default function MyPlannerPage() {
   const [title, setTitle] = useState(() => activePlanner?.title ?? '')
   const [memo, setMemo] = useState(() => activePlanner?.memo ?? '')
   const [editingId, setEditingId] = useState(null)
+  const [monthDetail, setMonthDetail] = useState(null)
   const [form, setForm] = useState({
     title: '',
     day: 0,
@@ -221,13 +229,14 @@ export default function MyPlannerPage() {
     setMemo(next[0]?.memo ?? '')
   }
 
-  const startCreate = (day = selectedDay) => {
+  const startCreate = (day = selectedDay, startTime = '18:00') => {
+    const start = toMinutes(startTime, 18 * 60)
     setEditingId(null)
     setForm({
       title: '',
       day,
-      start: '18:00',
-      end: '19:00',
+      start: minutesToTime(start),
+      end: minutesToTime(start + 60),
       type: 'personal',
       memo: '',
     })
@@ -280,6 +289,43 @@ export default function MyPlannerPage() {
     persistPlanner({ schedule: schedule.filter((event) => event.id !== editingId) })
     setEditingId(null)
     startCreate()
+  }
+
+  const startCreateAtSlot = (event, day) => {
+    const rect = event.currentTarget.getBoundingClientRect()
+    const hourOffset = clamp(Math.floor((event.clientY - rect.top) / 56), 0, HOURS.length - 1)
+    const start = (HOURS[0] + hourOffset) * 60
+    setSelectedDay(day)
+    setEditingId(null)
+    setForm({
+      title: '',
+      day,
+      start: minutesToTime(start),
+      end: minutesToTime(start + 60),
+      type: 'personal',
+      memo: '',
+    })
+  }
+
+  const startCreateFromMonth = (cell) => {
+    if (!cell) return
+    const events = schedule.filter((event) => event.day === cell.day)
+    const latestEnd = events.reduce((latest, event) => Math.max(latest, toMinutes(event.end, latest)), 8 * 60)
+    const start = clamp(Math.ceil(latestEnd / 60) * 60, HOURS[0] * 60, (HOURS[HOURS.length - 1]) * 60)
+
+    setSelectedDay(cell.day)
+    setViewMode('day')
+    startCreate(cell.day, minutesToTime(start))
+    setMonthDetail(null)
+  }
+
+  const openMonthDetail = (cell) => {
+    if (!cell) return
+    setSelectedDay(cell.day)
+    setMonthDetail({
+      ...cell,
+      events: schedule.filter((event) => event.day === cell.day),
+    })
   }
 
   return (
@@ -381,7 +427,7 @@ export default function MyPlannerPage() {
                             <div className="time-rail">
                               {HOURS.map((hour) => <span key={hour}>{hour}</span>)}
                             </div>
-                            <div className="day-column" onDoubleClick={() => startCreate(selectedDay)}>
+                            <div className="day-column" onClick={(event) => startCreateAtSlot(event, selectedDay)}>
                               {dayEvents.map((event) => (
                                 <ScheduleBlock key={event.id} event={event} onClick={startEdit} />
                               ))}
@@ -409,7 +455,11 @@ export default function MyPlannerPage() {
                               {HOURS.map((hour) => <span key={hour}>{hour}</span>)}
                             </div>
                             {CALENDAR_DAYS.map((day) => (
-                              <div className={`day-column ${day.weekend ?? ''}`} key={day.label} onDoubleClick={() => startCreate(day.value)}>
+                              <div
+                                className={`day-column ${day.weekend ?? ''}`}
+                                key={day.label}
+                                onClick={(event) => startCreateAtSlot(event, day.value)}
+                              >
                                 {schedule.filter((event) => event.day === day.value).map((event) => (
                                   <ScheduleBlock key={event.id} event={event} compact onClick={startEdit} />
                                 ))}
@@ -433,7 +483,7 @@ export default function MyPlannerPage() {
                                   className={`month-cell${cell?.day === selectedDay ? ' active' : ''}${cell?.weekend ? ` ${cell.weekend}` : ''}${cell?.holiday ? ' holiday' : ''}`}
                                   key={`${cell?.date ?? 'blank'}-${index}`}
                                   disabled={!cell}
-                                  onClick={() => cell && setSelectedDay(cell.day)}
+                                  onClick={() => openMonthDetail(cell)}
                                 >
                                   {cell && <strong>{cell.date}</strong>}
                                   {cell?.holiday && <small>{cell.holiday}</small>}
@@ -505,6 +555,53 @@ export default function MyPlannerPage() {
               )}
             </article>
           </section>
+        )}
+        {monthDetail && (
+          <div className="planner-modal-backdrop" onClick={() => setMonthDetail(null)}>
+            <section className="planner-day-modal" onClick={(event) => event.stopPropagation()}>
+              <div className="planner-day-modal-head">
+                <div>
+                  <p>{month.label}</p>
+                  <h2>{monthDetail.date}일 {CALENDAR_DAYS.find((day) => day.value === monthDetail.day)?.label}요일</h2>
+                </div>
+                <button type="button" onClick={() => setMonthDetail(null)} aria-label="닫기">×</button>
+              </div>
+              {monthDetail.holiday && <div className="modal-holiday-label">{monthDetail.holiday}</div>}
+              <div className="modal-event-list">
+                {monthDetail.events.length === 0 ? (
+                  <div className="modal-empty">등록된 일정이 없습니다.</div>
+                ) : (
+                  monthDetail.events
+                    .slice()
+                    .sort((a, b) => toMinutes(a.start, 0) - toMinutes(b.start, 0))
+                    .map((event) => (
+                      <button
+                        type="button"
+                        key={event.id}
+                        className="modal-event-item"
+                        onClick={() => {
+                          setMonthDetail(null)
+                          startEdit(event)
+                        }}
+                      >
+                        <span style={{ background: event.color ?? '#6b9ee8' }} />
+                        <strong>{event.title}</strong>
+                        <em>{event.start} - {event.end}</em>
+                      </button>
+                    ))
+                )}
+              </div>
+              <button
+                type="button"
+                className="directory-btn primary modal-create-btn"
+                onClick={() => {
+                  startCreateFromMonth(monthDetail)
+                }}
+              >
+                이 요일에 일정 추가
+              </button>
+            </section>
+          </div>
         )}
       </div>
     </main>

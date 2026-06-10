@@ -357,7 +357,8 @@
 
 .week-head {
   display: grid;
-  grid-template-columns: 54px repeat(7, minmax(76px, 1fr));
+  grid-template-columns: 54px repeat(7, minmax(0, 1fr));
+  width: 100%;
   border: 1px solid #e5e7eb;
   border-bottom: none;
   border-radius: 8px 8px 0 0;
@@ -399,7 +400,8 @@
 
 .timetable {
   display: grid;
-  grid-template-columns: 54px repeat(7, minmax(76px, 1fr));
+  grid-template-columns: 54px repeat(7, minmax(0, 1fr));
+  width: 100%;
   height: 1008px;
   border: 1px solid #e5e7eb;
   border-radius: 0 0 8px 8px;
@@ -668,6 +670,127 @@
   font-size: 10px;
   font-style: normal;
   font-weight: 900;
+}
+
+.planner-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.34);
+  padding: 24px;
+}
+
+.planner-day-modal {
+  width: min(420px, 100%);
+  border-radius: 10px;
+  background: white;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+  padding: 18px;
+}
+
+.planner-day-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.planner-day-modal-head p {
+  margin: 0 0 4px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.planner-day-modal-head h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.planner-day-modal-head button {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: white;
+  color: #64748b;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modal-holiday-label {
+  display: inline-flex;
+  margin-bottom: 12px;
+  border-radius: 999px;
+  background: #ffe4e6;
+  color: #be123c;
+  padding: 5px 9px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.modal-event-list {
+  display: grid;
+  gap: 8px;
+  max-height: 360px;
+  overflow: auto;
+}
+
+.modal-empty {
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  color: #64748b;
+  padding: 28px 12px;
+  text-align: center;
+  font-size: 13px;
+}
+
+.modal-event-item {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 10px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.modal-event-item span {
+  width: 10px;
+  height: 38px;
+  border-radius: 999px;
+}
+
+.modal-event-item strong {
+  min-width: 0;
+  color: #0f172a;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modal-event-item em {
+  color: #64748b;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.modal-create-btn {
+  width: 100%;
+  margin-top: 14px;
 }
 
 .community-list {
