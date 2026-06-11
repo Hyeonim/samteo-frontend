@@ -13,6 +13,7 @@ function Header() {
 
   const links = [
     { to: '/jobs', label: '일자리' },
+    { to: '/events', label: '이벤트' },
     ...(isLoggedIn ? [{ to: '/my-planner', label: '내 플래너' }] : []),
     { to: '/community', label: '커뮤니티' },
   ]

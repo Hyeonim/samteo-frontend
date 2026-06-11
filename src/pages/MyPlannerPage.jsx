@@ -92,11 +92,12 @@ function normalizeWorkColors(schedule) {
 }
 
 function getSchedule(planner) {
-  const schedule = Array.isArray(planner?.schedule) && planner.schedule.length > 0
-    ? planner.schedule
-    : createJobSchedule(planner ?? {})
+  const generated = createJobSchedule(planner ?? {})
+  const saved = Array.isArray(planner?.schedule) ? planner.schedule : []
+  const savedIds = new Set(saved.map((event) => event.id))
+  const generatedOnly = generated.filter((event) => !savedIds.has(event.id))
 
-  return normalizeWorkColors(schedule)
+  return normalizeWorkColors([...generatedOnly, ...saved])
 }
 
 function getMonthDays() {
@@ -115,6 +116,7 @@ function getMonthDays() {
     const scheduleDay = nativeDay === 0 ? 6 : nativeDay - 1
     cells.push({
       date,
+      dateKey: `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(date)}`,
       day: scheduleDay,
       weekend: nativeDay === 0 ? 'sun' : nativeDay === 6 ? 'sat' : null,
       holiday: null,
@@ -159,6 +161,7 @@ export default function MyPlannerPage() {
   const [memo, setMemo] = useState(() => activePlanner?.memo ?? '')
   const [editingId, setEditingId] = useState(null)
   const [monthDetail, setMonthDetail] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
   const [form, setForm] = useState({
     title: '',
     day: 0,
@@ -203,6 +206,7 @@ export default function MyPlannerPage() {
     setActiveId(next[0]?.id ?? null)
     setTitle(next[0]?.title ?? '')
     setMemo(next[0]?.memo ?? '')
+    setDeleteTarget(null)
   }
 
   const startCreate = (day = selectedDay, startTime = '18:00') => {
@@ -247,7 +251,7 @@ export default function MyPlannerPage() {
       title: form.title.trim(),
       day: Number(form.day),
       end: minutesToTime(Math.max(end, start + 30)),
-      color: form.type === 'work' ? (matchingWorkColor ?? COLORS[0]) : form.type === 'study' ? COLORS[2] : form.type === 'rest' ? COLORS[3] : COLORS[5],
+      color: form.type === 'work' ? (matchingWorkColor ?? COLORS[0]) : form.type === 'study' ? COLORS[2] : form.type === 'rest' ? COLORS[3] : form.type === 'event' ? '#8b5cf6' : COLORS[5],
       locked: false,
     }
     const nextSchedule = editingId
@@ -265,6 +269,11 @@ export default function MyPlannerPage() {
     persistPlanner({ schedule: schedule.filter((event) => event.id !== editingId) })
     setEditingId(null)
     startCreate()
+  }
+
+  const goToEvents = () => {
+    if (!activePlanner) return
+    navigate('/events', { state: { plannerId: activePlanner.id } })
   }
 
   const startCreateAtSlot = (event, day) => {
@@ -300,7 +309,7 @@ export default function MyPlannerPage() {
     setSelectedDay(cell.day)
     setMonthDetail({
       ...cell,
-      events: schedule.filter((event) => event.day === cell.day),
+      events: schedule.filter((event) => (event.dateKey ? event.dateKey === cell.dateKey : event.day === cell.day)),
     })
   }
 
@@ -355,7 +364,7 @@ export default function MyPlannerPage() {
                     </div>
                     <div className="planner-top-actions">
                       <button className="directory-btn primary" onClick={saveSummary}>저장</button>
-                      <button className="directory-btn" onClick={removePlanner}>삭제</button>
+                      <button className="directory-btn" onClick={() => setDeleteTarget(activePlanner)}>삭제</button>
                     </div>
                   </div>
 
@@ -453,7 +462,7 @@ export default function MyPlannerPage() {
                               <div className={`month-weekday ${day.weekend ?? ''}`} key={day.label}>{day.label}</div>
                             ))}
                             {month.cells.map((cell, index) => {
-                              const events = cell ? schedule.filter((event) => event.day === cell.day) : []
+                              const events = cell ? schedule.filter((event) => (event.dateKey ? event.dateKey === cell.dateKey : event.day === cell.day)) : []
                               return (
                                 <button
                                   className={`month-cell${cell?.day === selectedDay ? ' active' : ''}${cell?.weekend ? ` ${cell.weekend}` : ''}${cell?.holiday ? ' holiday' : ''}`}
@@ -477,6 +486,15 @@ export default function MyPlannerPage() {
 
                     <aside className="schedule-editor">
                       <div className="planner-panel-title">{editingId ? '일정 수정' : '일정 추가'}</div>
+                      {!editingId && (
+                        <div className="schedule-event-finder">
+                          <div>
+                            <strong>빈 시간에 갈 곳을 찾고 있나요?</strong>
+                            <p>현재 플래너 지역 기준 축제를 추천받아 일정에 담을 수 있어요.</p>
+                          </div>
+                          <button type="button" className="directory-btn" onClick={goToEvents}>이벤트 찾기</button>
+                        </div>
+                      )}
                       <label>
                         제목
                         <input
@@ -513,6 +531,7 @@ export default function MyPlannerPage() {
                           <option value="study">준비/학습</option>
                           <option value="rest">휴식</option>
                           <option value="work">근무</option>
+                          <option value="event">행사/이벤트</option>
                         </select>
                       </label>
                       <label>
@@ -576,6 +595,18 @@ export default function MyPlannerPage() {
               >
                 이 요일에 일정 추가
               </button>
+            </section>
+          </div>
+        )}
+        {deleteTarget && (
+          <div className="planner-modal-backdrop" onClick={() => setDeleteTarget(null)}>
+            <section className="planner-confirm-modal" onClick={(event) => event.stopPropagation()}>
+              <h2>플래너를 삭제할까요?</h2>
+              <p><strong>{deleteTarget.title}</strong> 플래너와 직접 추가한 시간표가 함께 삭제됩니다.</p>
+              <div className="confirm-actions">
+                <button className="directory-btn" onClick={() => setDeleteTarget(null)}>아니오</button>
+                <button className="directory-btn danger solid" onClick={removePlanner}>예, 삭제</button>
+              </div>
             </section>
           </div>
         )}

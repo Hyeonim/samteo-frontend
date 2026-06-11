@@ -502,6 +502,34 @@
   padding: 14px;
 }
 
+.schedule-event-finder {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  background: #eff6ff;
+  padding: 12px;
+}
+
+.schedule-event-finder strong {
+  display: block;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.schedule-event-finder p {
+  margin: 4px 0 0;
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.schedule-event-finder .directory-btn {
+  width: 100%;
+  background: white;
+}
+
 .schedule-editor label {
   display: grid;
   gap: 6px;
@@ -540,6 +568,12 @@
 .directory-btn.danger {
   border-color: #fecdd3;
   color: #e11d48;
+}
+
+.directory-btn.danger.solid {
+  border-color: #e11d48;
+  background: #e11d48;
+  color: white;
 }
 
 .directory-btn:disabled {
@@ -689,6 +723,34 @@
   background: white;
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
   padding: 18px;
+}
+
+.planner-confirm-modal {
+  width: min(380px, 100%);
+  border-radius: 10px;
+  background: white;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+  padding: 22px;
+}
+
+.planner-confirm-modal h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.planner-confirm-modal p {
+  margin: 10px 0 18px;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .planner-day-modal-head {
@@ -948,6 +1010,268 @@
   cursor: pointer;
 }
 
+.events-page .directory-shell {
+  max-width: 1180px;
+}
+
+.event-hero-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  margin-bottom: 14px;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #ffffff, #eff6ff);
+  padding: 20px;
+}
+
+.event-hero-main h2 {
+  margin: 10px 0 6px;
+  color: #0f172a;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.event-hero-main p {
+  margin: 0;
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.event-region-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: #1d4ed8;
+  color: white;
+  padding: 7px 11px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.event-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 100px);
+  gap: 10px;
+}
+
+.event-hero-stats div {
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.86);
+  padding: 12px;
+}
+
+.event-hero-stats span {
+  display: block;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.event-hero-stats strong {
+  display: block;
+  margin-top: 5px;
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.event-controls {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.event-quick-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.event-quick-filters button {
+  min-height: 40px;
+  border: 1px solid #dbe3ef;
+  border-radius: 999px;
+  background: white;
+  color: #475569;
+  padding: 0 15px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.event-quick-filters button.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.event-filter-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  padding: 14px;
+}
+
+.event-filter-panel label {
+  display: grid;
+  gap: 6px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.event-filter-panel select {
+  min-width: 0;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: white;
+  color: #0f172a;
+  padding: 10px;
+  font: inherit;
+  outline: none;
+}
+
+.event-category-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.event-category-tabs button,
+.event-mode-row button {
+  border: 1px solid #dbe3ef;
+  border-radius: 999px;
+  background: white;
+  color: #475569;
+  padding: 9px 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.event-category-tabs button.active,
+.event-mode-row button.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.event-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.event-card {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  padding: 16px;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
+}
+
+.event-date-card {
+  display: grid;
+  place-items: center;
+  min-height: 82px;
+  border-radius: 8px;
+  background: #0f172a;
+  color: white;
+  text-align: center;
+}
+
+.event-date-card span {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.event-date-card strong {
+  margin-top: 4px;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.event-card-body {
+  min-width: 0;
+}
+
+.event-card h2 {
+  margin: 8px 0 6px;
+  color: #0f172a;
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.event-card p {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.event-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.event-add-modal {
+  display: grid;
+  gap: 12px;
+  width: min(460px, 100%);
+  border-radius: 10px;
+  background: white;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+  padding: 18px;
+}
+
+.event-add-modal label {
+  display: grid;
+  gap: 6px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.event-add-modal select,
+.event-add-modal input {
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: white;
+  padding: 10px;
+  font: inherit;
+  outline: none;
+}
+
+.event-mode-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.event-notice {
+  border-radius: 8px;
+  background: #ecfdf5;
+  color: #047857;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
 @media (max-width: 900px) {
   .directory-head,
   .directory-toolbar {
@@ -956,6 +1280,9 @@
   }
 
   .directory-grid,
+  .event-grid,
+  .event-filter-panel,
+  .event-hero-panel,
   .planner-list,
   .planner-workbench,
   .planner-scheduler,
@@ -967,6 +1294,19 @@
   .planner-topbar,
   .planner-form.inline {
     grid-template-columns: 1fr;
+  }
+
+  .event-card {
+    grid-template-columns: 70px minmax(0, 1fr);
+  }
+
+  .event-card .directory-btn {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .event-hero-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .planner-top-actions,

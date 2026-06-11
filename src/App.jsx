@@ -6,6 +6,7 @@ import RegionExplorePage from './pages/RegionExplorePage'
 import JobsPage from './pages/JobsPage'
 import AccommodationsPage from './pages/AccommodationsPage'
 import MyPlannerPage from './pages/MyPlannerPage'
+import EventsPage from './pages/EventsPage'
 import CommunityPage from './pages/CommunityPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -22,6 +23,7 @@ function App() {
           <Route path="/regions" element={<RegionExplorePage />} />
           <Route path="/jobs" element={<JobsPage />} />
           <Route path="/accommodations" element={<AccommodationsPage />} />
+          <Route path="/events" element={<EventsPage />} />
           <Route path="/my-planner" element={<MyPlannerPage />} />
           <Route path="/community" element={<CommunityPage />} />
           <Route path="/login" element={<LoginPage />} />
