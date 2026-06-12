@@ -194,19 +194,17 @@ export default function Step2Jobs({
   const [activeType, setActiveType] = useState('전체')
 
   useEffect(() => {
+    if (!cityId) return
     setLoading(true)
     setSearch('')
     setActiveType('전체')
-    api.get('/api/planner/jobs')
+    api.get(`/api/planner/jobs?cityId=${cityId}`)
       .then((res) => setJobs(unwrap(res).map(normalizeJob)))
       .catch(() => setJobs([]))
       .finally(() => setLoading(false))
   }, [cityId])
 
-  const cityJobs = useMemo(
-    () => jobs.filter((job) => job.cityId === cityId),
-    [jobs, cityId]
-  )
+  const cityJobs = useMemo(() => jobs, [jobs])
 
   const districts = useMemo(() => {
     const map = new Map()

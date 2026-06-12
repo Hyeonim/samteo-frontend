@@ -14,33 +14,26 @@ function unwrap(res) {
   return res.data ?? res.result ?? res
 }
 
-function getCityOptions(jobs) {
-  const options = new Map()
-
-  jobs.forEach((job) => {
-    const cityId = job.cityId
-    const cityName = job.cityName ?? job.city ?? job.region
-    if (!cityId || !cityName) return
-
-    const prev = options.get(cityId)
-    options.set(cityId, {
-      id: cityId,
-      name: cityName,
-      count: (prev?.count ?? 0) + 1,
-    })
-  })
-
-  return [...options.values()].sort((a, b) => a.name.localeCompare(b.name, 'ko'))
-}
-
 export default function Step1Region({ selectedRegion, onSelect }) {
   const [search, setSearch] = useState('')
   const [regions, setRegions] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.get('/api/planner/jobs')
-      .then((res) => setRegions(getCityOptions(unwrap(res))))
+    api.get('/api/regions')
+      .then((res) => {
+        const data = unwrap(res)
+        const cityMap = new Map()
+        data.forEach((region) => {
+          const cityId = region.id.split('-')[0]
+          const cityName = region.name.split(' ')[0]
+          if (!cityMap.has(cityId)) {
+            cityMap.set(cityId, { id: cityId, name: cityName, count: 0 })
+          }
+          cityMap.get(cityId).count += 1
+        })
+        setRegions([...cityMap.values()].sort((a, b) => a.name.localeCompare(b.name, 'ko')))
+      })
       .catch(() => setRegions([]))
       .finally(() => setLoading(false))
   }, [])
