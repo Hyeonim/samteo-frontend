@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../api'
+import LoadingScreen from '../components/common/LoadingScreen'
 import { getStoredPlanners, saveStoredPlanner } from '../utils/plannerStorage'
 import './ExplorePages.css'
 
@@ -75,6 +76,17 @@ function matchesRegion(festival, region) {
   ))
 }
 
+function isDisplayableRegion(region) {
+  const value = String(region ?? '').trim()
+  return Boolean(value) && !/^\d+$/.test(value)
+}
+
+function sanitizeFestival(festival) {
+  return isDisplayableRegion(festival.location)
+    ? festival
+    : { ...festival, location: null }
+}
+
 function buildWorkSchedule(planner) {
   return (planner.jobs ?? []).flatMap((job, jobIndex) => [0, 1, 2, 3, 4].map((day) => ({
     id: `work-${planner.id}-${job.id ?? jobIndex}-${day}`,
@@ -129,7 +141,7 @@ export default function EventsPage() {
           result.status === 'fulfilled' ? unwrap(result.value) : []
         ))
         const unique = new Map()
-        items.forEach((item) => {
+        items.map(sanitizeFestival).forEach((item) => {
           const key = `${item.title}-${item.startDate}-${item.endDate}`
           unique.set(key, item)
         })
@@ -145,7 +157,7 @@ export default function EventsPage() {
 
   const recommendedRegion = plannerRegion(selectedPlanner)
   const availableRegions = useMemo(() => (
-    [...new Set(festivals.map((festival) => festival.location).filter(Boolean))]
+    [...new Set(festivals.map((festival) => festival.location).filter(isDisplayableRegion))]
       .sort((a, b) => a.localeCompare(b, 'ko'))
   ), [festivals])
 
@@ -297,9 +309,9 @@ export default function EventsPage() {
         {category === 'attractions' ? (
           <div className="directory-empty">관광지 데이터 API가 연결되면 지역별 운영시간과 휴무일을 확인하고 플래너에 담을 수 있습니다.</div>
         ) : loading ? (
-          <div className="directory-empty">축제 정보를 불러오는 중입니다.</div>
+          <LoadingScreen message="축제 정보를 불러오는 중입니다" description="적재된 이벤트 데이터를 확인하고 있습니다." />
         ) : festivals.length === 0 ? (
-          <div className="directory-empty">표시할 축제 데이터가 없습니다. TourAPI 또는 백엔드 응답을 확인해 주세요.</div>
+          <div className="directory-empty">표시할 축제 데이터가 없습니다. 적재 데이터 또는 백엔드 응답을 확인해 주세요.</div>
         ) : visibleFestivals.length === 0 ? (
           <div className="directory-empty">
             {recommendedRegion ? `${recommendedRegion} 근처 축제가 없습니다. 전체 보기로 다른 지역 이벤트를 확인해 보세요.` : '선택한 지역의 축제가 없습니다.'}

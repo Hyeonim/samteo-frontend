@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
+import LoadingScreen from '../components/common/LoadingScreen'
 import './ExplorePages.css'
 
 function unwrap(res) {
@@ -54,7 +55,7 @@ export default function RegionExplorePage() {
         </div>
 
         {loading ? (
-          <div className="directory-empty">지역 정보를 불러오는 중입니다.</div>
+          <LoadingScreen message="지역 정보를 불러오는 중입니다" description="추천 지역과 생활 정보를 준비하고 있습니다." />
         ) : filtered.length === 0 ? (
           <div className="directory-empty">표시할 지역 데이터가 없습니다.</div>
         ) : (

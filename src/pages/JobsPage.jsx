@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
+import LoadingScreen from '../components/common/LoadingScreen'
 import './ExplorePages.css'
 
 const RECOMMEND_TABS = [
@@ -257,7 +258,7 @@ export default function JobsPage() {
         </div>
 
         {loading ? (
-          <div className="directory-empty">추천 일자리를 불러오는 중입니다.</div>
+          <LoadingScreen message="추천 일자리를 불러오는 중입니다" description="지역과 조건에 맞는 공고를 준비하고 있습니다." />
         ) : filtered.length === 0 ? (
           <div className="directory-empty">조건에 맞는 추천 일자리가 없습니다.</div>
         ) : (

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
+import LoadingScreen from '../components/common/LoadingScreen'
 import './ExplorePages.css'
 
 function unwrap(res) {
@@ -49,7 +50,7 @@ export default function AccommodationsPage() {
         </div>
 
         {loading ? (
-          <div className="directory-empty">숙소 정보를 불러오는 중입니다.</div>
+          <LoadingScreen message="숙소 정보를 불러오는 중입니다" description="가격과 위치 정보를 정리하고 있습니다." />
         ) : filtered.length === 0 ? (
           <div className="directory-empty">검색 조건에 맞는 숙소가 없습니다.</div>
         ) : (

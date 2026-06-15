@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { api } from '../api'
+import LoadingScreen from '../components/common/LoadingScreen'
 
 function OAuthCallbackPage() {
   const [searchParams] = useSearchParams()
@@ -26,9 +26,7 @@ function OAuthCallbackPage() {
   }, [])
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', color: '#6b7280' }}>
-      로그인 처리 중...
-    </div>
+    <LoadingScreen variant="page" message="로그인 처리 중입니다" description="인증 정보를 확인하고 있습니다." />
   )
 }
 
