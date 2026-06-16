@@ -125,6 +125,8 @@ export default function EventsPage() {
   const [planners, setPlanners] = useState(() => initialPlanners)
   const [selectedPlannerId, setSelectedPlannerId] = useState(location.state?.plannerId ?? initialPlanners[0]?.id ?? '')
   const [regionFilter, setRegionFilter] = useState('planner')
+  const [selectedRegions, setSelectedRegions] = useState([])
+  const [regionMenuOpen, setRegionMenuOpen] = useState(false)
   const [selectedFestival, setSelectedFestival] = useState(null)
   const [selectedDate, setSelectedDate] = useState('')
   const [mode, setMode] = useState('single')
@@ -162,16 +164,23 @@ export default function EventsPage() {
   ), [festivals])
 
   const visibleFestivals = useMemo(() => {
-    if (regionFilter === 'all') return festivals
+    if (regionFilter === 'all') {
+      if (selectedRegions.length === 0) return festivals
+      return festivals.filter((festival) => selectedRegions.some((region) => matchesRegion(festival, region)))
+    }
     const region = regionFilter === 'planner' ? recommendedRegion : regionFilter
     return festivals.filter((festival) => matchesRegion(festival, region))
-  }, [festivals, regionFilter, recommendedRegion])
+  }, [festivals, regionFilter, recommendedRegion, selectedRegions])
 
   const activeRegionLabel = regionFilter === 'all'
-    ? '전체 지역'
+    ? (selectedRegions.length > 0 ? `${selectedRegions.length}개 지역` : '전체 지역')
     : regionFilter === 'planner'
       ? (recommendedRegion || '플래너 지역')
       : regionFilter
+
+  const selectableRegions = useMemo(() => (
+    availableRegions.filter((region) => !selectedRegions.includes(region))
+  ), [availableRegions, selectedRegions])
 
   const festivalDates = useMemo(() => (
     selectedFestival ? dateRange(selectedFestival.startDate, selectedFestival.endDate) : []
@@ -183,6 +192,21 @@ export default function EventsPage() {
     setSelectedDate(dates[0] ? toDateKey(dates[0]) : '')
     setMode('single')
     setNotice('')
+  }
+
+  const addRegionFilter = (region) => {
+    if (!region) return
+    setRegionFilter('all')
+    setRegionMenuOpen(false)
+    if (region === 'all') {
+      setSelectedRegions([])
+      return
+    }
+    setSelectedRegions((prev) => (prev.includes(region) ? prev : [...prev, region]))
+  }
+
+  const removeRegionFilter = (region) => {
+    setSelectedRegions((prev) => prev.filter((item) => item !== region))
   }
 
   const addToPlanner = () => {
@@ -232,11 +256,21 @@ export default function EventsPage() {
         <section className="event-hero-panel" aria-label="이벤트 추천 기준">
           <div className="event-hero-main">
             <span className="event-region-pill">{activeRegionLabel}</span>
-            <h2>{regionFilter === 'planner' ? '일자리·숙소 근처 추천' : `${activeRegionLabel} 이벤트 보기`}</h2>
+            <h2>
+              {regionFilter === 'planner'
+                ? '일자리·숙소 근처 추천'
+                : selectedRegions.length > 0
+                  ? '선택 지역 이벤트 보기'
+                  : '전체 지역 이벤트 보기'}
+            </h2>
             <p>
-              {selectedPlanner
-                ? `${selectedPlanner.title}의 일자리와 숙소 위치를 기준으로 가까운 이벤트를 먼저 보여드려요.`
-                : '저장된 플래너가 없으면 전체 지역에서 탐색할 수 있습니다.'}
+              {regionFilter === 'planner'
+                ? selectedPlanner
+                  ? `${selectedPlanner.title}의 일자리와 숙소 위치를 기준으로 가까운 이벤트를 먼저 보여드려요.`
+                  : '저장된 플래너가 없으면 전체 지역에서 탐색할 수 있습니다.'
+                : selectedRegions.length > 0
+                  ? `${selectedRegions.join(', ')} 지역의 이벤트를 모아 보여드려요.`
+                  : '보고 싶은 지역을 담아 여러 지역의 이벤트를 한 번에 비교할 수 있습니다.'}
             </p>
           </div>
           <div className="event-hero-stats">
@@ -255,28 +289,68 @@ export default function EventsPage() {
           <div className="event-quick-filters">
             <button
               className={regionFilter === 'planner' ? 'active' : ''}
-              onClick={() => setRegionFilter('planner')}
+              onClick={() => {
+                setRegionFilter('planner')
+                setRegionMenuOpen(false)
+              }}
               aria-pressed={regionFilter === 'planner'}
             >
               일자리·숙소 근처
             </button>
             <button
               className={regionFilter !== 'planner' ? 'active' : ''}
-              onClick={() => setRegionFilter('all')}
+              onClick={() => {
+                setRegionFilter('all')
+                setRegionMenuOpen(false)
+              }}
               aria-pressed={regionFilter !== 'planner'}
             >
               전체 보기
             </button>
           </div>
           {regionFilter !== 'planner' && (
-            <div className="event-filter-panel compact">
-              <label>
-                다른 지역 선택
-                <select value={regionFilter} onChange={(event) => setRegionFilter(event.target.value)}>
-                  <option value="all">전체 지역</option>
-                  {availableRegions.map((region) => <option key={region} value={region}>{region}</option>)}
-                </select>
-              </label>
+            <div className="event-region-picker">
+              <div className="event-region-picker__select">
+                <span>지역 담기</span>
+                <button
+                  type="button"
+                  className={`event-region-select${regionMenuOpen ? ' open' : ''}`}
+                  onClick={() => setRegionMenuOpen((prev) => !prev)}
+                  aria-haspopup="listbox"
+                  aria-expanded={regionMenuOpen}
+                >
+                  <span>{selectedRegions.length === 0 ? '전체 지역' : '지역 추가하기'}</span>
+                  <span className="event-region-select__arrow" aria-hidden="true">⌄</span>
+                </button>
+                {regionMenuOpen && (
+                  <div className="event-region-menu" role="listbox">
+                    <button
+                      type="button"
+                      className={selectedRegions.length === 0 ? 'active' : ''}
+                      onClick={() => addRegionFilter('all')}
+                    >
+                      전체 지역
+                    </button>
+                    {selectableRegions.map((region) => (
+                      <button type="button" key={region} onClick={() => addRegionFilter(region)}>
+                        {region}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="event-region-tray" aria-label="선택한 지역">
+                {selectedRegions.length === 0 ? (
+                  <span className="event-region-empty">전체 지역</span>
+                ) : (
+                  selectedRegions.map((region) => (
+                    <span className="event-region-chip" key={region}>
+                      {region}
+                      <button type="button" onClick={() => removeRegionFilter(region)} aria-label={`${region} 제거`}>x</button>
+                    </span>
+                  ))
+                )}
+              </div>
             </div>
           )}
         </section>
