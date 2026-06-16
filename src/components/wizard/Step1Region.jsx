@@ -10,8 +10,44 @@ const CARD_BACKGROUNDS = [
   'linear-gradient(160deg, #1a3320, #2d6040)',
 ]
 
+const CITY_IDS = new Set([
+  'seoul',
+  'busan',
+  'daegu',
+  'jeju',
+  'gangneung',
+  'jeonju',
+  'gyeongju',
+  'incheon',
+  'yeosu',
+  'sokcho',
+  'gwangju',
+  'daejeon',
+])
+
 function unwrap(res) {
   return res.data ?? res.result ?? res
+}
+
+function getCityId(region) {
+  const tagCityId = (region.tags ?? []).find((tag) => CITY_IDS.has(tag))
+  if (tagCityId) return tagCityId
+  if (region.cityId) return region.cityId
+  if (region.id.includes('-')) return region.id.split('-')[0]
+  return region.id
+}
+
+function getCityName(region) {
+  return region.cityName ?? region.name.split(' ')[0]
+}
+
+function countJobsByCity(jobs) {
+  const counts = new Map()
+  jobs.forEach((job) => {
+    if (!job.cityId) return
+    counts.set(job.cityId, (counts.get(job.cityId) ?? 0) + 1)
+  })
+  return counts
 }
 
 export default function Step1Region({ selectedRegion, onSelect }) {
@@ -20,19 +56,25 @@ export default function Step1Region({ selectedRegion, onSelect }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.get('/api/regions')
-      .then((res) => {
-        const data = unwrap(res)
+    Promise.all([
+      api.get('/api/regions'),
+      api.get('/api/planner/jobs'),
+    ])
+      .then(([regionRes, jobRes]) => {
+        const data = unwrap(regionRes)
+        const jobCounts = countJobsByCity(unwrap(jobRes))
         const cityMap = new Map()
         data.forEach((region) => {
-          const cityId = region.id.split('-')[0]
-          const cityName = region.name.split(' ')[0]
+          const cityId = getCityId(region)
+          const cityName = getCityName(region)
           if (!cityMap.has(cityId)) {
             cityMap.set(cityId, { id: cityId, name: cityName, count: 0 })
           }
-          cityMap.get(cityId).count += 1
+          cityMap.get(cityId).count = jobCounts.get(cityId) ?? 0
         })
-        setRegions([...cityMap.values()].sort((a, b) => a.name.localeCompare(b.name, 'ko')))
+        setRegions([...cityMap.values()]
+          .filter((city) => city.count > 0)
+          .sort((a, b) => a.name.localeCompare(b.name, 'ko')))
       })
       .catch(() => setRegions([]))
       .finally(() => setLoading(false))

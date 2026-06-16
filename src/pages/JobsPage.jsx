@@ -159,6 +159,12 @@ function sectionJobs(jobs, section) {
   return jobs
 }
 
+const JOB_CARD_THEMES = ['ocean', 'forest', 'berry', 'amber', 'mint', 'slate']
+
+function getJobCardTheme(index) {
+  return JOB_CARD_THEMES[index % JOB_CARD_THEMES.length]
+}
+
 export default function JobsPage() {
   const navigate = useNavigate()
   const [jobs, setJobs] = useState([])
@@ -166,6 +172,7 @@ export default function JobsPage() {
   const [type, setType] = useState('전체')
   const [activeTab, setActiveTab] = useState('all')
   const [loading, setLoading] = useState(true)
+  const [viewMode, setViewMode] = useState('card')
 
   useEffect(() => {
     api.get('/api/planner/jobs')
@@ -255,12 +262,71 @@ export default function JobsPage() {
           <select className="directory-select" value={type} onChange={(event) => setType(event.target.value)}>
             {types.map((item) => <option key={item}>{item}</option>)}
           </select>
+          <div className={`job-view-toggle ${viewMode === 'list' ? 'is-list' : 'is-card'}`} aria-label="일자리 보기 방식">
+            <button
+              type="button"
+              className={viewMode === 'card' ? 'active' : ''}
+              aria-label="카드형 보기"
+              title="카드형 보기"
+              onClick={() => setViewMode('card')}
+            >
+              <span className="job-view-icon grid" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+                <span />
+              </span>
+            </button>
+            <button
+              type="button"
+              className={viewMode === 'list' ? 'active' : ''}
+              aria-label="리스트형 보기"
+              title="리스트형 보기"
+              onClick={() => setViewMode('list')}
+            >
+              <span className="job-view-icon list" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </span>
+            </button>
+          </div>
         </div>
 
         {loading ? (
           <LoadingScreen message="추천 일자리를 불러오는 중입니다" description="지역과 조건에 맞는 공고를 준비하고 있습니다." />
         ) : filtered.length === 0 ? (
           <div className="directory-empty">조건에 맞는 추천 일자리가 없습니다.</div>
+        ) : viewMode === 'card' ? (
+          <section className="job-recommend-grid">
+            {filtered.map((job, index) => (
+              <article className="job-shop-card" key={job.id}>
+                <div className={`job-shop-visual ${getJobCardTheme(index)}`}>
+                  <span className="job-shop-badge">{job.daysLeft <= 2 ? `D-${job.daysLeft}` : job.type}</span>
+                  <span className="job-shop-emoji">{job.emoji}</span>
+                  <div>
+                    <strong>{job.region}</strong>
+                    <span>{job.company ?? '추천 근무지'}</span>
+                  </div>
+                </div>
+                <div className="job-shop-body">
+                  <div className="job-shop-title-row">
+                    <h2>{job.name}</h2>
+                    <span>{job.popularity}</span>
+                  </div>
+                  <p className="job-shop-reason">{job.recommendReason}</p>
+                  <div className="job-shop-meta">
+                    <div><span>예상 급여</span><strong>{job.salary.toLocaleString()}원</strong></div>
+                    <div><span>출퇴근</span><strong>{job.commute}분</strong></div>
+                  </div>
+                  <div className="directory-tags job-shop-tags">
+                    {job.tags.slice(0, 3).map((tag) => <span className="directory-tag" key={tag}>{tag}</span>)}
+                  </div>
+                  <button className="job-card-action" onClick={() => startAccommodationMatching(job)}>숙소 매칭 시작</button>
+                </div>
+              </article>
+            ))}
+          </section>
         ) : (
           <section className="job-recommend-list">
             {filtered.map((job) => (

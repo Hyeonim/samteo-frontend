@@ -868,6 +868,11 @@
   align-items: center;
 }
 
+.jobs-page .directory-toolbar {
+  grid-template-columns: minmax(0, 1fr) minmax(150px, auto) auto;
+  align-items: center;
+}
+
 .job-highlight-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -941,9 +946,278 @@
   color: #1d4ed8;
 }
 
+.job-view-toggle {
+  --job-view-thumb-width: 38px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid #dbe3ef;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 4px;
+}
+
+.job-view-toggle::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: var(--job-view-thumb-width);
+  height: 36px;
+  border-radius: 7px;
+  background: white;
+  box-shadow: 0 1px 5px rgba(15, 23, 42, 0.1);
+  transform: translateX(0);
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.job-view-toggle.is-list::before {
+  transform: translateX(calc(var(--job-view-thumb-width) + 4px));
+}
+
+.job-view-toggle button {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 38px;
+  height: 36px;
+  place-items: center;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: #64748b;
+  padding: 0;
+  cursor: pointer;
+  transition: color 160ms ease, transform 160ms ease;
+}
+
+.job-view-toggle button.active {
+  color: #2563eb;
+  transform: scale(1.04);
+}
+
+.job-view-icon {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  gap: 3px;
+}
+
+.job-view-icon.grid {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.job-view-icon.grid span {
+  border-radius: 3px;
+  background: currentColor;
+}
+
+.job-view-icon.list {
+  grid-template-rows: repeat(3, 1fr);
+}
+
+.job-view-icon.list span {
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.job-recommend-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.job-shop-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.job-shop-visual {
+  position: relative;
+  display: flex;
+  min-height: 184px;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px;
+  color: white;
+  overflow: hidden;
+}
+
+.job-shop-visual::after {
+  content: '';
+  position: absolute;
+  right: -36px;
+  bottom: -48px;
+  width: 150px;
+  height: 150px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.job-shop-visual.ocean {
+  background: linear-gradient(135deg, #17365f, #2563eb);
+}
+
+.job-shop-visual.forest {
+  background: linear-gradient(135deg, #064e3b, #059669);
+}
+
+.job-shop-visual.berry {
+  background: linear-gradient(135deg, #581c87, #c026d3);
+}
+
+.job-shop-visual.amber {
+  background: linear-gradient(135deg, #713f12, #d97706);
+}
+
+.job-shop-visual.mint {
+  background: linear-gradient(135deg, #0f766e, #14b8a6);
+}
+
+.job-shop-visual.slate {
+  background: linear-gradient(135deg, #0f172a, #475569);
+}
+
+.job-shop-badge {
+  position: relative;
+  z-index: 1;
+  align-self: flex-start;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1d4ed8;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.job-shop-emoji {
+  position: relative;
+  z-index: 1;
+  align-self: flex-end;
+  font-size: 54px;
+  line-height: 1;
+  filter: drop-shadow(0 10px 18px rgba(15, 23, 42, 0.22));
+}
+
+.job-shop-visual strong,
+.job-shop-visual span {
+  position: relative;
+  z-index: 1;
+}
+
+.job-shop-visual strong {
+  display: block;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.job-shop-visual div span {
+  display: block;
+  margin-top: 5px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.job-shop-body {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.job-shop-title-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.job-shop-title-row h2 {
+  min-width: 0;
+  margin: 0;
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.job-shop-title-row > span {
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
+  padding: 5px 8px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.job-shop-reason {
+  display: -webkit-box;
+  min-height: 42px;
+  margin: 0;
+  overflow: hidden;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.6;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.job-shop-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.job-shop-meta div {
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 10px;
+}
+
+.job-shop-meta span {
+  display: block;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.job-shop-meta strong {
+  display: block;
+  margin-top: 4px;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.job-shop-tags {
+  min-height: 25px;
+}
+
 .job-recommend-list {
   display: grid;
   gap: 12px;
+  animation: jobResultsSlideIn 180ms ease-out both;
+}
+
+.job-recommend-grid {
+  animation: jobResultsSlideIn 180ms ease-out both;
+}
+
+@keyframes jobResultsSlideIn {
+  from {
+    opacity: 0.98;
+    transform: translateY(5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .job-recommend-card {
@@ -1118,6 +1392,11 @@
   padding: 14px;
 }
 
+.event-filter-panel.compact {
+  grid-template-columns: minmax(240px, 420px);
+  justify-content: start;
+}
+
 .event-filter-panel label {
   display: grid;
   gap: 6px;
@@ -1286,6 +1565,7 @@
   .planner-list,
   .planner-workbench,
   .planner-scheduler,
+  .job-recommend-grid,
   .job-highlight-grid,
   .job-recommend-card {
     grid-template-columns: 1fr;
@@ -1343,5 +1623,25 @@
 
   .job-card-action {
     width: 100%;
+  }
+
+  .job-view-toggle {
+    --job-view-thumb-width: calc((100% - 12px) / 2);
+    width: 100%;
+  }
+
+  .job-view-toggle button {
+    flex: 1;
+    width: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .job-view-toggle::before,
+  .job-view-toggle button,
+  .job-recommend-grid,
+  .job-recommend-list {
+    animation: none;
+    transition: none;
   }
 }

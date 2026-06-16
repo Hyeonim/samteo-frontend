@@ -232,10 +232,10 @@ export default function EventsPage() {
         <section className="event-hero-panel" aria-label="이벤트 추천 기준">
           <div className="event-hero-main">
             <span className="event-region-pill">{activeRegionLabel}</span>
-            <h2>{regionFilter === 'planner' ? '내 일자리 지역 기준 추천' : `${activeRegionLabel} 이벤트 보기`}</h2>
+            <h2>{regionFilter === 'planner' ? '일자리·숙소 근처 추천' : `${activeRegionLabel} 이벤트 보기`}</h2>
             <p>
               {selectedPlanner
-                ? `${selectedPlanner.title}의 지역을 기준으로 먼저 보여드려요. 다른 지역도 바로 전환할 수 있습니다.`
+                ? `${selectedPlanner.title}의 일자리와 숙소 위치를 기준으로 가까운 이벤트를 먼저 보여드려요.`
                 : '저장된 플래너가 없으면 전체 지역에서 탐색할 수 있습니다.'}
             </p>
           </div>
@@ -258,39 +258,27 @@ export default function EventsPage() {
               onClick={() => setRegionFilter('planner')}
               aria-pressed={regionFilter === 'planner'}
             >
-              내 지역 우선
+              일자리·숙소 근처
             </button>
             <button
-              className={regionFilter === 'all' ? 'active' : ''}
+              className={regionFilter !== 'planner' ? 'active' : ''}
               onClick={() => setRegionFilter('all')}
-              aria-pressed={regionFilter === 'all'}
+              aria-pressed={regionFilter !== 'planner'}
             >
               전체 보기
             </button>
           </div>
-          <div className="event-filter-panel">
-            <label>
-              기준 플래너
-              <select
-                value={selectedPlannerId}
-                onChange={(event) => {
-                  setSelectedPlannerId(event.target.value)
-                  setRegionFilter('planner')
-                }}
-              >
-                {planners.length === 0 && <option value="">저장된 플래너 없음</option>}
-                {planners.map((planner) => <option key={planner.id} value={planner.id}>{planner.title}</option>)}
-              </select>
-            </label>
-            <label>
-              다른 지역 선택
-              <select value={regionFilter} onChange={(event) => setRegionFilter(event.target.value)}>
-                <option value="planner">내 일자리 지역{recommendedRegion ? ` (${recommendedRegion})` : ''}</option>
-                <option value="all">전체 지역</option>
-                {availableRegions.map((region) => <option key={region} value={region}>{region}</option>)}
-              </select>
-            </label>
-          </div>
+          {regionFilter !== 'planner' && (
+            <div className="event-filter-panel compact">
+              <label>
+                다른 지역 선택
+                <select value={regionFilter} onChange={(event) => setRegionFilter(event.target.value)}>
+                  <option value="all">전체 지역</option>
+                  {availableRegions.map((region) => <option key={region} value={region}>{region}</option>)}
+                </select>
+              </label>
+            </div>
+          )}
         </section>
 
         <div className="event-category-tabs" role="tablist" aria-label="이벤트 유형">
