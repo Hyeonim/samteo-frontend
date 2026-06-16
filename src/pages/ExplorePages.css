@@ -631,17 +631,21 @@
 }
 
 .editor-choice-pill.type em {
-  display: grid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 18px;
   height: 18px;
-  place-items: center;
   margin-left: auto;
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.06);
-  color: #64748b;
-  font-size: 12px;
+  background: rgba(15, 23, 42, 0.08);
+  color: #475569;
+  font-size: 11px;
   font-style: normal;
-  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  user-select: none;
+  transition: background 120ms ease, color 120ms ease;
 }
 
 .editor-choice-pill.type em:hover {
@@ -716,6 +720,12 @@
 .editor-inline-create .directory-btn {
   min-height: 40px;
   padding-inline: 12px;
+}
+
+.type-label-error {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #dc2626;
 }
 
 .editor-actions {

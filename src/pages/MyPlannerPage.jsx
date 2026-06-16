@@ -15,14 +15,15 @@ const CALENDAR_DAYS = [
 const HOURS = Array.from({ length: 18 }, (_, index) => index + 6)
 const COLORS = ['#ef7f72', '#6b9ee8', '#9ac768', '#6ec7bd', '#f3bf58', '#9b7ae5', '#f59e73']
 const VIEW_LABELS = { day: '일간', week: '주간', month: '월간' }
-const EVENT_TYPES = [
+const DEFAULT_EVENT_TYPES = [
   { value: 'personal', label: '개인 일정', color: '#f59e73' },
   { value: 'study', label: '준비/학습', color: '#9ac768' },
   { value: 'rest', label: '휴식', color: '#6ec7bd' },
   { value: 'work', label: '근무', color: '#ef7f72' },
   { value: 'event', label: '행사/이벤트', color: '#8b5cf6' },
-  { value: 'custom', label: '직접 입력', color: '#6b9ee8' },
 ]
+const CUSTOM_OPTION = { value: 'custom', label: '직접 입력', color: '#6b9ee8' }
+const EVENT_TYPES = [...DEFAULT_EVENT_TYPES, CUSTOM_OPTION]
 const COLOR_SWATCHES = ['#ef7f72', '#f59e73', '#f3bf58', '#9ac768', '#6ec7bd', '#6b9ee8', '#8b5cf6', '#475569']
 
 function getEventTypeMeta(type) {
@@ -197,7 +198,10 @@ export default function MyPlannerPage() {
   const [editingId, setEditingId] = useState(null)
   const [monthDetail, setMonthDetail] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
-  const [customEventTypes, setCustomEventTypes] = useState(() => activePlanner?.customEventTypes ?? [])
+  const [eventTypes, setEventTypes] = useState(() => {
+    if (!activePlanner) return [...DEFAULT_EVENT_TYPES]
+    return activePlanner.eventTypes ?? [...DEFAULT_EVENT_TYPES, ...(activePlanner.customEventTypes ?? [])]
+  })
   const [form, setForm] = useState({
     title: '',
     day: 0,
@@ -216,11 +220,11 @@ export default function MyPlannerPage() {
   const dayEvents = recurringSchedule.filter((event) => event.day === selectedDay)
   const month = useMemo(() => getMonthDays(), [])
   const eventTypeOptions = useMemo(() => (
-    [...EVENT_TYPES, ...customEventTypes]
-  ), [customEventTypes])
-  const selectedCustomType = useMemo(
-    () => customEventTypes.find((type) => type.value === form.type) ?? null,
-    [customEventTypes, form.type]
+    [...eventTypes, CUSTOM_OPTION]
+  ), [eventTypes])
+  const selectedEditableType = useMemo(
+    () => eventTypes.find((type) => type.value === form.type) ?? null,
+    [eventTypes, form.type]
   )
 
   const getDefaultDateKey = (day = selectedDay) => (
@@ -260,24 +264,27 @@ export default function MyPlannerPage() {
     const label = form.typeLabel.trim()
     if (!activePlanner || !label) return
 
-    const editingType = selectedCustomType
-    const existing = customEventTypes.find((item) => item.label === label)
-    const shouldCreateFromPreset = !editingType && form.type !== 'custom'
-    const nextType = existing ?? {
-      value: shouldCreateFromPreset ? createCustomTypeValue(label) : (editingType?.value ?? createCustomTypeValue(label)),
-      label,
-      color: form.color || getEventTypeMeta('custom').color,
-    }
-    const nextTypes = editingType || existing
-      ? customEventTypes.map((item) => (
-        item.value === (editingType?.value ?? existing.value)
-          ? { ...item, label, color: form.color || item.color }
-          : item
-      ))
-      : [...customEventTypes, nextType]
+    const editingType = selectedEditableType
+    let nextType
+    let nextTypes
+    let nextSchedule = schedule
 
-    setCustomEventTypes(nextTypes)
-    const saved = saveStoredPlanner({ ...activePlanner, schedule, customEventTypes: nextTypes })
+    if (editingType) {
+      nextType = { ...editingType, label, color: form.color || editingType.color }
+      nextTypes = eventTypes.map((item) => (item.value === editingType.value ? nextType : item))
+      nextSchedule = schedule.map((event) => (
+        event.type === editingType.value
+          ? { ...event, typeLabel: label, color: form.color || editingType.color }
+          : event
+      ))
+    } else {
+      const existing = eventTypes.find((item) => item.label === label)
+      nextType = existing ?? { value: createCustomTypeValue(label), label, color: form.color || CUSTOM_OPTION.color }
+      nextTypes = existing ? eventTypes : [...eventTypes, nextType]
+    }
+
+    setEventTypes(nextTypes)
+    const saved = saveStoredPlanner({ ...activePlanner, schedule: nextSchedule, eventTypes: nextTypes })
     refresh(saved)
     setForm((prev) => ({
       ...prev,
@@ -289,18 +296,18 @@ export default function MyPlannerPage() {
 
   const deleteCustomEventType = (typeValue = form.type) => {
     if (!activePlanner) return
-    const target = customEventTypes.find((item) => item.value === typeValue)
+    const target = eventTypes.find((item) => item.value === typeValue)
     if (!target) return
-    const fallback = getEventTypeMeta('personal')
-    const nextTypes = customEventTypes.filter((item) => item.value !== target.value)
+    const nextTypes = eventTypes.filter((item) => item.value !== target.value)
+    const fallback = nextTypes[0] ?? CUSTOM_OPTION
     const nextSchedule = schedule.map((event) => (
       event.type === target.value
         ? { ...event, type: fallback.value, typeLabel: fallback.label, color: fallback.color }
         : event
     ))
 
-    setCustomEventTypes(nextTypes)
-    const saved = saveStoredPlanner({ ...activePlanner, schedule: nextSchedule, customEventTypes: nextTypes })
+    setEventTypes(nextTypes)
+    const saved = saveStoredPlanner({ ...activePlanner, schedule: nextSchedule, eventTypes: nextTypes })
     refresh(saved)
     setForm((prev) => (
       prev.type === target.value
@@ -326,7 +333,7 @@ export default function MyPlannerPage() {
     setActiveId(planner.id)
     setTitle(planner.title ?? '')
     setMemo(planner.memo ?? '')
-    setCustomEventTypes(planner.customEventTypes ?? [])
+    setEventTypes(planner.eventTypes ?? [...DEFAULT_EVENT_TYPES, ...(planner.customEventTypes ?? [])])
     setEditingId(null)
   }
 
@@ -725,11 +732,11 @@ export default function MyPlannerPage() {
                         구분
                         <div className="editor-choice-grid types" role="group" aria-label="일정 구분 선택">
                           {eventTypeOptions.map((type) => {
-                            const isSavedCustom = customEventTypes.some((item) => item.value === type.value)
+                            const isEditable = type.value !== 'custom'
                             return (
                               <button
                                 type="button"
-                                className={`editor-choice-pill type${form.type === type.value ? ' active' : ''}${isSavedCustom ? ' saved' : ''}`}
+                                className={`editor-choice-pill type${form.type === type.value ? ' active' : ''}${isEditable ? ' saved' : ''}`}
                                 key={type.value}
                                 onClick={() => setForm((prev) => ({
                                   ...prev,
@@ -743,7 +750,7 @@ export default function MyPlannerPage() {
                               >
                                 <span />
                                 {type.label}
-                                {isSavedCustom && (
+                                {isEditable && (
                                   <em
                                     role="button"
                                     tabIndex={0}
@@ -760,7 +767,7 @@ export default function MyPlannerPage() {
                                       }
                                     }}
                                   >
-                                    x
+                                    ×
                                   </em>
                                 )}
                               </button>
@@ -769,17 +776,13 @@ export default function MyPlannerPage() {
                         </div>
                       </label>
                       <label>
-                        {form.type === 'custom'
-                          ? '직접 구분명'
-                          : selectedCustomType
-                            ? '구분 수정'
-                            : '선택 구분 편집'}
+                        {form.type === 'custom' ? '직접 구분명' : '구분 수정'}
                         <div className="editor-inline-create">
                           <input
                             value={form.typeLabel}
                             onChange={(event) => setForm((prev) => ({
                               ...prev,
-                              typeLabel: event.target.value,
+                              typeLabel: event.target.value.slice(0, 6),
                             }))}
                             onKeyDown={(event) => {
                               if (event.key === 'Enter') {
@@ -788,6 +791,7 @@ export default function MyPlannerPage() {
                               }
                             }}
                             placeholder="예: 운동, 식사, 면접"
+                            maxLength={6}
                             disabled={form.locked}
                           />
                           <button
@@ -798,17 +802,18 @@ export default function MyPlannerPage() {
                           >
                             {form.type === 'custom' ? '추가' : '수정'}
                           </button>
-                          {selectedCustomType && (
-                            <button
-                              type="button"
-                              className="directory-btn danger"
-                              onClick={() => deleteCustomEventType(selectedCustomType.value)}
-                              disabled={form.locked}
-                            >
-                              삭제
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            className="directory-btn danger"
+                            onClick={() => selectedEditableType && deleteCustomEventType(selectedEditableType.value)}
+                            disabled={form.locked || !selectedEditableType}
+                          >
+                            삭제
+                          </button>
                         </div>
+                        {form.typeLabel.length === 6 && (
+                          <p className="type-label-error">최대 6자까지 입력할 수 있습니다.</p>
+                        )}
                       </label>
                       <label>
                         색상
