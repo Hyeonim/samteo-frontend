@@ -626,6 +626,29 @@
   padding: 0 11px;
 }
 
+.editor-choice-pill.type.saved {
+  padding-right: 7px;
+}
+
+.editor-choice-pill.type em {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  margin-left: auto;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.06);
+  color: #64748b;
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1;
+}
+
+.editor-choice-pill.type em:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
 .editor-choice-pill.scope {
   border-radius: 8px;
 }
@@ -682,6 +705,17 @@
 .editor-color-swatch:disabled {
   cursor: not-allowed;
   opacity: 0.55;
+}
+
+.editor-inline-create {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+}
+
+.editor-inline-create .directory-btn {
+  min-height: 40px;
+  padding-inline: 12px;
 }
 
 .editor-actions {

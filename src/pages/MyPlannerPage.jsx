@@ -29,6 +29,10 @@ function getEventTypeMeta(type) {
   return EVENT_TYPES.find((item) => item.value === type) ?? EVENT_TYPES[0]
 }
 
+function createCustomTypeValue(label) {
+  return `custom-${label.trim().toLowerCase().replace(/\s+/g, '-')}`
+}
+
 function formatDate(value) {
   if (!value) return '-'
   return new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
@@ -48,11 +52,22 @@ function minutesToTime(value) {
   return `${pad(Math.floor(value / 60))}:${pad(value % 60)}`
 }
 
+function toDateKey(date) {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
 function formatDateKey(value) {
   if (!value) return ''
   const [year, month, day] = value.split('-').map(Number)
   if (!year || !month || !day) return value
   return `${month}월 ${day}일`
+}
+
+function dayFromDateKey(value, fallback = 0) {
+  const [year, month, day] = String(value ?? '').split('-').map(Number)
+  if (!year || !month || !day) return fallback
+  const nativeDay = new Date(year, month - 1, day).getDay()
+  return nativeDay === 0 ? 6 : nativeDay - 1
 }
 
 function clamp(value, min, max) {
@@ -182,6 +197,7 @@ export default function MyPlannerPage() {
   const [editingId, setEditingId] = useState(null)
   const [monthDetail, setMonthDetail] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const [customEventTypes, setCustomEventTypes] = useState(() => activePlanner?.customEventTypes ?? [])
   const [form, setForm] = useState({
     title: '',
     day: 0,
@@ -199,6 +215,99 @@ export default function MyPlannerPage() {
   const recurringSchedule = useMemo(() => schedule.filter((event) => !event.dateKey), [schedule])
   const dayEvents = recurringSchedule.filter((event) => event.day === selectedDay)
   const month = useMemo(() => getMonthDays(), [])
+  const eventTypeOptions = useMemo(() => (
+    [...EVENT_TYPES, ...customEventTypes]
+  ), [customEventTypes])
+  const selectedCustomType = useMemo(
+    () => customEventTypes.find((type) => type.value === form.type) ?? null,
+    [customEventTypes, form.type]
+  )
+
+  const getDefaultDateKey = (day = selectedDay) => (
+    month.cells.find((cell) => cell?.day === Number(day))?.dateKey ?? toDateKey(new Date())
+  )
+
+  const setDateScope = () => {
+    setForm((prev) => ({
+      ...prev,
+      repeatMode: 'date',
+      dateKey: prev.dateKey ?? getDefaultDateKey(prev.day),
+    }))
+  }
+
+  const setWeeklyScope = () => {
+    setForm((prev) => ({ ...prev, repeatMode: 'weekly' }))
+  }
+
+  const updateFormDay = (day) => {
+    setForm((prev) => ({
+      ...prev,
+      day,
+      dateKey: prev.repeatMode === 'date' ? getDefaultDateKey(day) : prev.dateKey,
+    }))
+  }
+
+  const updateFormDate = (dateKey) => {
+    setForm((prev) => ({
+      ...prev,
+      dateKey,
+      repeatMode: 'date',
+      day: dayFromDateKey(dateKey, prev.day),
+    }))
+  }
+
+  const saveCustomEventType = () => {
+    const label = form.typeLabel.trim()
+    if (!activePlanner || !label) return
+
+    const editingType = selectedCustomType
+    const existing = customEventTypes.find((item) => item.label === label)
+    const shouldCreateFromPreset = !editingType && form.type !== 'custom'
+    const nextType = existing ?? {
+      value: shouldCreateFromPreset ? createCustomTypeValue(label) : (editingType?.value ?? createCustomTypeValue(label)),
+      label,
+      color: form.color || getEventTypeMeta('custom').color,
+    }
+    const nextTypes = editingType || existing
+      ? customEventTypes.map((item) => (
+        item.value === (editingType?.value ?? existing.value)
+          ? { ...item, label, color: form.color || item.color }
+          : item
+      ))
+      : [...customEventTypes, nextType]
+
+    setCustomEventTypes(nextTypes)
+    const saved = saveStoredPlanner({ ...activePlanner, schedule, customEventTypes: nextTypes })
+    refresh(saved)
+    setForm((prev) => ({
+      ...prev,
+      type: nextType.value,
+      typeLabel: nextType.label,
+      color: form.color || nextType.color,
+    }))
+  }
+
+  const deleteCustomEventType = (typeValue = form.type) => {
+    if (!activePlanner) return
+    const target = customEventTypes.find((item) => item.value === typeValue)
+    if (!target) return
+    const fallback = getEventTypeMeta('personal')
+    const nextTypes = customEventTypes.filter((item) => item.value !== target.value)
+    const nextSchedule = schedule.map((event) => (
+      event.type === target.value
+        ? { ...event, type: fallback.value, typeLabel: fallback.label, color: fallback.color }
+        : event
+    ))
+
+    setCustomEventTypes(nextTypes)
+    const saved = saveStoredPlanner({ ...activePlanner, schedule: nextSchedule, customEventTypes: nextTypes })
+    refresh(saved)
+    setForm((prev) => (
+      prev.type === target.value
+        ? { ...prev, type: fallback.value, typeLabel: fallback.label, color: fallback.color }
+        : prev
+    ))
+  }
 
   const refresh = (saved) => {
     const next = getStoredPlanners()
@@ -217,6 +326,7 @@ export default function MyPlannerPage() {
     setActiveId(planner.id)
     setTitle(planner.title ?? '')
     setMemo(planner.memo ?? '')
+    setCustomEventTypes(planner.customEventTypes ?? [])
     setEditingId(null)
   }
 
@@ -557,8 +667,8 @@ export default function MyPlannerPage() {
                           <button
                             type="button"
                             className={`editor-choice-pill scope${form.repeatMode === 'date' ? ' active' : ''}`}
-                            onClick={() => setForm((prev) => ({ ...prev, repeatMode: 'date' }))}
-                            disabled={form.locked || !form.dateKey}
+                            onClick={setDateScope}
+                            disabled={form.locked}
                             aria-pressed={form.repeatMode === 'date'}
                           >
                             {form.dateKey ? `${formatDateKey(form.dateKey)}만` : '선택 날짜만'}
@@ -566,13 +676,23 @@ export default function MyPlannerPage() {
                           <button
                             type="button"
                             className={`editor-choice-pill scope${form.repeatMode === 'weekly' ? ' active' : ''}`}
-                            onClick={() => setForm((prev) => ({ ...prev, repeatMode: 'weekly' }))}
+                            onClick={setWeeklyScope}
                             disabled={form.locked}
                             aria-pressed={form.repeatMode === 'weekly'}
                           >
                             매주 반복
                           </button>
                         </div>
+                      </label>
+                      <label>
+                        날짜
+                        <input
+                          type="date"
+                          value={form.dateKey ?? getDefaultDateKey(form.day)}
+                          onChange={(event) => updateFormDate(event.target.value)}
+                          onFocus={setDateScope}
+                          disabled={form.locked}
+                        />
                       </label>
                       <label>
                         요일
@@ -582,7 +702,7 @@ export default function MyPlannerPage() {
                               type="button"
                               className={`editor-choice-pill${Number(form.day) === day.value ? ' active' : ''}${day.weekend ? ` ${day.weekend}` : ''}`}
                               key={day.label}
-                              onClick={() => setForm((prev) => ({ ...prev, day: day.value }))}
+                              onClick={() => updateFormDay(day.value)}
                               disabled={form.locked}
                               aria-pressed={Number(form.day) === day.value}
                             >
@@ -604,39 +724,91 @@ export default function MyPlannerPage() {
                       <label>
                         구분
                         <div className="editor-choice-grid types" role="group" aria-label="일정 구분 선택">
-                          {EVENT_TYPES.map((type) => (
-                            <button
-                              type="button"
-                              className={`editor-choice-pill type${form.type === type.value ? ' active' : ''}`}
-                              key={type.value}
-                              onClick={() => setForm((prev) => ({
-                                ...prev,
-                                type: type.value,
-                                typeLabel: type.value === 'custom' ? '' : type.label,
-                                color: type.color,
-                              }))}
-                              disabled={form.locked}
-                              aria-pressed={form.type === type.value}
-                              style={{ '--choice-color': type.color }}
-                            >
-                              <span />
-                              {type.label}
-                            </button>
-                          ))}
+                          {eventTypeOptions.map((type) => {
+                            const isSavedCustom = customEventTypes.some((item) => item.value === type.value)
+                            return (
+                              <button
+                                type="button"
+                                className={`editor-choice-pill type${form.type === type.value ? ' active' : ''}${isSavedCustom ? ' saved' : ''}`}
+                                key={type.value}
+                                onClick={() => setForm((prev) => ({
+                                  ...prev,
+                                  type: type.value,
+                                  typeLabel: type.value === 'custom' ? '' : type.label,
+                                  color: type.color,
+                                }))}
+                                disabled={form.locked}
+                                aria-pressed={form.type === type.value}
+                                style={{ '--choice-color': type.color }}
+                              >
+                                <span />
+                                {type.label}
+                                {isSavedCustom && (
+                                  <em
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-label={`${type.label} 구분 삭제`}
+                                    onClick={(event) => {
+                                      event.stopPropagation()
+                                      deleteCustomEventType(type.value)
+                                    }}
+                                    onKeyDown={(event) => {
+                                      if (event.key === 'Enter' || event.key === ' ') {
+                                        event.preventDefault()
+                                        event.stopPropagation()
+                                        deleteCustomEventType(type.value)
+                                      }
+                                    }}
+                                  >
+                                    x
+                                  </em>
+                                )}
+                              </button>
+                            )
+                          })}
                         </div>
                       </label>
                       <label>
-                        구분 이름
-                        <input
-                          value={form.typeLabel}
-                          onChange={(event) => setForm((prev) => ({
-                            ...prev,
-                            type: prev.type === 'custom' ? 'custom' : prev.type,
-                            typeLabel: event.target.value,
-                          }))}
-                          placeholder="예: 운동, 식사, 면접"
-                          disabled={form.locked}
-                        />
+                        {form.type === 'custom'
+                          ? '직접 구분명'
+                          : selectedCustomType
+                            ? '구분 수정'
+                            : '선택 구분 편집'}
+                        <div className="editor-inline-create">
+                          <input
+                            value={form.typeLabel}
+                            onChange={(event) => setForm((prev) => ({
+                              ...prev,
+                              typeLabel: event.target.value,
+                            }))}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter') {
+                                event.preventDefault()
+                                saveCustomEventType()
+                              }
+                            }}
+                            placeholder="예: 운동, 식사, 면접"
+                            disabled={form.locked}
+                          />
+                          <button
+                            type="button"
+                            className="directory-btn"
+                            onClick={saveCustomEventType}
+                            disabled={form.locked || !form.typeLabel.trim()}
+                          >
+                            {form.type === 'custom' ? '추가' : '수정'}
+                          </button>
+                          {selectedCustomType && (
+                            <button
+                              type="button"
+                              className="directory-btn danger"
+                              onClick={() => deleteCustomEventType(selectedCustomType.value)}
+                              disabled={form.locked}
+                            >
+                              삭제
+                            </button>
+                          )}
+                        </div>
                       </label>
                       <label>
                         색상
