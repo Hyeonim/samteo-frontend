@@ -561,6 +561,129 @@
   gap: 8px;
 }
 
+.editor-choice-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.editor-choice-grid.days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.editor-choice-grid.types {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.editor-choice-grid.scope {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.editor-choice-pill {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid #dbe3ef;
+  border-radius: 999px;
+  background: white;
+  color: #475569;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.editor-choice-pill:hover:not(:disabled) {
+  border-color: #bfdbfe;
+  background: #f8fbff;
+}
+
+.editor-choice-pill.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+.editor-choice-pill.sun {
+  color: #e11d48;
+}
+
+.editor-choice-pill.sat {
+  color: #2563eb;
+}
+
+.editor-choice-pill.type {
+  justify-content: flex-start;
+  border-radius: 8px;
+  padding: 0 11px;
+}
+
+.editor-choice-pill.scope {
+  border-radius: 8px;
+}
+
+.editor-choice-pill.type span {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--choice-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--choice-color) 18%, transparent);
+}
+
+.editor-choice-pill.type.active {
+  border-color: var(--choice-color);
+  background: color-mix(in srgb, var(--choice-color) 12%, white);
+  color: #0f172a;
+}
+
+.editor-choice-pill:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.editor-color-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.editor-color-swatch {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: var(--swatch-color);
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.08), 0 5px 12px rgba(15, 23, 42, 0.08);
+  cursor: pointer;
+}
+
+.editor-color-swatch.active {
+  border-color: white;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--swatch-color) 38%, transparent), 0 7px 14px rgba(15, 23, 42, 0.12);
+}
+
+.editor-color-swatch.active::after {
+  content: '';
+  position: absolute;
+  inset: 9px;
+  border-radius: 999px;
+  background: white;
+}
+
+.editor-color-swatch:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .editor-actions {
   justify-content: flex-start;
 }

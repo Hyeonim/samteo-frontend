@@ -15,6 +15,19 @@ const CALENDAR_DAYS = [
 const HOURS = Array.from({ length: 18 }, (_, index) => index + 6)
 const COLORS = ['#ef7f72', '#6b9ee8', '#9ac768', '#6ec7bd', '#f3bf58', '#9b7ae5', '#f59e73']
 const VIEW_LABELS = { day: '일간', week: '주간', month: '월간' }
+const EVENT_TYPES = [
+  { value: 'personal', label: '개인 일정', color: '#f59e73' },
+  { value: 'study', label: '준비/학습', color: '#9ac768' },
+  { value: 'rest', label: '휴식', color: '#6ec7bd' },
+  { value: 'work', label: '근무', color: '#ef7f72' },
+  { value: 'event', label: '행사/이벤트', color: '#8b5cf6' },
+  { value: 'custom', label: '직접 입력', color: '#6b9ee8' },
+]
+const COLOR_SWATCHES = ['#ef7f72', '#f59e73', '#f3bf58', '#9ac768', '#6ec7bd', '#6b9ee8', '#8b5cf6', '#475569']
+
+function getEventTypeMeta(type) {
+  return EVENT_TYPES.find((item) => item.value === type) ?? EVENT_TYPES[0]
+}
 
 function formatDate(value) {
   if (!value) return '-'
@@ -33,6 +46,13 @@ function toMinutes(value, fallback) {
 
 function minutesToTime(value) {
   return `${pad(Math.floor(value / 60))}:${pad(value % 60)}`
+}
+
+function formatDateKey(value) {
+  if (!value) return ''
+  const [year, month, day] = value.split('-').map(Number)
+  if (!year || !month || !day) return value
+  return `${month}월 ${day}일`
 }
 
 function clamp(value, min, max) {
@@ -168,11 +188,16 @@ export default function MyPlannerPage() {
     start: '18:00',
     end: '19:00',
     type: 'personal',
+    typeLabel: getEventTypeMeta('personal').label,
+    color: getEventTypeMeta('personal').color,
     memo: '',
+    dateKey: null,
+    repeatMode: 'weekly',
   })
 
   const schedule = useMemo(() => getSchedule(activePlanner), [activePlanner])
-  const dayEvents = schedule.filter((event) => event.day === selectedDay)
+  const recurringSchedule = useMemo(() => schedule.filter((event) => !event.dateKey), [schedule])
+  const dayEvents = recurringSchedule.filter((event) => event.day === selectedDay)
   const month = useMemo(() => getMonthDays(), [])
 
   const refresh = (saved) => {
@@ -209,7 +234,7 @@ export default function MyPlannerPage() {
     setDeleteTarget(null)
   }
 
-  const startCreate = (day = selectedDay, startTime = '18:00') => {
+  const startCreate = (day = selectedDay, startTime = '18:00', dateKey = null) => {
     const start = toMinutes(startTime, 18 * 60)
     setEditingId(null)
     setForm({
@@ -218,13 +243,24 @@ export default function MyPlannerPage() {
       start: minutesToTime(start),
       end: minutesToTime(start + 60),
       type: 'personal',
+      typeLabel: getEventTypeMeta('personal').label,
+      color: getEventTypeMeta('personal').color,
       memo: '',
+      dateKey,
+      repeatMode: dateKey ? 'date' : 'weekly',
     })
   }
 
   const startEdit = (event) => {
+    const typeMeta = getEventTypeMeta(event.type)
     if (event.locked) {
-      setForm({ ...event, memo: event.memo ?? '' })
+      setForm({
+        ...event,
+        typeLabel: event.typeLabel ?? typeMeta.label,
+        color: event.color ?? typeMeta.color,
+        memo: event.memo ?? '',
+        repeatMode: event.dateKey ? 'date' : 'weekly',
+      })
       setEditingId(event.id)
       return
     }
@@ -235,7 +271,11 @@ export default function MyPlannerPage() {
       start: event.start,
       end: event.end,
       type: event.type,
+      typeLabel: event.typeLabel ?? typeMeta.label,
+      color: event.color ?? typeMeta.color,
       memo: event.memo ?? '',
+      dateKey: event.dateKey ?? null,
+      repeatMode: event.dateKey ? 'date' : 'weekly',
     })
   }
 
@@ -246,12 +286,15 @@ export default function MyPlannerPage() {
     const matchingWorkColor = schedule.find((event) => (
       event.type === 'work' && event.title === form.title.trim()
     ))?.color
+    const typeMeta = getEventTypeMeta(form.type)
     const normalized = {
       ...form,
       title: form.title.trim(),
+      typeLabel: form.typeLabel.trim() || typeMeta.label,
       day: Number(form.day),
       end: minutesToTime(Math.max(end, start + 30)),
-      color: form.type === 'work' ? (matchingWorkColor ?? COLORS[0]) : form.type === 'study' ? COLORS[2] : form.type === 'rest' ? COLORS[3] : form.type === 'event' ? '#8b5cf6' : COLORS[5],
+      dateKey: form.repeatMode === 'date' ? form.dateKey : null,
+      color: form.type === 'work' && !form.color ? (matchingWorkColor ?? COLORS[0]) : (form.color || typeMeta.color),
       locked: false,
     }
     const nextSchedule = editingId
@@ -288,19 +331,23 @@ export default function MyPlannerPage() {
       start: minutesToTime(start),
       end: minutesToTime(start + 60),
       type: 'personal',
+      typeLabel: getEventTypeMeta('personal').label,
+      color: getEventTypeMeta('personal').color,
       memo: '',
+      dateKey: null,
+      repeatMode: 'weekly',
     })
   }
 
   const startCreateFromMonth = (cell) => {
     if (!cell) return
-    const events = schedule.filter((event) => event.day === cell.day)
+    const events = schedule.filter((event) => (event.dateKey ? event.dateKey === cell.dateKey : event.day === cell.day))
     const latestEnd = events.reduce((latest, event) => Math.max(latest, toMinutes(event.end, latest)), 8 * 60)
     const start = clamp(Math.ceil(latestEnd / 60) * 60, HOURS[0] * 60, (HOURS[HOURS.length - 1]) * 60)
 
     setSelectedDay(cell.day)
     setViewMode('day')
-    startCreate(cell.day, minutesToTime(start))
+    startCreate(cell.day, minutesToTime(start), cell.dateKey)
     setMonthDetail(null)
   }
 
@@ -445,7 +492,7 @@ export default function MyPlannerPage() {
                                 key={day.label}
                                 onClick={(event) => startCreateAtSlot(event, day.value)}
                               >
-                                {schedule.filter((event) => event.day === day.value).map((event) => (
+                                {recurringSchedule.filter((event) => event.day === day.value).map((event) => (
                                   <ScheduleBlock key={event.id} event={event} compact onClick={startEdit} />
                                 ))}
                               </div>
@@ -505,14 +552,44 @@ export default function MyPlannerPage() {
                         />
                       </label>
                       <label>
+                        적용
+                        <div className="editor-choice-grid scope" role="group" aria-label="일정 적용 방식 선택">
+                          <button
+                            type="button"
+                            className={`editor-choice-pill scope${form.repeatMode === 'date' ? ' active' : ''}`}
+                            onClick={() => setForm((prev) => ({ ...prev, repeatMode: 'date' }))}
+                            disabled={form.locked || !form.dateKey}
+                            aria-pressed={form.repeatMode === 'date'}
+                          >
+                            {form.dateKey ? `${formatDateKey(form.dateKey)}만` : '선택 날짜만'}
+                          </button>
+                          <button
+                            type="button"
+                            className={`editor-choice-pill scope${form.repeatMode === 'weekly' ? ' active' : ''}`}
+                            onClick={() => setForm((prev) => ({ ...prev, repeatMode: 'weekly' }))}
+                            disabled={form.locked}
+                            aria-pressed={form.repeatMode === 'weekly'}
+                          >
+                            매주 반복
+                          </button>
+                        </div>
+                      </label>
+                      <label>
                         요일
-                        <select
-                          value={form.day}
-                          onChange={(event) => setForm((prev) => ({ ...prev, day: Number(event.target.value) }))}
-                          disabled={form.locked}
-                        >
-                          {CALENDAR_DAYS.map((day) => <option value={day.value} key={day.label}>{day.label}요일</option>)}
-                        </select>
+                        <div className="editor-choice-grid days" role="group" aria-label="요일 선택">
+                          {CALENDAR_DAYS.map((day) => (
+                            <button
+                              type="button"
+                              className={`editor-choice-pill${Number(form.day) === day.value ? ' active' : ''}${day.weekend ? ` ${day.weekend}` : ''}`}
+                              key={day.label}
+                              onClick={() => setForm((prev) => ({ ...prev, day: day.value }))}
+                              disabled={form.locked}
+                              aria-pressed={Number(form.day) === day.value}
+                            >
+                              {day.label}
+                            </button>
+                          ))}
+                        </div>
                       </label>
                       <div className="editor-time-row">
                         <label>
@@ -526,13 +603,57 @@ export default function MyPlannerPage() {
                       </div>
                       <label>
                         구분
-                        <select value={form.type} onChange={(event) => setForm((prev) => ({ ...prev, type: event.target.value }))} disabled={form.locked}>
-                          <option value="personal">개인 일정</option>
-                          <option value="study">준비/학습</option>
-                          <option value="rest">휴식</option>
-                          <option value="work">근무</option>
-                          <option value="event">행사/이벤트</option>
-                        </select>
+                        <div className="editor-choice-grid types" role="group" aria-label="일정 구분 선택">
+                          {EVENT_TYPES.map((type) => (
+                            <button
+                              type="button"
+                              className={`editor-choice-pill type${form.type === type.value ? ' active' : ''}`}
+                              key={type.value}
+                              onClick={() => setForm((prev) => ({
+                                ...prev,
+                                type: type.value,
+                                typeLabel: type.value === 'custom' ? '' : type.label,
+                                color: type.color,
+                              }))}
+                              disabled={form.locked}
+                              aria-pressed={form.type === type.value}
+                              style={{ '--choice-color': type.color }}
+                            >
+                              <span />
+                              {type.label}
+                            </button>
+                          ))}
+                        </div>
+                      </label>
+                      <label>
+                        구분 이름
+                        <input
+                          value={form.typeLabel}
+                          onChange={(event) => setForm((prev) => ({
+                            ...prev,
+                            type: prev.type === 'custom' ? 'custom' : prev.type,
+                            typeLabel: event.target.value,
+                          }))}
+                          placeholder="예: 운동, 식사, 면접"
+                          disabled={form.locked}
+                        />
+                      </label>
+                      <label>
+                        색상
+                        <div className="editor-color-grid" role="group" aria-label="일정 색상 선택">
+                          {COLOR_SWATCHES.map((color) => (
+                            <button
+                              type="button"
+                              className={`editor-color-swatch${form.color === color ? ' active' : ''}`}
+                              key={color}
+                              onClick={() => setForm((prev) => ({ ...prev, color }))}
+                              disabled={form.locked}
+                              aria-label={`${color} 색상`}
+                              aria-pressed={form.color === color}
+                              style={{ '--swatch-color': color }}
+                            />
+                          ))}
+                        </div>
                       </label>
                       <label>
                         메모
@@ -593,7 +714,7 @@ export default function MyPlannerPage() {
                   startCreateFromMonth(monthDetail)
                 }}
               >
-                이 요일에 일정 추가
+                이 날짜에 일정 추가
               </button>
             </section>
           </div>
