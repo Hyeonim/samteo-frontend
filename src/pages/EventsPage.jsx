@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import LoadingScreen from '../components/common/LoadingScreen'
 import { getStoredPlanners, saveStoredPlanner } from '../utils/plannerStorage'
+import { createWorkScheduleId } from '../utils/plannerSchedule'
 import './ExplorePages.css'
 
 const CATEGORIES = [
@@ -89,7 +90,7 @@ function sanitizeFestival(festival) {
 
 function buildWorkSchedule(planner) {
   return (planner.jobs ?? []).flatMap((job, jobIndex) => [0, 1, 2, 3, 4].map((day) => ({
-    id: `work-${planner.id}-${job.id ?? jobIndex}-${day}`,
+    id: createWorkScheduleId(planner.id, job.id ?? jobIndex, day),
     title: job.name ?? job.title ?? '근무',
     type: 'work',
     day,

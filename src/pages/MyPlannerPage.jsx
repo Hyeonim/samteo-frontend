@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { deleteStoredPlanner, getStoredPlanners, saveStoredPlanner } from '../utils/plannerStorage'
+import { myPlannerApi } from '../api/myPlannerApi'
+import { createJobSchedule } from '../utils/plannerSchedule'
 import './ExplorePages.css'
 
 const CALENDAR_DAYS = [
@@ -75,40 +76,6 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value))
 }
 
-function parseJobTime(job, index) {
-  const text = [job.workingDays, job.sub, job.schedule, job.time].filter(Boolean).join(' ')
-  const times = [...text.matchAll(/(\d{1,2}:\d{2})/g)].map((match) => match[1])
-  const defaultStart = 9 * 60 + (index % 3) * 60
-  const start = toMinutes(times[0], defaultStart)
-  const end = toMinutes(times[1], start + 7 * 60)
-  return { start: minutesToTime(start), end: minutesToTime(Math.max(end, start + 60)) }
-}
-
-function parseJobDays(job) {
-  const text = [job.workingDays, job.sub, job.schedule, job.time].filter(Boolean).join(' ')
-  if (/Mon-Fri|월-금|주\s*5/.test(text)) return [0, 1, 2, 3, 4]
-  if (/주\s*4/.test(text)) return [0, 1, 2, 3]
-  if (/주말|Sat|Sun|토|일/.test(text)) return [5, 6]
-  return [0, 1, 2, 3, 4]
-}
-
-function createJobSchedule(planner) {
-  return (planner.jobs ?? []).flatMap((job, jobIndex) => {
-    const time = parseJobTime(job, jobIndex)
-    const jobColor = COLORS[jobIndex % COLORS.length]
-    return parseJobDays(job).map((day) => ({
-      id: `work-${planner.id}-${job.id ?? jobIndex}-${day}`,
-      title: job.name ?? job.title ?? '근무',
-      type: 'work',
-      day,
-      start: time.start,
-      end: time.end,
-      color: jobColor,
-      memo: job.company ?? job.type ?? '자동 생성된 근무 일정',
-      locked: true,
-    }))
-  })
-}
 
 function normalizeWorkColors(schedule) {
   const workColorByTitle = new Map()
@@ -185,8 +152,9 @@ function ScheduleBlock({ event, compact = false, onClick }) {
 
 export default function MyPlannerPage() {
   const navigate = useNavigate()
-  const [planners, setPlanners] = useState(() => getStoredPlanners())
-  const [activeId, setActiveId] = useState(() => getStoredPlanners()[0]?.id ?? null)
+  const [planners, setPlanners] = useState([])
+  const [activeId, setActiveId] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState('week')
   const [selectedDay, setSelectedDay] = useState(0)
   const activePlanner = useMemo(
@@ -198,10 +166,7 @@ export default function MyPlannerPage() {
   const [editingId, setEditingId] = useState(null)
   const [monthDetail, setMonthDetail] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
-  const [eventTypes, setEventTypes] = useState(() => {
-    if (!activePlanner) return [...DEFAULT_EVENT_TYPES]
-    return activePlanner.eventTypes ?? [...DEFAULT_EVENT_TYPES, ...(activePlanner.customEventTypes ?? [])]
-  })
+  const [eventTypes, setEventTypes] = useState([...DEFAULT_EVENT_TYPES])
   const [form, setForm] = useState({
     title: '',
     day: 0,
@@ -214,6 +179,23 @@ export default function MyPlannerPage() {
     dateKey: null,
     repeatMode: 'weekly',
   })
+
+  useEffect(() => {
+    myPlannerApi.getAll()
+      .then((res) => {
+        const data = res?.data ?? []
+        setPlanners(data)
+        if (data.length > 0) {
+          const first = data[0]
+          setActiveId(first.id)
+          setTitle(first.title ?? '')
+          setMemo(first.memo ?? '')
+          setEventTypes(first.eventTypes ?? [...DEFAULT_EVENT_TYPES])
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
 
   const schedule = useMemo(() => getSchedule(activePlanner), [activePlanner])
   const recurringSchedule = useMemo(() => schedule.filter((event) => !event.dateKey), [schedule])
@@ -284,8 +266,9 @@ export default function MyPlannerPage() {
     }
 
     setEventTypes(nextTypes)
-    const saved = saveStoredPlanner({ ...activePlanner, schedule: nextSchedule, eventTypes: nextTypes })
-    refresh(saved)
+    myPlannerApi.update(activePlanner.id, { ...activePlanner, schedule: nextSchedule, eventTypes: nextTypes })
+      .then((res) => refresh(res?.data))
+      .catch(() => {})
     setForm((prev) => ({
       ...prev,
       type: nextType.value,
@@ -307,8 +290,9 @@ export default function MyPlannerPage() {
     ))
 
     setEventTypes(nextTypes)
-    const saved = saveStoredPlanner({ ...activePlanner, schedule: nextSchedule, eventTypes: nextTypes })
-    refresh(saved)
+    myPlannerApi.update(activePlanner.id, { ...activePlanner, schedule: nextSchedule, eventTypes: nextTypes })
+      .then((res) => refresh(res?.data))
+      .catch(() => {})
     setForm((prev) => (
       prev.type === target.value
         ? { ...prev, type: fallback.value, typeLabel: fallback.label, color: fallback.color }
@@ -317,16 +301,15 @@ export default function MyPlannerPage() {
   }
 
   const refresh = (saved) => {
-    const next = getStoredPlanners()
-    setPlanners(next)
-    setActiveId(saved?.id ?? next[0]?.id ?? null)
+    if (!saved) return
+    setPlanners((prev) => prev.map((p) => (p.id === saved.id ? saved : p)))
   }
 
   const persistPlanner = (patch) => {
-    if (!activePlanner) return null
-    const saved = saveStoredPlanner({ ...activePlanner, schedule, ...patch })
-    refresh(saved)
-    return saved
+    if (!activePlanner) return
+    myPlannerApi.update(activePlanner.id, { ...activePlanner, schedule, eventTypes, ...patch })
+      .then((res) => refresh(res?.data))
+      .catch(() => {})
   }
 
   const selectPlanner = (planner) => {
@@ -341,13 +324,16 @@ export default function MyPlannerPage() {
     persistPlanner({ title, memo })
   }
 
-  const removePlanner = () => {
+  const removePlanner = async () => {
     if (!activePlanner) return
-    const next = deleteStoredPlanner(activePlanner.id)
+    try { await myPlannerApi.remove(activePlanner.id) } catch { return }
+    const next = planners.filter((p) => p.id !== activePlanner.id)
+    const nextActive = next[0] ?? null
     setPlanners(next)
-    setActiveId(next[0]?.id ?? null)
-    setTitle(next[0]?.title ?? '')
-    setMemo(next[0]?.memo ?? '')
+    setActiveId(nextActive?.id ?? null)
+    setTitle(nextActive?.title ?? '')
+    setMemo(nextActive?.memo ?? '')
+    setEventTypes(nextActive?.eventTypes ?? [...DEFAULT_EVENT_TYPES])
     setDeleteTarget(null)
   }
 
@@ -475,6 +461,16 @@ export default function MyPlannerPage() {
       ...cell,
       events: schedule.filter((event) => (event.dateKey ? event.dateKey === cell.dateKey : event.day === cell.day)),
     })
+  }
+
+  if (loading) {
+    return (
+      <main className="directory-page">
+        <div className="directory-shell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '40vh' }}>
+          <p style={{ color: '#94a3b8' }}>플래너를 불러오는 중...</p>
+        </div>
+      </main>
+    )
   }
 
   return (

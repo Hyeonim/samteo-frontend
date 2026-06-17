@@ -7,7 +7,8 @@ import Step3Accommodation from '../components/wizard/Step3Accommodation'
 import Step4Budget from '../components/wizard/Step4Budget'
 import Step5Planner from '../components/wizard/Step5Planner'
 import { api } from '../api'
-import { saveStoredPlanner } from '../utils/plannerStorage'
+import { myPlannerApi } from '../api/myPlannerApi'
+import { createJobSchedule, createPlannerId } from '../utils/plannerSchedule'
 import './PlannerPage.css'
 
 const TOTAL = 5
@@ -155,7 +156,7 @@ export default function PlannerPage() {
     const totalSalary = selectedJobs.reduce((sum, job) => sum + Number(job.salary ?? job.monthlySalary ?? 0), 0)
     const accommodationCost = Number(selectedHotel.price ?? selectedHotel.monthlyPrice ?? 0)
     const planner = {
-      id: `planner-${Date.now()}`,
+      id: createPlannerId(),
       title: `${selectedRegionName ?? selectedCityName} 체류 플래너`,
       cityId: selectedCity,
       cityName: selectedCityName,
@@ -195,7 +196,19 @@ export default function PlannerPage() {
       // Local persistence keeps the UI usable even when the API is offline.
     }
 
-    saveStoredPlanner(planner)
+    const plannerWithSchedule = { ...planner, schedule: createJobSchedule(planner) }
+    try {
+      await myPlannerApi.create(plannerWithSchedule)
+    } catch (error) {
+      setSaving(false)
+      if (error.status === 401 || error.status === 403) {
+        alert('로그인이 필요합니다. 로그인 후 다시 저장해 주세요.')
+        navigate('/login', { state: { from: '/planner' } })
+        return
+      }
+      alert('플래너 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.')
+      return
+    }
     setSaving(false)
     navigate('/my-planner')
   }

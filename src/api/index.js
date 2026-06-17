@@ -13,7 +13,15 @@ async function request(path, options = {}) {
     },
     ...options,
   })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  if (!res.ok) {
+    if (res.status === 401 || res.status === 403) {
+      localStorage.removeItem('token')
+    }
+    const error = new Error(`HTTP ${res.status}`)
+    error.status = res.status
+    throw error
+  }
+  if (res.status === 204) return null
   return res.json()
 }
 
