@@ -16,6 +16,7 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
   const [routeInfo, setRouteInfo] = useState(null)
   const [routeLoading, setRouteLoading] = useState(false)
   const [mapReady, setMapReady] = useState(false)
+  const [mobileTab, setMobileTab] = useState('list')
   const sliderRef = useRef(null)
   const mapRef = useRef(null)
   const kakaoMapRef = useRef(null)
@@ -62,16 +63,22 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
     }
   }, [selectedJobs, activeJobId])
 
+  // 모바일에서 지도 탭으로 전환할 때 relayout
+  useEffect(() => {
+    if (mobileTab === 'map' && kakaoMapRef.current) {
+      setTimeout(() => {
+        kakaoMapRef.current?.relayout()
+      }, 120)
+    }
+  }, [mobileTab])
+
   useEffect(() => {
     const initMap = () => {
-      console.log('[MAP] initMap 호출 — kakaoMapRef:', !!kakaoMapRef.current)
       if (kakaoMapRef.current) return
       window.kakao.maps.load(() => {
         const container = mapRef.current
-        console.log('[MAP] kakao.maps.load 콜백 — container:', !!container, 'kakaoMapRef:', !!kakaoMapRef.current)
         if (!container || kakaoMapRef.current) return
 
-        console.log('[MAP] container 크기:', container.offsetWidth, 'x', container.offsetHeight)
         const map = new window.kakao.maps.Map(container, {
           center: new window.kakao.maps.LatLng(35.8714, 128.6014),
           level: 5,
@@ -79,9 +86,7 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
         kakaoMapRef.current = map
         map.relayout()
         setMapReady(true)
-        console.log('[MAP] 지도 생성 완료')
 
-        // 타일이 그려진 후(2 프레임) 첫 번째 알바 자동 선택
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             const first = selectedJobsRef.current[0]
@@ -100,7 +105,6 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
     }
 
     return () => {
-      console.log('[MAP] cleanup 실행 — kakaoMapRef 초기화')
       setMapReady(false)
       kakaoMapRef.current = null
       markersRef.current = []
@@ -109,11 +113,9 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
     }
   }, [])
 
-  // 숙소 데이터가 로드되면 지도에 마커 배치
   useEffect(() => {
     if (!mapReady || !kakaoMapRef.current) return
 
-    // 기존 마커 제거
     markersRef.current.forEach((m) => m.setMap(null))
     infoWindowsRef.current.forEach((iw) => iw.setMap(null))
     markersRef.current = []
@@ -152,7 +154,6 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
     })
   }, [mapReady, visibleHotels])
 
-  // 선택된 숙소 마커 강조 + 지도 이동
   useEffect(() => {
     if (!mapReady || !markersRef.current.length || !kakaoMapRef.current) return
     markersRef.current.forEach((m, i) => {
@@ -198,7 +199,6 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
     routePolylinesRef.current.push(polyline)
   }, [])
 
-  // 경로 조회 및 지도 표시
   useEffect(() => {
     if (!activeJob) {
       clearRoute()
@@ -264,7 +264,6 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
             const color = sp.trafficType === 1 ? '#3B82F6' : '#10B981'
             let drew = false
 
-            // 1순위: loadLane (상세 도로 좌표)
             if (sp.mapObj) {
               try {
                 const laneData = await fetchLane(sp.mapObj)
@@ -274,10 +273,9 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
                   const coords = lane.section.flatMap((s) => s.graphPos ?? [])
                   if (coords.length > 0) { drawPolyline(coords, color); drew = true }
                 }
-              } catch { /* 아래 fallback 사용 */ }
+              } catch { /* fallback */ }
             }
 
-            // 2순위: passStopList 정류장/역 좌표 연결
             if (!drew) {
               const stations = sp.passStopList?.stations ?? []
               if (stations.length >= 2) {
@@ -287,7 +285,6 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
               }
             }
 
-            // 3순위: 출발-도착 직선
             if (!drew && hasCoords) {
               drawPolyline([{ x: sx, y: sy }, { x: ex, y: ey }], color)
             }
@@ -326,7 +323,6 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
             steps,
           })
 
-          // 숙소 + 알바 둘 다 보이도록 지도 조정
           const bounds = new window.kakao.maps.LatLngBounds()
           bounds.extend(new window.kakao.maps.LatLng(hotel.lat, hotel.lng))
           bounds.extend(new window.kakao.maps.LatLng(activeJob.lat, activeJob.lng))
@@ -352,7 +348,6 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
     }
   }, [visibleHotels, selectedHotel.name, onSelect])
 
-  // 알바 위치로 이동
   useEffect(() => {
     if (!mapReady || !kakaoMapRef.current) return
 
@@ -495,7 +490,23 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
         )}
       </div>
 
-      <div className="map-step-layout">
+      {/* 모바일 전용 목록/지도 탭 */}
+      <div className="map-mobile-tabs">
+        <button
+          className={`map-mobile-tab${mobileTab === 'list' ? ' active' : ''}`}
+          onClick={() => setMobileTab('list')}
+        >
+          🏠 목록
+        </button>
+        <button
+          className={`map-mobile-tab${mobileTab === 'map' ? ' active' : ''}`}
+          onClick={() => setMobileTab('map')}
+        >
+          🗺 지도
+        </button>
+      </div>
+
+      <div className={`map-step-layout${mobileTab === 'map' ? ' mobile-show-map' : ' mobile-show-list'}`}>
         <div className="map-sidebar">
           <div className="map-sidebar-header">
             <div className="map-sidebar-title">추천 숙소</div>
@@ -558,7 +569,7 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
         </div>
 
         <div className="map-wrapper">
-          <div ref={mapRef} style={{ width: '100%', height: '560px' }} />
+          <div ref={mapRef} className="map-canvas" />
         </div>
       </div>
     </div>

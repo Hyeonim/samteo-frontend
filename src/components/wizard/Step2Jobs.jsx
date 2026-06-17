@@ -180,6 +180,8 @@ function normalizeJob(job) {
   }
 }
 
+const MOBILE_INITIAL = 6
+
 export default function Step2Jobs({
   cityId,
   cityName = CITY_LABELS[cityId] ?? cityId,
@@ -192,17 +194,22 @@ export default function Step2Jobs({
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
   const [activeType, setActiveType] = useState('전체')
+  const [showAll, setShowAll] = useState(false)
 
   useEffect(() => {
     if (!cityId) return
     setLoading(true)
     setSearch('')
     setActiveType('전체')
+    setShowAll(false)
     api.get(`/api/planner/jobs?cityId=${cityId}`)
       .then((res) => setJobs(unwrap(res).map(normalizeJob)))
       .catch(() => setJobs([]))
       .finally(() => setLoading(false))
   }, [cityId])
+
+  // 필터 바뀌면 더 보기 리셋
+  useEffect(() => { setShowAll(false) }, [search, activeType, selectedDistrictId])
 
   const cityJobs = useMemo(() => jobs, [jobs])
 
@@ -317,51 +324,58 @@ export default function Step2Jobs({
           <div style={{ fontSize: 13, color: '#aaa' }}>다른 키워드나 구·군으로 검색해 보세요</div>
         </div>
       ) : (
-        <div className="pkg-grid">
-          {filtered.map((job, idx) => {
-            const isSelected = selectedJobs.some((j) => j.id === job.id)
-            const bg = BG_CYCLE[idx % 3]
-            return (
-              <div
-                key={job.id}
-                className={`pkg-card${isSelected ? ' selected' : ''}`}
-                onClick={() => selectJob(job)}
-              >
-                {job.best && <div className="pkg-best">⭐ BEST</div>}
-                {isSelected && <div className="pkg-check-badge">✓</div>}
-                <div className={`pkg-img ${bg}`}>
-                  <div className="pkg-img-label">{job.emoji}</div>
-                  <div className="pkg-img-overlay">
-                    <div className="pkg-location">{job.district ? `${cityName} ${job.district}` : job.location}</div>
-                  </div>
-                </div>
-                <div className="pkg-body">
-                  <div className="pkg-type">{job.type}</div>
-                  <div className="pkg-name">{job.name}</div>
-                  <div className="pkg-desc">{job.desc}</div>
-                  <div className="pkg-tags">
-                    {(job.tags ?? []).map((t) => (
-                      <span key={t} className="ptag">{t}</span>
-                    ))}
-                  </div>
-                  <div className="pkg-footer">
-                    <div className="pkg-price">
-                      <span className="amount">{job.priceLabel}</span>
-                      <span className="unit">{job.unit}</span>
-                      <span className="sub">{job.sub}</span>
+        <>
+          <div className="pkg-grid">
+            {(showAll ? filtered : filtered.slice(0, MOBILE_INITIAL)).map((job, idx) => {
+              const isSelected = selectedJobs.some((j) => j.id === job.id)
+              const bg = BG_CYCLE[idx % 3]
+              return (
+                <div
+                  key={job.id}
+                  className={`pkg-card${isSelected ? ' selected' : ''}`}
+                  onClick={() => selectJob(job)}
+                >
+                  {job.best && <div className="pkg-best">⭐ BEST</div>}
+                  {isSelected && <div className="pkg-check-badge">✓</div>}
+                  <div className={`pkg-img ${bg}`}>
+                    <div className="pkg-img-label">{job.emoji}</div>
+                    <div className="pkg-img-overlay">
+                      <div className="pkg-location">{job.district ? `${cityName} ${job.district}` : job.location}</div>
                     </div>
-                    <button
-                      className={`pkg-btn${isSelected ? ' sel' : ''}`}
-                      onClick={(e) => { e.stopPropagation(); selectJob(job) }}
-                    >
-                      {isSelected ? '✓ 선택됨' : '선택하기'}
-                    </button>
+                  </div>
+                  <div className="pkg-body">
+                    <div className="pkg-type">{job.type}</div>
+                    <div className="pkg-name">{job.name}</div>
+                    <div className="pkg-desc">{job.desc}</div>
+                    <div className="pkg-tags">
+                      {(job.tags ?? []).map((t) => (
+                        <span key={t} className="ptag">{t}</span>
+                      ))}
+                    </div>
+                    <div className="pkg-footer">
+                      <div className="pkg-price">
+                        <span className="amount">{job.priceLabel}</span>
+                        <span className="unit">{job.unit}</span>
+                        <span className="sub">{job.sub}</span>
+                      </div>
+                      <button
+                        className={`pkg-btn${isSelected ? ' sel' : ''}`}
+                        onClick={(e) => { e.stopPropagation(); selectJob(job) }}
+                      >
+                        {isSelected ? '✓ 선택됨' : '선택하기'}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
+          {!showAll && filtered.length > MOBILE_INITIAL && (
+            <button className="pkg-show-more" onClick={() => setShowAll(true)}>
+              더 보기 ({filtered.length - MOBILE_INITIAL}개 남음)
+            </button>
+          )}
+        </>
       )}
     </div>
   )

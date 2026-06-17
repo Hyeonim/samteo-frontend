@@ -12,6 +12,8 @@ const RECOMMEND_TABS = [
   { id: 'salary', label: '수입 좋은' },
 ]
 
+const MOBILE_INITIAL = 5
+
 function getRegionLabel(regionId, fallback) {
   const labels = {
     junggu: '대구 중구',
@@ -165,6 +167,10 @@ function getJobCardTheme(index) {
   return JOB_CARD_THEMES[index % JOB_CARD_THEMES.length]
 }
 
+function isMobile() {
+  try { return window.innerWidth < 768 } catch { return false }
+}
+
 export default function JobsPage() {
   const navigate = useNavigate()
   const [jobs, setJobs] = useState([])
@@ -172,7 +178,8 @@ export default function JobsPage() {
   const [type, setType] = useState('전체')
   const [activeTab, setActiveTab] = useState('all')
   const [loading, setLoading] = useState(true)
-  const [viewMode, setViewMode] = useState('card')
+  const [viewMode, setViewMode] = useState(() => isMobile() ? 'list' : 'card')
+  const [showAll, setShowAll] = useState(false)
 
   useEffect(() => {
     api.get('/api/planner/jobs')
@@ -180,6 +187,9 @@ export default function JobsPage() {
       .catch(() => setJobs([]))
       .finally(() => setLoading(false))
   }, [])
+
+  // 탭 바뀌면 "더 보기" 리셋
+  useEffect(() => { setShowAll(false) }, [activeTab, query, type])
 
   const types = useMemo(() => ['전체', ...new Set(jobs.map((job) => job.type).filter(Boolean))], [jobs])
 
@@ -192,6 +202,14 @@ export default function JobsPage() {
     })
     return sectionJobs(searched, activeTab)
   }, [jobs, query, type, activeTab])
+
+  // "전체" 탭에서만 더 보기 제한 적용
+  const displayed = useMemo(() => {
+    if (activeTab !== 'all' || showAll) return filtered
+    return filtered.slice(0, MOBILE_INITIAL * 2)
+  }, [filtered, activeTab, showAll])
+
+  const hasMore = activeTab === 'all' && !showAll && filtered.length > MOBILE_INITIAL * 2
 
   const popularJobs = useMemo(() => sectionJobs(jobs, 'popular'), [jobs])
   const closingJobs = useMemo(() => sectionJobs(jobs, 'closing'), [jobs])
@@ -271,10 +289,7 @@ export default function JobsPage() {
               onClick={() => setViewMode('card')}
             >
               <span className="job-view-icon grid" aria-hidden="true">
-                <span />
-                <span />
-                <span />
-                <span />
+                <span /><span /><span /><span />
               </span>
             </button>
             <button
@@ -285,9 +300,7 @@ export default function JobsPage() {
               onClick={() => setViewMode('list')}
             >
               <span className="job-view-icon list" aria-hidden="true">
-                <span />
-                <span />
-                <span />
+                <span /><span /><span />
               </span>
             </button>
           </div>
@@ -298,68 +311,82 @@ export default function JobsPage() {
         ) : filtered.length === 0 ? (
           <div className="directory-empty">조건에 맞는 추천 일자리가 없습니다.</div>
         ) : viewMode === 'card' ? (
-          <section className="job-recommend-grid">
-            {filtered.map((job, index) => (
-              <article className="job-shop-card" key={job.id}>
-                <div className={`job-shop-visual ${getJobCardTheme(index)}`}>
-                  <span className="job-shop-badge">{job.daysLeft <= 2 ? `D-${job.daysLeft}` : job.type}</span>
-                  <span className="job-shop-emoji">{job.emoji}</span>
-                  <div>
-                    <strong>{job.region}</strong>
-                    <span>{job.company ?? '추천 근무지'}</span>
+          <>
+            <section className="job-recommend-grid">
+              {displayed.map((job, index) => (
+                <article className="job-shop-card" key={job.id}>
+                  <div className={`job-shop-visual ${getJobCardTheme(index)}`}>
+                    <span className="job-shop-badge">{job.daysLeft <= 2 ? `D-${job.daysLeft}` : job.type}</span>
+                    <span className="job-shop-emoji">{job.emoji}</span>
+                    <div>
+                      <strong>{job.region}</strong>
+                      <span>{job.company ?? '추천 근무지'}</span>
+                    </div>
                   </div>
-                </div>
-                <div className="job-shop-body">
-                  <div className="job-shop-title-row">
-                    <h2>{job.name}</h2>
+                  <div className="job-shop-body">
+                    <div className="job-shop-title-row">
+                      <h2>{job.name}</h2>
+                      <span>{job.popularity}</span>
+                    </div>
+                    <p className="job-shop-reason">{job.recommendReason}</p>
+                    <div className="job-shop-meta">
+                      <div><span>예상 급여</span><strong>{job.salary.toLocaleString()}원</strong></div>
+                      <div><span>출퇴근</span><strong>{job.commute}분</strong></div>
+                    </div>
+                    <div className="directory-tags job-shop-tags">
+                      {job.tags.slice(0, 3).map((tag) => <span className="directory-tag" key={tag}>{tag}</span>)}
+                    </div>
+                    <button className="job-card-action" onClick={() => startAccommodationMatching(job)}>숙소 매칭 시작</button>
+                  </div>
+                </article>
+              ))}
+            </section>
+            {hasMore && (
+              <button className="show-more-btn" onClick={() => setShowAll(true)}>
+                더 보기 ({filtered.length - displayed.length}개 남음)
+              </button>
+            )}
+          </>
+        ) : (
+          <>
+            <section className="job-recommend-list">
+              {displayed.map((job) => (
+                <article className="job-recommend-card" key={job.id}>
+                  <div className="job-rank">
                     <span>{job.popularity}</span>
+                    <small>추천</small>
                   </div>
-                  <p className="job-shop-reason">{job.recommendReason}</p>
-                  <div className="job-shop-meta">
-                    <div><span>예상 급여</span><strong>{job.salary.toLocaleString()}원</strong></div>
-                    <div><span>출퇴근</span><strong>{job.commute}분</strong></div>
-                  </div>
-                  <div className="directory-tags job-shop-tags">
-                    {job.tags.slice(0, 3).map((tag) => <span className="directory-tag" key={tag}>{tag}</span>)}
+                  <div className="job-recommend-main">
+                    <div className="directory-card-top">
+                      <div>
+                        <h2 className="directory-card-title">{job.name}</h2>
+                        <p className="directory-card-sub">{job.company} · {job.region}</p>
+                      </div>
+                      <span className={`directory-badge${job.daysLeft <= 2 ? ' danger' : ''}`}>
+                        {job.daysLeft <= 2 ? `D-${job.daysLeft}` : job.type}
+                      </span>
+                    </div>
+                    <p className="job-reason">{job.recommendReason}</p>
+                    <div className="directory-metrics compact">
+                      <div className="directory-metric"><span>예상 급여</span><strong>{job.salary.toLocaleString()}원</strong></div>
+                      <div className="directory-metric"><span>출퇴근</span><strong>{job.commute}분</strong></div>
+                      <div className="directory-metric"><span>근무</span><strong>{job.workingDays ?? '-'}</strong></div>
+                      <div className="directory-metric"><span>고용</span><strong>{job.employmentType ?? '단기'}</strong></div>
+                    </div>
+                    <div className="directory-tags">
+                      {job.tags.map((tag) => <span className="directory-tag" key={tag}>{tag}</span>)}
+                    </div>
                   </div>
                   <button className="job-card-action" onClick={() => startAccommodationMatching(job)}>숙소 매칭 시작</button>
-                </div>
-              </article>
-            ))}
-          </section>
-        ) : (
-          <section className="job-recommend-list">
-            {filtered.map((job) => (
-              <article className="job-recommend-card" key={job.id}>
-                <div className="job-rank">
-                  <span>{job.popularity}</span>
-                  <small>추천</small>
-                </div>
-                <div className="job-recommend-main">
-                  <div className="directory-card-top">
-                    <div>
-                      <h2 className="directory-card-title">{job.name}</h2>
-                      <p className="directory-card-sub">{job.company} · {job.region}</p>
-                    </div>
-                    <span className={`directory-badge${job.daysLeft <= 2 ? ' danger' : ''}`}>
-                      {job.daysLeft <= 2 ? `D-${job.daysLeft}` : job.type}
-                    </span>
-                  </div>
-                  <p className="job-reason">{job.recommendReason}</p>
-                  <div className="directory-metrics compact">
-                    <div className="directory-metric"><span>예상 급여</span><strong>{job.salary.toLocaleString()}원</strong></div>
-                    <div className="directory-metric"><span>출퇴근</span><strong>{job.commute}분</strong></div>
-                    <div className="directory-metric"><span>근무</span><strong>{job.workingDays ?? '-'}</strong></div>
-                    <div className="directory-metric"><span>고용</span><strong>{job.employmentType ?? '단기'}</strong></div>
-                  </div>
-                  <div className="directory-tags">
-                    {job.tags.map((tag) => <span className="directory-tag" key={tag}>{tag}</span>)}
-                  </div>
-                </div>
-                <button className="job-card-action" onClick={() => startAccommodationMatching(job)}>숙소 매칭 시작</button>
-              </article>
-            ))}
-          </section>
+                </article>
+              ))}
+            </section>
+            {hasMore && (
+              <button className="show-more-btn" onClick={() => setShowAll(true)}>
+                더 보기 ({filtered.length - displayed.length}개 남음)
+              </button>
+            )}
+          </>
         )}
       </div>
     </main>

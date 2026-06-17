@@ -927,6 +927,17 @@
 .btn-next:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(59,130,246,0.4); }
 .step-counter { font-size: 13px; color: #aaa; font-weight: 600; }
 
+/* ── Map canvas ── */
+.map-canvas {
+  width: 100%;
+  height: 560px;
+}
+
+/* ── 지도/목록 모바일 탭 ── */
+.map-mobile-tabs {
+  display: none;
+}
+
 /* ── Mobile Responsive ── */
 @media (max-width: 768px) {
   .planner-wizard {
@@ -984,23 +995,69 @@
     gap: 14px;
   }
 
-  /* 지도 레이아웃: 세로로 쌓기 */
+  /* 지도/목록 모바일 탭 */
+  .map-mobile-tabs {
+    display: flex;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+
+  .map-mobile-tab {
+    flex: 1;
+    padding: 10px;
+    background: white;
+    border: none;
+    font-size: 14px;
+    font-weight: 700;
+    color: #64748b;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .map-mobile-tab + .map-mobile-tab {
+    border-left: 1.5px solid #e0e0e0;
+  }
+
+  .map-mobile-tab.active {
+    background: #EFF6FF;
+    color: #2563eb;
+  }
+
+  /* 지도 레이아웃: 탭별 표시 */
   .map-step-layout {
     flex-direction: column;
     height: auto;
     border-radius: 12px;
   }
 
+  .map-step-layout.mobile-show-list .map-wrapper {
+    display: none;
+  }
+
+  .map-step-layout.mobile-show-map .map-sidebar {
+    display: none;
+  }
+
   .map-sidebar {
     width: 100%;
     min-width: unset;
-    max-height: 280px;
+    max-height: 420px;
     border-right: none;
     border-bottom: 1px solid #e8e8e8;
   }
 
+  .map-step-layout.mobile-show-map .map-wrapper {
+    height: 420px;
+  }
+
+  .map-canvas {
+    height: 420px !important;
+  }
+
   .map-wrapper {
-    height: 280px;
+    height: 420px;
   }
 
   /* 예산 레이아웃: 1열 */
@@ -1044,12 +1101,36 @@
   }
 }
 
+/* ── 더 보기 버튼 (Step2) ── */
+.pkg-show-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 14px;
+  padding: 13px;
+  border: 1.5px dashed #dbe3ef;
+  border-radius: 10px;
+  background: white;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.pkg-show-more:hover {
+  border-color: #3B82F6;
+  color: #3B82F6;
+  background: #EFF6FF;
+}
+
 @media (max-width: 480px) {
   .wizard-inner {
     padding: 0 12px;
   }
 
-  /* Region grid: 작은 화면에서도 2열 유지 (적당함) */
+  /* Region grid: 작은 화면에서도 2열 유지 */
   .region-grid {
     gap: 8px;
   }
@@ -1066,9 +1147,65 @@
     display: none;
   }
 
-  /* Jobs pkg grid: 1열 */
+  /* Jobs pkg grid: 모바일에서 컴팩트 카드 */
   .pkg-grid {
     grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  /* 카드를 가로 배치로 변경 */
+  .pkg-card {
+    display: flex;
+    flex-direction: row;
+    border-radius: 12px;
+  }
+
+  .pkg-img {
+    width: 76px;
+    min-width: 76px;
+    height: auto;
+    min-height: 100%;
+    border-radius: 10px 0 0 10px;
+  }
+
+  .pkg-img-label {
+    font-size: 28px;
+  }
+
+  .pkg-img-overlay {
+    padding: 8px;
+  }
+
+  .pkg-location {
+    font-size: 9px;
+  }
+
+  .pkg-body {
+    flex: 1;
+    padding: 10px 12px;
+    min-width: 0;
+  }
+
+  .pkg-name {
+    font-size: 13px;
+    margin-bottom: 3px;
+  }
+
+  /* 설명/태그 숨겨서 높이 줄이기 */
+  .pkg-desc {
+    display: none;
+  }
+
+  .pkg-tags {
+    display: none;
+  }
+
+  .pkg-footer {
+    padding-top: 8px;
+  }
+
+  .pkg-price .amount {
+    font-size: 15px;
   }
 
   .step-card {

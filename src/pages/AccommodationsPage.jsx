@@ -4,6 +4,8 @@ import { api } from '../api'
 import LoadingScreen from '../components/common/LoadingScreen'
 import './ExplorePages.css'
 
+const INITIAL_COUNT = 8
+
 function unwrap(res) {
   return res.data ?? res.result ?? res
 }
@@ -13,6 +15,7 @@ export default function AccommodationsPage() {
   const [items, setItems] = useState([])
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(true)
+  const [showAll, setShowAll] = useState(false)
 
   useEffect(() => {
     api.get('/api/planner/accommodations')
@@ -20,6 +23,9 @@ export default function AccommodationsPage() {
       .catch(() => setItems([]))
       .finally(() => setLoading(false))
   }, [])
+
+  // 검색어 바뀌면 "더 보기" 리셋
+  useEffect(() => { setShowAll(false) }, [query])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -30,6 +36,9 @@ export default function AccommodationsPage() {
         .includes(q)
     ))
   }, [items, query])
+
+  const displayed = showAll ? filtered : filtered.slice(0, INITIAL_COUNT)
+  const hasMore = !showAll && filtered.length > INITIAL_COUNT
 
   return (
     <main className="directory-page">
@@ -46,7 +55,12 @@ export default function AccommodationsPage() {
         </header>
 
         <div className="directory-toolbar">
-          <input className="directory-search" placeholder="숙소명, 지역, 조건 검색" value={query} onChange={(event) => setQuery(event.target.value)} />
+          <input
+            className="directory-search"
+            placeholder="숙소명, 지역, 조건 검색"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
         </div>
 
         {loading ? (
@@ -54,26 +68,33 @@ export default function AccommodationsPage() {
         ) : filtered.length === 0 ? (
           <div className="directory-empty">검색 조건에 맞는 숙소가 없습니다.</div>
         ) : (
-          <section className="directory-grid">
-            {filtered.map((item) => (
-              <article className="directory-card" key={item.id ?? item.name}>
-                <div className="directory-card-top">
-                  <div>
-                    <h2 className="directory-card-title">{item.name}</h2>
-                    <p className="directory-card-sub">{item.address ?? item.location} · {item.district}</p>
+          <>
+            <section className="directory-grid">
+              {displayed.map((item) => (
+                <article className="directory-card" key={item.id ?? item.name}>
+                  <div className="directory-card-top">
+                    <div>
+                      <h2 className="directory-card-title">{item.name}</h2>
+                      <p className="directory-card-sub">{item.address ?? item.location} · {item.district}</p>
+                    </div>
+                    <span className="directory-badge">{item.commuteMinutes ?? '-'}분</span>
                   </div>
-                  <span className="directory-badge">{item.commuteMinutes ?? '-'}분</span>
-                </div>
-                <div className="directory-metrics">
-                  <div className="directory-metric"><span>월 비용</span><strong>{(item.monthlyPrice ?? item.price ?? 0).toLocaleString()}원</strong></div>
-                  <div className="directory-metric"><span>보증금</span><strong>{(item.deposit ?? 0).toLocaleString()}원</strong></div>
-                </div>
-                <div className="directory-tags">
-                  {(item.tags ?? []).map((tag) => <span className="directory-tag" key={tag}>{tag}</span>)}
-                </div>
-              </article>
-            ))}
-          </section>
+                  <div className="directory-metrics">
+                    <div className="directory-metric"><span>월 비용</span><strong>{(item.monthlyPrice ?? item.price ?? 0).toLocaleString()}원</strong></div>
+                    <div className="directory-metric"><span>보증금</span><strong>{(item.deposit ?? 0).toLocaleString()}원</strong></div>
+                  </div>
+                  <div className="directory-tags">
+                    {(item.tags ?? []).map((tag) => <span className="directory-tag" key={tag}>{tag}</span>)}
+                  </div>
+                </article>
+              ))}
+            </section>
+            {hasMore && (
+              <button className="show-more-btn" onClick={() => setShowAll(true)}>
+                더 보기 ({filtered.length - displayed.length}개 남음)
+              </button>
+            )}
+          </>
         )}
       </div>
     </main>

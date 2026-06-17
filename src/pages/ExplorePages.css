@@ -1867,6 +1867,30 @@
   font-weight: 800;
 }
 
+/* ── 더 보기 버튼 ── */
+.show-more-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 16px;
+  padding: 14px;
+  border: 1.5px dashed #dbe3ef;
+  border-radius: 10px;
+  background: white;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.show-more-btn:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+  background: #eff6ff;
+}
+
 @media (max-width: 900px) {
   .directory-head,
   .directory-toolbar {
