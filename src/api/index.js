@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+const BASE_URL = import.meta.env.VITE_API_URL || ''
 
 function getToken() {
   return localStorage.getItem('token')
@@ -14,9 +14,6 @@ async function request(path, options = {}) {
     ...options,
   })
   if (!res.ok) {
-    if (res.status === 401 || res.status === 403) {
-      localStorage.removeItem('token')
-    }
     const error = new Error(`HTTP ${res.status}`)
     error.status = res.status
     throw error

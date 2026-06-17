@@ -6,7 +6,6 @@ import Step2Jobs from '../components/wizard/Step2Jobs'
 import Step3Accommodation from '../components/wizard/Step3Accommodation'
 import Step4Budget from '../components/wizard/Step4Budget'
 import Step5Planner from '../components/wizard/Step5Planner'
-import { api } from '../api'
 import { myPlannerApi } from '../api/myPlannerApi'
 import { createJobSchedule, createPlannerId } from '../utils/plannerSchedule'
 import './PlannerPage.css'
@@ -182,18 +181,6 @@ export default function PlannerPage() {
       disposableIncome: Math.max(0, totalSalary - accommodationCost - FIXED_EXPENSES),
       createdAt: new Date().toISOString(),
       memo: '',
-    }
-
-    try {
-      await api.post('/api/planner', {
-        regionId: planner.regionId,
-        jobIds: planner.jobs.map((job) => job.id),
-        accommodationId: planner.accommodation.id ?? null,
-        stayMonth: 1,
-      })
-    } catch {
-      // The backend currently creates planners but does not expose a list API.
-      // Local persistence keeps the UI usable even when the API is offline.
     }
 
     const plannerWithSchedule = { ...planner, schedule: createJobSchedule(planner) }
