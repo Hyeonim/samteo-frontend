@@ -140,3 +140,16 @@
 }
 
 .login-register-link a:hover { text-decoration: underline; }
+
+@media (max-width: 480px) {
+  .login-page {
+    padding: 1.25rem;
+    align-items: flex-start;
+    padding-top: 2rem;
+  }
+
+  .login-card {
+    padding: 2rem 1.5rem;
+    border-radius: 16px;
+  }
+}

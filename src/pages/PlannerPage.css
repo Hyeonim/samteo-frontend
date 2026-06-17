@@ -926,3 +926,168 @@
 }
 .btn-next:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(59,130,246,0.4); }
 .step-counter { font-size: 13px; color: #aaa; font-weight: 600; }
+
+/* ── Mobile Responsive ── */
+@media (max-width: 768px) {
+  .planner-wizard {
+    margin-top: 0;
+    padding: 20px 0 48px;
+  }
+
+  .wizard-inner {
+    padding: 0 16px;
+  }
+
+  /* Step indicator: 라벨 숨김 */
+  .step-ind-label {
+    display: none;
+  }
+
+  .step-indicator {
+    padding: 16px 12px;
+    margin-bottom: 20px;
+  }
+
+  .step-ind-circle {
+    width: 30px;
+    height: 30px;
+    font-size: 12px;
+  }
+
+  /* Step card */
+  .step-card {
+    padding: 22px 16px;
+    border-radius: 14px;
+  }
+
+  .step-title {
+    font-size: 18px;
+  }
+
+  /* Region grid: 2열 */
+  .region-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .region-card {
+    height: 150px;
+  }
+
+  .rg-city {
+    font-size: 20px;
+  }
+
+  /* Jobs pkg grid: 2열 */
+  .pkg-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+
+  /* 지도 레이아웃: 세로로 쌓기 */
+  .map-step-layout {
+    flex-direction: column;
+    height: auto;
+    border-radius: 12px;
+  }
+
+  .map-sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: 280px;
+    border-right: none;
+    border-bottom: 1px solid #e8e8e8;
+  }
+
+  .map-wrapper {
+    height: 280px;
+  }
+
+  /* 예산 레이아웃: 1열 */
+  .budget-layout {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  /* 플래너 레이아웃: 1열 */
+  .planner-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  /* 플래너 요약 바 */
+  .planner-summary-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  /* 마법사 네비게이션 버튼 */
+  .wizard-nav {
+    gap: 10px;
+  }
+
+  .btn-prev {
+    padding: 11px 18px;
+    font-size: 13px;
+  }
+
+  .btn-next {
+    padding: 11px 20px;
+    font-size: 13px;
+  }
+
+  /* 스텝 카운터 */
+  .step-counter {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .wizard-inner {
+    padding: 0 12px;
+  }
+
+  /* Region grid: 작은 화면에서도 2열 유지 (적당함) */
+  .region-grid {
+    gap: 8px;
+  }
+
+  .region-card {
+    height: 120px;
+  }
+
+  .rg-city {
+    font-size: 16px;
+  }
+
+  .rg-desc {
+    display: none;
+  }
+
+  /* Jobs pkg grid: 1열 */
+  .pkg-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .step-card {
+    padding: 18px 12px;
+  }
+
+  .step-title {
+    font-size: 16px;
+  }
+
+  /* 예산 차트 */
+  .bar-chart {
+    height: 110px;
+  }
+
+  /* 플래너 요약 바 버튼 */
+  .btn-change,
+  .btn-view {
+    padding: 8px 12px;
+    font-size: 11px;
+  }
+}

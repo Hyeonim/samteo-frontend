@@ -16,6 +16,7 @@
   align-items: center;
   gap: 0.6rem;
   text-decoration: none;
+  flex-shrink: 0;
 }
 
 .nav-logo__text {
@@ -106,4 +107,123 @@
   font-size: 0.875rem;
   font-weight: 600;
   color: #374151;
+}
+
+/* ── Hamburger button ── */
+.nav-hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 36px;
+  height: 36px;
+  padding: 7px;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.nav-hamburger:hover {
+  background: #f3f4f6;
+}
+
+.nav-hamburger span {
+  display: block;
+  width: 100%;
+  height: 2px;
+  background: #374151;
+  border-radius: 1px;
+  transition: transform 0.25s, opacity 0.2s;
+  transform-origin: center;
+}
+
+.nav-hamburger.is-open span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+
+.nav-hamburger.is-open span:nth-child(2) {
+  opacity: 0;
+}
+
+.nav-hamburger.is-open span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+/* ── Mobile menu panel ── */
+.nav-mobile-menu {
+  position: fixed;
+  top: 64px;
+  left: 0;
+  right: 0;
+  z-index: 99;
+  background: white;
+  border-top: 1px solid #f3f4f6;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+}
+
+.nav-mobile-link {
+  display: block;
+  padding: 0.9rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #374151;
+  text-decoration: none;
+  border-bottom: 1px solid #f9fafb;
+  transition: background 0.15s, color 0.15s;
+}
+
+.nav-mobile-link:hover {
+  background: #f9fafb;
+  color: #7c3aed;
+}
+
+.nav-mobile-link.active {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.nav-mobile-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 1rem 1.5rem 1.25rem;
+}
+
+.nav-btn-start--full {
+  width: 100%;
+  padding: 0.7rem 1rem;
+  text-align: center;
+}
+
+/* ── Overlay ── */
+.nav-overlay {
+  position: fixed;
+  inset: 0;
+  top: 64px;
+  z-index: 98;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .nav {
+    padding: 0 1rem;
+  }
+
+  .nav-links {
+    display: none;
+  }
+
+  .nav-actions {
+    display: none;
+  }
+
+  .nav-hamburger {
+    display: flex;
+  }
 }

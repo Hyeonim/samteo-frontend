@@ -1965,3 +1965,191 @@
     transition: none;
   }
 }
+
+/* ── 640px 이하: 작은 태블릿 / 큰 폰 ── */
+@media (max-width: 640px) {
+  .directory-page {
+    padding: 20px 16px 48px;
+  }
+
+  .directory-title {
+    font-size: 22px;
+  }
+
+  .directory-desc {
+    font-size: 13px;
+  }
+
+  .directory-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .directory-actions {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .directory-actions .directory-btn {
+    flex: 1;
+    text-align: center;
+  }
+
+  /* 이벤트 히어로 */
+  .event-hero-panel {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .event-hero-stats {
+    grid-template-columns: repeat(2, 1fr);
+    width: 100%;
+  }
+
+  .event-hero-stats div {
+    padding: 10px;
+  }
+
+  .event-hero-stats strong {
+    font-size: 15px;
+  }
+
+  /* 이벤트 카드 */
+  .event-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .event-card {
+    grid-template-columns: 70px minmax(0, 1fr);
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .event-card .directory-btn {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  /* 일자리 툴바 */
+  .jobs-page .directory-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  /* 일자리 하이라이트 */
+  .job-highlight-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* 일자리 리스트 카드 */
+  .job-recommend-card {
+    grid-template-columns: 60px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .job-rank {
+    width: 48px;
+    height: 48px;
+  }
+
+  .job-rank span {
+    font-size: 15px;
+  }
+
+  .job-card-action {
+    grid-column: 1 / -1;
+    width: 100%;
+    text-align: center;
+  }
+
+  .directory-metrics.compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* 플래너 리스트 */
+  .planner-list {
+    grid-template-columns: 1fr;
+  }
+
+  .planner-workbench {
+    grid-template-columns: 1fr;
+  }
+
+  /* 스케줄러 */
+  .planner-scheduler {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .planner-form.inline {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── 480px 이하: 소형 스마트폰 ── */
+@media (max-width: 480px) {
+  .directory-page {
+    padding: 16px 12px 40px;
+  }
+
+  .directory-title {
+    font-size: 20px;
+  }
+
+  /* 이벤트 카드 */
+  .event-card {
+    grid-template-columns: 60px minmax(0, 1fr);
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .event-date-card {
+    min-height: 68px;
+  }
+
+  .event-date-card span {
+    font-size: 11px;
+  }
+
+  .event-date-card strong {
+    font-size: 15px;
+  }
+
+  .event-card h2 {
+    font-size: 14px;
+  }
+
+  /* 일자리 카드 */
+  .job-shop-visual {
+    min-height: 150px;
+  }
+
+  .job-shop-visual strong {
+    font-size: 18px;
+  }
+
+  .job-shop-emoji {
+    font-size: 40px;
+  }
+
+  .job-shop-title-row h2 {
+    font-size: 15px;
+  }
+
+  /* 이벤트 필터 */
+  .event-filter-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .event-region-picker {
+    grid-template-columns: 1fr;
+  }
+
+  /* 빠른 필터 버튼 */
+  .event-quick-filters button,
+  .event-category-tabs button {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+}

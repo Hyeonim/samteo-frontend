@@ -235,3 +235,59 @@
 .cta-banner .btn-primary:hover {
   box-shadow: 0 6px 20px rgba(0,0,0,0.2);
 }
+
+/* ── Mobile Responsive ── */
+@media (max-width: 640px) {
+  .hero {
+    padding: 3rem 1.25rem;
+    min-height: calc(100svh - 64px);
+  }
+
+  .hero__desc {
+    font-size: 1rem;
+  }
+
+  .features {
+    padding: 3rem 1.25rem;
+  }
+
+  .features__title {
+    font-size: 1.4rem;
+    margin-bottom: 2rem;
+  }
+
+  .cta-banner {
+    padding: 3.5rem 1.25rem;
+  }
+
+  .cta-banner__title {
+    font-size: 1.4rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero {
+    padding: 2.5rem 1rem;
+  }
+
+  .hero__cta {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    width: 100%;
+    text-align: center;
+    padding: 0.8rem 1rem;
+  }
+
+  .hero__welcome {
+    width: 100%;
+    text-align: center;
+  }
+
+  .cta-banner {
+    padding: 3rem 1rem;
+  }
+}
