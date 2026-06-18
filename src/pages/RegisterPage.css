@@ -89,3 +89,19 @@
 }
 
 .register-login-link a:hover { text-decoration: underline; }
+
+@media (max-width: 480px) {
+  .register-page {
+    padding: 1.25rem 1rem;
+    align-items: flex-start;
+  }
+
+  .register-card {
+    padding: 1.75rem 1.25rem;
+    border-radius: 14px;
+  }
+
+  .register-title {
+    font-size: 1.25rem;
+  }
+}

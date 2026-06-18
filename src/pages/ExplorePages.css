@@ -1965,6 +1965,10 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .planner-scheduler {
+    grid-template-columns: 1fr;
+  }
+
   .job-card-action {
     width: 100%;
   }
@@ -2104,10 +2108,39 @@
   .planner-scheduler {
     grid-template-columns: 1fr;
     padding: 14px;
+    gap: 14px;
+  }
+
+  .planner-topbar {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .planner-summary-strip {
+    padding: 0 14px;
   }
 
   .planner-form.inline {
     grid-template-columns: 1fr;
+  }
+
+  .scheduler-tabs button,
+  .day-picker button {
+    padding: 8px 8px;
+    font-size: 11px;
+  }
+
+  .directory-empty {
+    padding: 28px 16px;
+  }
+
+  .editor-inline-create {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 6px;
+  }
+
+  .confirm-actions .directory-btn {
+    flex: 1;
   }
 }
 
@@ -2175,5 +2208,50 @@
   .event-category-tabs button {
     padding: 8px 10px;
     font-size: 12px;
+  }
+
+  /* 빈 상태 */
+  .directory-empty {
+    padding: 20px 12px;
+    font-size: 13px;
+  }
+
+  /* 플래너 상세 */
+  .planner-topbar {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .planner-scheduler {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .planner-summary-strip {
+    padding: 0 12px;
+  }
+
+  /* 모달 버튼 세로 쌓기 */
+  .confirm-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .confirm-actions .directory-btn {
+    width: 100%;
+    text-align: center;
+    flex: none;
+  }
+
+  /* 일자리 카드형 */
+  .job-shop-card {
+    min-width: 0;
+  }
+
+  /* 스케줄러 탭 */
+  .scheduler-tabs button,
+  .day-picker button {
+    padding: 7px 6px;
+    font-size: 10px;
   }
 }
