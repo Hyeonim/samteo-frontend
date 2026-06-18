@@ -1,14 +1,67 @@
-import { useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 const FIXED_EXPENSES = 380000
+const CALENDAR_DAYS = [
+  { label: '일', value: 6, weekend: 'sun' },
+  { label: '월', value: 0 },
+  { label: '화', value: 1 },
+  { label: '수', value: 2 },
+  { label: '목', value: 3 },
+  { label: '금', value: 4 },
+  { label: '토', value: 5, weekend: 'sat' },
+]
 
-export default function Step5Planner({ selectedJobs, selectedHotel }) {
+function toScheduleDay(nativeDay) {
+  return nativeDay === 0 ? 6 : nativeDay - 1
+}
+
+function createMonthPreview(schedule) {
+  const today = new Date()
+  const first = new Date(today.getFullYear(), today.getMonth(), 1)
+  const last = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+  const cells = []
+
+  for (let index = 0; index < first.getDay(); index += 1) {
+    cells.push(null)
+  }
+
+  for (let date = 1; date <= last.getDate(); date += 1) {
+    const day = new Date(today.getFullYear(), today.getMonth(), date)
+    const nativeDay = day.getDay()
+    const scheduleDay = toScheduleDay(nativeDay)
+    cells.push({
+      date,
+      day: scheduleDay,
+      weekend: nativeDay === 0 ? 'sun' : nativeDay === 6 ? 'sat' : '',
+      events: schedule.filter((event) => event.day === scheduleDay),
+    })
+  }
+
+  while (cells.length % 7 !== 0) {
+    cells.push(null)
+  }
+
+  return {
+    label: `${today.getFullYear()}년 ${today.getMonth() + 1}월`,
+    cells,
+  }
+}
+
+export default function Step5Planner({ selectedJobs, selectedHotel, plannerPreview }) {
   const [activeJobId, setActiveJobId] = useState(selectedJobs[0]?.id ?? null)
   const sliderRef = useRef(null)
 
   const activeJob = selectedJobs.find((job) => job.id === activeJobId) ?? selectedJobs[0] ?? null
-  const accommodationCost = Number(selectedHotel.price ?? 0)
+  const accommodationCost = Number(selectedHotel.price ?? selectedHotel.monthlyPrice ?? 0)
   const total = activeJob ? Math.max(0, Number(activeJob.salary ?? 0) - accommodationCost - FIXED_EXPENSES) : 0
+  const previewSchedule = plannerPreview?.schedule ?? []
+  const monthPreview = useMemo(() => createMonthPreview(previewSchedule), [previewSchedule])
+
+  useEffect(() => {
+    if (!selectedJobs.some((job) => job.id === activeJobId)) {
+      setActiveJobId(selectedJobs[0]?.id ?? null)
+    }
+  }, [activeJobId, selectedJobs])
 
   function scrollSlider(dir) {
     sliderRef.current?.scrollBy({ left: dir * 250, behavior: 'smooth' })
@@ -80,9 +133,47 @@ export default function Step5Planner({ selectedJobs, selectedHotel }) {
           <div className="planner-layout">
             <div className="cal-panel">
               <div className="cal-panel-header">
-                <div className="cal-month-title">선택한 일자리 요약</div>
+                <div>
+                  <div className="cal-month-title">완성될 플래너 미리보기</div>
+                  <p className="planner-preview-sub">{plannerPreview?.title ?? '새 체류 플래너'}</p>
+                </div>
               </div>
-              <div className="community-list">
+              <div className="planner-preview-body">
+                <div className="directory-metrics compact planner-preview-metrics">
+                  <div className="directory-metric"><span>지역</span><strong>{plannerPreview?.regionName ?? '-'}</strong></div>
+                  <div className="directory-metric"><span>숙소</span><strong>{plannerPreview?.accommodation?.name || '-'}</strong></div>
+                  <div className="directory-metric"><span>일자리</span><strong>{plannerPreview?.jobs?.length ?? 0}개</strong></div>
+                  <div className="directory-metric"><span>월 잔액</span><strong>{Number(plannerPreview?.disposableIncome ?? 0).toLocaleString()}원</strong></div>
+                </div>
+
+                <div className="planner-month-preview" aria-label="저장될 월간 플래너 미리보기">
+                  <div className="planner-month-title">{monthPreview.label}</div>
+                  <div className="planner-month-weekdays">
+                    {CALENDAR_DAYS.map((day) => (
+                      <span className={day.weekend ?? ''} key={day.label}>{day.label}</span>
+                    ))}
+                  </div>
+                  <div className="planner-month-grid">
+                    {monthPreview.cells.map((cell, index) => (
+                      <div
+                        className={`planner-month-cell${cell ? '' : ' empty'}${cell?.weekend ? ` ${cell.weekend}` : ''}`}
+                        key={`${cell?.date ?? 'blank'}-${index}`}
+                      >
+                        {cell && (
+                          <>
+                            <strong>{cell.date}</strong>
+                            {cell.events.slice(0, 2).map((event) => (
+                              <span key={event.id} style={{ background: event.color ?? '#6b9ee8' }}>{event.title}</span>
+                            ))}
+                            {cell.events.length > 2 && <em>+{cell.events.length - 2}</em>}
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="planner-preview-section-title">선택한 일자리</div>
                 {selectedJobs.map((job) => (
                   <article className="directory-card" key={job.id}>
                     <div className="directory-card-top">

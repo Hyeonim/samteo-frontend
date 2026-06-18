@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import StepIndicator from '../components/wizard/StepIndicator'
 import Step1Region from '../components/wizard/Step1Region'
@@ -91,6 +91,7 @@ export default function PlannerPage() {
   const [selectedRegionName, setSelectedRegionName] = useState(seedDistrictName)
   const [selectedJobs, setSelectedJobs] = useState(seedJob ? [seedJob] : [])
   const [selectedHotel, setSelectedHotel] = useState(DEFAULT_HOTEL)
+  const [draftPlannerId] = useState(() => createPlannerId())
   const [saving, setSaving] = useState(false)
 
   function selectCity(cityId, cityName) {
@@ -139,23 +140,11 @@ export default function PlannerPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  async function completePlanner() {
-    if (selectedJobs.length === 0) {
-      alert('일자리를 하나 이상 선택해 주세요.')
-      setCurrentStep(2)
-      return
-    }
-    if (!selectedRegion) {
-      alert('선택한 일자리의 구·군 정보를 확인해 주세요.')
-      setCurrentStep(2)
-      return
-    }
-
-    setSaving(true)
+  function buildPlannerDraft(createdAt = new Date().toISOString()) {
     const totalSalary = selectedJobs.reduce((sum, job) => sum + Number(job.salary ?? job.monthlySalary ?? 0), 0)
     const accommodationCost = Number(selectedHotel.price ?? selectedHotel.monthlyPrice ?? 0)
-    const planner = {
-      id: createPlannerId(),
+    return {
+      id: draftPlannerId,
       title: `${selectedRegionName ?? selectedCityName} 체류 플래너`,
       cityId: selectedCity,
       cityName: selectedCityName,
@@ -179,10 +168,30 @@ export default function PlannerPage() {
       accommodationCost,
       fixedExpense: FIXED_EXPENSES,
       disposableIncome: Math.max(0, totalSalary - accommodationCost - FIXED_EXPENSES),
-      createdAt: new Date().toISOString(),
+      createdAt,
       memo: '',
     }
+  }
 
+  const previewPlanner = useMemo(() => {
+    const planner = buildPlannerDraft()
+    return { ...planner, schedule: createJobSchedule(planner) }
+  }, [draftPlannerId, selectedCity, selectedCityName, selectedRegion, selectedRegionName, selectedJobs, selectedHotel])
+
+  async function completePlanner() {
+    if (selectedJobs.length === 0) {
+      alert('일자리를 하나 이상 선택해 주세요.')
+      setCurrentStep(2)
+      return
+    }
+    if (!selectedRegion) {
+      alert('선택한 일자리의 구·군 정보를 확인해 주세요.')
+      setCurrentStep(2)
+      return
+    }
+
+    setSaving(true)
+    const planner = buildPlannerDraft()
     const plannerWithSchedule = { ...planner, schedule: createJobSchedule(planner) }
     try {
       await myPlannerApi.create(plannerWithSchedule)
@@ -215,7 +224,7 @@ export default function PlannerPage() {
     />,
     <Step3Accommodation key={3} selectedJobs={selectedJobs} selectedHotel={selectedHotel} onSelect={setSelectedHotel} />,
     <Step4Budget key={4} selectedJobs={selectedJobs} selectedHotel={selectedHotel} />,
-    <Step5Planner key={5} selectedJobs={selectedJobs} selectedHotel={selectedHotel} />,
+    <Step5Planner key={5} selectedJobs={selectedJobs} selectedHotel={selectedHotel} plannerPreview={previewPlanner} />,
   ]
 
   return (
