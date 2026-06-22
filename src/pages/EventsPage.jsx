@@ -108,14 +108,6 @@ function mergeSchedule(planner, events) {
   return [...base, ...events]
 }
 
-function monthQueries() {
-  const today = new Date()
-  return Array.from({ length: 3 }, (_, index) => {
-    const date = new Date(today.getFullYear(), today.getMonth() + index, 1)
-    return { year: date.getFullYear(), month: date.getMonth() + 1 }
-  })
-}
-
 export default function EventsPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -125,7 +117,7 @@ export default function EventsPage() {
   const [loading, setLoading] = useState(true)
   const [planners, setPlanners] = useState(() => initialPlanners)
   const [selectedPlannerId, setSelectedPlannerId] = useState(location.state?.plannerId ?? initialPlanners[0]?.id ?? '')
-  const [regionFilter, setRegionFilter] = useState('planner')
+  const [regionFilter, setRegionFilter] = useState('all')
   const [selectedRegions, setSelectedRegions] = useState([])
   const [regionMenuOpen, setRegionMenuOpen] = useState(false)
   const [selectedFestival, setSelectedFestival] = useState(null)
@@ -136,20 +128,17 @@ export default function EventsPage() {
   const [notice, setNotice] = useState('')
 
   useEffect(() => {
-    Promise.allSettled(
-      monthQueries().map(({ year, month }) => api.get(`/api/festivals?year=${year}&month=${month}`))
-    )
-      .then((results) => {
-        const items = results.flatMap((result) => (
-          result.status === 'fulfilled' ? unwrap(result.value) : []
-        ))
+    api.get('/api/festivals')
+      .then((result) => {
+        const items = unwrap(result)
         const unique = new Map()
         items.map(sanitizeFestival).forEach((item) => {
-          const key = `${item.title}-${item.startDate}-${item.endDate}`
+          const key = item.id ?? `${item.title}-${item.location}-${item.address}`
           unique.set(key, item)
         })
         setFestivals([...unique.values()])
       })
+      .catch(() => setFestivals([]))
       .finally(() => setLoading(false))
   }, [])
 
@@ -190,7 +179,7 @@ export default function EventsPage() {
   const openAddModal = (festival) => {
     const dates = dateRange(festival.startDate, festival.endDate)
     setSelectedFestival(festival)
-    setSelectedDate(dates[0] ? toDateKey(dates[0]) : '')
+    setSelectedDate(dates[0] ? toDateKey(dates[0]) : toDateKey(new Date()))
     setMode('single')
     setNotice('')
   }
@@ -281,7 +270,7 @@ export default function EventsPage() {
             </div>
             <div>
               <span>수집 범위</span>
-              <strong>3개월</strong>
+              <strong>전체 행사</strong>
             </div>
           </div>
         </section>
@@ -382,20 +371,16 @@ export default function EventsPage() {
         ) : (
           <section className="event-grid" aria-label={`${activeRegionLabel} 축제 목록`}>
             {visibleFestivals.map((festival) => (
-              <article className="event-card" key={`${festival.title}-${festival.startDate}-${festival.endDate}`}>
+              <article className="event-card" key={festival.id ?? `${festival.title}-${festival.location}`}>
                 <div className="event-date-card">
-                  <span>{formatDate(festival.startDate)}</span>
-                  <strong>{formatDate(festival.endDate ?? festival.startDate)}</strong>
+                  <span>행사</span>
+                  <strong>일정 미제공</strong>
                 </div>
                 <div className="event-card-body">
                   <span className="directory-badge">축제</span>
                   <h2>{festival.title}</h2>
                   <p>{festival.location ?? '지역 정보 없음'}</p>
-                  <div className="event-meta">
-                    <span>{festival.startDate}</span>
-                    <span>~</span>
-                    <span>{festival.endDate ?? festival.startDate}</span>
-                  </div>
+                  <div className="event-meta"><span>{festival.address ?? '상세 위치 미제공'}</span></div>
                 </div>
                 <button className="directory-btn primary" onClick={() => openAddModal(festival)}>플래너에 담기</button>
               </article>
@@ -421,12 +406,14 @@ export default function EventsPage() {
                 </select>
               </label>
 
-              <div className="event-mode-row">
-                <button className={mode === 'single' ? 'active' : ''} onClick={() => setMode('single')}>하루만 담기</button>
-                <button className={mode === 'all' ? 'active' : ''} onClick={() => setMode('all')}>전체 기간 담기</button>
-              </div>
+              {festivalDates.length > 0 && (
+                <div className="event-mode-row">
+                  <button className={mode === 'single' ? 'active' : ''} onClick={() => setMode('single')}>하루만 담기</button>
+                  <button className={mode === 'all' ? 'active' : ''} onClick={() => setMode('all')}>전체 기간 담기</button>
+                </div>
+              )}
 
-              {mode === 'single' && (
+              {mode === 'single' && festivalDates.length > 0 && (
                 <label>
                   날짜
                   <select value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)}>
@@ -435,6 +422,13 @@ export default function EventsPage() {
                       return <option key={key} value={key}>{key}</option>
                     })}
                   </select>
+                </label>
+              )}
+
+              {festivalDates.length === 0 && (
+                <label>
+                  플래너에 담을 날짜
+                  <input type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} />
                 </label>
               )}
 

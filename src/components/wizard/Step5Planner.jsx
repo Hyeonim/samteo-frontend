@@ -52,7 +52,8 @@ export default function Step5Planner({ selectedJobs, selectedHotel, plannerPrevi
   const sliderRef = useRef(null)
 
   const activeJob = selectedJobs.find((job) => job.id === activeJobId) ?? selectedJobs[0] ?? null
-  const accommodationCost = Number(selectedHotel.price ?? selectedHotel.monthlyPrice ?? 0)
+  const rawAccommodationCost = selectedHotel.price ?? selectedHotel.monthlyPrice
+  const accommodationCost = Number(rawAccommodationCost ?? 0)
   const total = activeJob ? Math.max(0, Number(activeJob.salary ?? 0) - accommodationCost - FIXED_EXPENSES) : 0
   const previewSchedule = plannerPreview?.schedule ?? []
   const monthPreview = useMemo(() => createMonthPreview(previewSchedule), [previewSchedule])
@@ -207,7 +208,7 @@ export default function Step5Planner({ selectedJobs, selectedHotel, plannerPrevi
                   </div>
                   <div className="ps-row">
                     <div className="ps-lbl">숙박비</div>
-                    <div className="ps-val" style={{ color: '#ef4444' }}>-{accommodationCost.toLocaleString()}원</div>
+                    <div className="ps-val" style={{ color: '#ef4444' }}>{rawAccommodationCost == null ? '미제공' : `-${accommodationCost.toLocaleString()}원`}</div>
                   </div>
                   <div className="ps-row">
                     <div className="ps-lbl">생활 고정비</div>

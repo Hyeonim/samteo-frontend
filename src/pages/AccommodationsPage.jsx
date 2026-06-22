@@ -10,6 +10,14 @@ function unwrap(res) {
   return res.data ?? res.result ?? res
 }
 
+function formatProvidedMoney(value) {
+  return value == null ? '미제공' : `${Number(value).toLocaleString()}원`
+}
+
+function formatProvidedMinutes(value) {
+  return value == null ? '미제공' : `${value}분`
+}
+
 export default function AccommodationsPage() {
   const navigate = useNavigate()
   const [items, setItems] = useState([])
@@ -77,11 +85,11 @@ export default function AccommodationsPage() {
                       <h2 className="directory-card-title">{item.name}</h2>
                       <p className="directory-card-sub">{item.address ?? item.location} · {item.district}</p>
                     </div>
-                    <span className="directory-badge">{item.commuteMinutes ?? '-'}분</span>
+                    <span className="directory-badge">{formatProvidedMinutes(item.commuteMinutes)}</span>
                   </div>
                   <div className="directory-metrics">
-                    <div className="directory-metric"><span>월 비용</span><strong>{(item.monthlyPrice ?? item.price ?? 0).toLocaleString()}원</strong></div>
-                    <div className="directory-metric"><span>보증금</span><strong>{(item.deposit ?? 0).toLocaleString()}원</strong></div>
+                    <div className="directory-metric"><span>월 비용</span><strong>{formatProvidedMoney(item.monthlyPrice ?? item.price)}</strong></div>
+                    <div className="directory-metric"><span>보증금</span><strong>{formatProvidedMoney(item.deposit)}</strong></div>
                   </div>
                   <div className="directory-tags">
                     {(item.tags ?? []).map((tag) => <span className="directory-tag" key={tag}>{tag}</span>)}

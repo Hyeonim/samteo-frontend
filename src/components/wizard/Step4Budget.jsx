@@ -9,11 +9,12 @@ export default function Step4Budget({ selectedJobs, selectedHotel }) {
   const sliderRef = useRef(null)
 
   const activeJob = selectedJobs.find((j) => j.id === activeJobId) ?? selectedJobs[0] ?? null
-  const total = activeJob ? Math.max(0, activeJob.salary - selectedHotel.price - FIXED_EXPENSES) : 0
+  const accommodationPrice = selectedHotel.price == null ? null : Number(selectedHotel.price)
+  const total = activeJob ? Math.max(0, activeJob.salary - (accommodationPrice ?? 0) - FIXED_EXPENSES) : 0
   const chartData = activeJob
     ? Array.from({ length: 6 }, (_, index) => {
       const month = `${index + 1}개월`
-      const expense = Number(selectedHotel.price ?? 0) + FIXED_EXPENSES
+      const expense = (accommodationPrice ?? 0) + FIXED_EXPENSES
       return {
         month,
         income: Math.max(24, Math.round(Number(activeJob.salary ?? 0) / 30000)),
@@ -90,7 +91,7 @@ export default function Step4Budget({ selectedJobs, selectedHotel }) {
             </div>
             <div className="srow">
               <div className="slabel">🏠 숙박비</div>
-              <div className="svalue sv-red">-₩{selectedHotel.price.toLocaleString()}</div>
+              <div className="svalue sv-red">{accommodationPrice == null ? '미제공' : `-₩${accommodationPrice.toLocaleString()}`}</div>
             </div>
             <div className="srow">
               <div className="slabel">🍽️ 식비 (30일)</div>

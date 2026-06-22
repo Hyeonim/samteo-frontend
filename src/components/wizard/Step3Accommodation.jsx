@@ -1,8 +1,15 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { api } from '../../api'
 
-async function fetchTransitRoute(accommodationId, jobId) {
-  const data = await api.post('/api/planner/commute-route', { accommodationId, jobId })
+async function fetchTransitRoute(accommodation, job) {
+  const data = await api.post('/api/planner/transit-routes', {
+    startName: accommodation.name,
+    endName: job.name ?? job.title,
+    startLatitude: accommodation.lat,
+    startLongitude: accommodation.lng,
+    endLatitude: job.lat ?? job.latitude,
+    endLongitude: job.lng ?? job.longitude,
+  })
   return data.data ?? data.result ?? data
 }
 
@@ -28,7 +35,9 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
   selectedJobsRef.current = selectedJobs
 
   useEffect(() => {
-    api.get('/api/planner/accommodations')
+    const regionId = selectedJobs[0]?.districtRegionId ?? selectedJobs[0]?.regionId
+    const query = regionId ? `?regionId=${encodeURIComponent(regionId)}` : ''
+    api.get(`/api/planner/accommodations${query}`)
       .then((res) => {
         const data = res.data ?? res.result ?? res
         setHotels(data.map((h) => ({
@@ -39,7 +48,7 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
         })))
       })
       .catch(() => {})
-  }, [])
+  }, [selectedJobs])
 
   const activeJob = selectedJobs.find((j) => j.id === activeJobId) ?? null
   const selectedRegionIds = useMemo(
@@ -138,7 +147,7 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
         <div style="padding:10px 14px;border-radius:10px;background:white;box-shadow:0 4px 16px rgba(0,0,0,0.15);min-width:160px;font-family:sans-serif;">
           <div style="font-weight:700;font-size:13px;color:#1e293b;">${h.name}</div>
           <div style="font-size:11px;color:#64748b;margin-top:2px;">${h.location}</div>
-          <div style="font-size:12px;color:#3B82F6;font-weight:600;margin-top:4px;">월 ${(h.price ?? 0).toLocaleString()}원</div>
+          <div style="font-size:12px;color:#3B82F6;font-weight:600;margin-top:4px;">${h.price == null ? '월 비용 미제공' : `월 ${Number(h.price).toLocaleString()}원`}</div>
         </div>`
       const infoWindow = new window.kakao.maps.CustomOverlay({
         position,
@@ -229,7 +238,7 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
 
     ;(async () => {
       try {
-        const routeRes = await fetchTransitRoute(hotel.id, activeJob.id)
+        const routeRes = await fetchTransitRoute(hotel, activeJob)
         if (cancelled) return
 
         const rawOdsay = routeRes.raw ?? routeRes
@@ -344,7 +353,7 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
     const stillVisible = visibleHotels.some((hotel) => hotel.name === selectedHotel.name)
     if (!stillVisible) {
       const first = visibleHotels[0]
-      onSelect({ id: first.id, name: first.name, price: first.price })
+      onSelect({ ...first })
     }
   }, [visibleHotels, selectedHotel.name, onSelect])
 
@@ -532,7 +541,7 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
                   <div
                     key={h.name}
                     className={`acc-card${selectedHotel.name === h.name ? ' selected' : ''}`}
-                    onClick={() => onSelect({ id: h.id, name: h.name, price: h.price })}
+                    onClick={() => onSelect({ ...h })}
                   >
                     <div style={{ position: 'relative', flexShrink: 0 }}>
                       <div className="acc-img-box" style={{ background: h.bg }} />
@@ -557,7 +566,7 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
                         ))}
                       </div>
                       <div className="acc-price-row">
-                        <span className="acc-price">월 {h.price.toLocaleString()}원</span>
+                        <span className="acc-price">{h.price == null ? '월 비용 미제공' : `월 ${Number(h.price).toLocaleString()}원`}</span>
                         <span className={h.posType === 'pos' ? 'acc-pos' : 'acc-neg'}>{h.pos}</span>
                       </div>
                     </div>
@@ -566,6 +575,24 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
               </div>
             ))}
           </div>
+          {selectedHotel.name && (
+            <div className="directory-metric" style={{ margin: '12px 16px 16px' }}>
+              <label htmlFor="planner-accommodation-price">월 숙박비 직접 입력</label>
+              <input
+                id="planner-accommodation-price"
+                type="number"
+                min="0"
+                step="10000"
+                placeholder="미제공 — 직접 입력할 수 있습니다"
+                value={selectedHotel.price ?? ''}
+                onChange={(event) => onSelect({
+                  ...selectedHotel,
+                  price: event.target.value === '' ? null : Number(event.target.value),
+                  monthlyPrice: event.target.value === '' ? null : Number(event.target.value),
+                })}
+              />
+            </div>
+          )}
         </div>
 
         <div className="map-wrapper">
