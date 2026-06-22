@@ -10,44 +10,8 @@ const CARD_BACKGROUNDS = [
   'linear-gradient(160deg, #1a3320, #2d6040)',
 ]
 
-const CITY_IDS = new Set([
-  'seoul',
-  'busan',
-  'daegu',
-  'jeju',
-  'gangneung',
-  'jeonju',
-  'gyeongju',
-  'incheon',
-  'yeosu',
-  'sokcho',
-  'gwangju',
-  'daejeon',
-])
-
 function unwrap(res) {
   return res.data ?? res.result ?? res
-}
-
-function getCityId(region) {
-  const tagCityId = (region.tags ?? []).find((tag) => CITY_IDS.has(tag))
-  if (tagCityId) return tagCityId
-  if (region.cityId) return region.cityId
-  if (region.id.includes('-')) return region.id.split('-')[0]
-  return region.id
-}
-
-function getCityName(region) {
-  return region.cityName ?? region.name.split(' ')[0]
-}
-
-function countJobsByCity(jobs) {
-  const counts = new Map()
-  jobs.forEach((job) => {
-    if (!job.cityId) return
-    counts.set(job.cityId, (counts.get(job.cityId) ?? 0) + 1)
-  })
-  return counts
 }
 
 export default function Step1Region({ selectedRegion, onSelect }) {
@@ -56,25 +20,11 @@ export default function Step1Region({ selectedRegion, onSelect }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    Promise.all([
-      api.get('/api/regions'),
-      api.get('/api/planner/jobs'),
-    ])
-      .then(([regionRes, jobRes]) => {
-        const data = unwrap(regionRes)
-        const jobCounts = countJobsByCity(unwrap(jobRes))
-        const cityMap = new Map()
-        data.forEach((region) => {
-          const cityId = getCityId(region)
-          const cityName = getCityName(region)
-          if (!cityMap.has(cityId)) {
-            cityMap.set(cityId, { id: cityId, name: cityName, count: 0 })
-          }
-          cityMap.get(cityId).count = jobCounts.get(cityId) ?? 0
-        })
-        setRegions([...cityMap.values()]
-          .filter((city) => city.count > 0)
-          .sort((a, b) => a.name.localeCompare(b.name, 'ko')))
+    api.get('/api/regions')
+      .then((regionRes) => {
+        setRegions(unwrap(regionRes)
+          .map((region) => ({ id: String(region.id), name: region.name }))
+          .sort((a, b) => Number(a.id) - Number(b.id)))
       })
       .catch(() => setRegions([]))
       .finally(() => setLoading(false))
@@ -90,7 +40,7 @@ export default function Step1Region({ selectedRegion, onSelect }) {
     <div className="step-card">
       <div className="step-title">어디서 한 달 동안 체류하고 싶으신가요?</div>
       <div className="step-subtitle">
-        백엔드에 등록된 일자리 데이터를 기준으로 선택 가능한 도시를 불러옵니다.
+        지역 메타데이터를 기준으로 선택 가능한 시·도를 불러옵니다.
       </div>
 
       <div className="region-search-wrap">
@@ -113,7 +63,7 @@ export default function Step1Region({ selectedRegion, onSelect }) {
         <div className="region-empty">
           <div style={{ fontSize: 32, marginBottom: 8 }}>😕</div>
           <div style={{ fontWeight: 700, marginBottom: 4 }}>선택 가능한 지역이 없습니다</div>
-          <div style={{ fontSize: 13, color: '#aaa' }}>백엔드 일자리 데이터의 도시 정보를 확인해 주세요.</div>
+          <div style={{ fontSize: 13, color: '#aaa' }}>meta_region 테이블의 지역 정보를 확인해 주세요.</div>
         </div>
       ) : (
         <div className="region-grid">
@@ -125,10 +75,10 @@ export default function Step1Region({ selectedRegion, onSelect }) {
             >
               <div className="rg-bg" style={{ background: CARD_BACKGROUNDS[index % CARD_BACKGROUNDS.length] }} />
               <div className="rg-overlay" />
-              <div className="rg-badge rg-badge-blue">{region.count}개 일자리</div>
+              <div className="rg-badge rg-badge-blue">지역 선택</div>
               <div className="rg-info">
                 <div className="rg-city">{region.name}</div>
-                <div className="rg-desc">등록된 일자리 기준으로 플래너를 시작합니다.</div>
+                <div className="rg-desc">지역 메타데이터를 기준으로 플래너를 시작합니다.</div>
               </div>
             </div>
           ))}
