@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import LoadingScreen from '../components/common/LoadingScreen'
@@ -9,7 +9,13 @@ import './ExplorePages.css'
 const CATEGORIES = [
   { id: 'festivals', label: '축제' },
   { id: 'attractions', label: '관광지' },
+  { id: 'restaurants', label: '식당' },
 ]
+const CATEGORY_CONFIG = {
+  festivals: { endpoint: '/api/festivals', label: '축제' },
+  attractions: { endpoint: '/api/attractions', label: '관광지' },
+  restaurants: { endpoint: '/api/restaurants', label: '식당' },
+}
 const PAGE_SIZE = 20
 const PAGE_GROUP_SIZE = 5
 
@@ -119,11 +125,102 @@ function EventVisual({ imageUrl, title, category = '행사' }) {
   }
 
   return (
-    <div className="event-date-card">
-      <span>{category}</span>
-      <strong>일정 미제공</strong>
+    <div className="event-image-placeholder" aria-label={`${title} 이미지 미제공`}>
+      <span aria-hidden="true">▧</span>
+      <strong>이미지 미제공</strong>
+      <small>{category}</small>
     </div>
   )
+}
+
+function DetailImage({ imageUrl, title }) {
+  const [imageFailed, setImageFailed] = useState(false)
+  if (imageUrl && !imageFailed) {
+    return (
+      <img
+        className="event-detail-image"
+        src={imageUrl}
+        alt={`${title} 대표 이미지`}
+        onError={() => setImageFailed(true)}
+      />
+    )
+  }
+  return (
+    <div className="event-detail-image-placeholder">
+      <span aria-hidden="true">▧</span>
+      <strong>이미지 미제공</strong>
+    </div>
+  )
+}
+
+const DETAIL_FIELD_LABELS = {
+  infocenter: '문의 및 안내',
+  restdate: '휴무일',
+  usetime: '이용시간',
+  parking: '주차',
+  chkpet: '반려동물 동반',
+  expguide: '체험 안내',
+  eventplace: '행사 장소',
+  playtime: '공연 시간',
+  sponsor1: '주최자',
+  sponsor1tel: '주최자 연락처',
+  sponsor2: '주관사',
+  sponsor2tel: '주관사 연락처',
+  usetimefestival: '이용요금',
+  spendtimefestival: '관람 소요시간',
+  bookingplace: '예매처',
+  firstmenu: '대표 메뉴',
+  opentimefood: '영업시간',
+  restdatefood: '휴무일',
+  parkingfood: '주차',
+  treatmenu: '취급 메뉴',
+  reservationfood: '예약 안내',
+  packing: '포장 가능',
+  smoking: '흡연 가능 여부',
+  infocenterfood: '문의 및 안내',
+}
+
+function stripHtml(value) {
+  if (!value) return ''
+  const documentValue = new DOMParser().parseFromString(String(value), 'text/html')
+  return documentValue.body.textContent?.replace(/\s+/g, ' ').trim() ?? ''
+}
+
+function detailFields(intro) {
+  return Object.entries(intro ?? {})
+    .filter(([key, value]) => value && DETAIL_FIELD_LABELS[key] && !/date/i.test(key))
+    .map(([key, value]) => ({ label: DETAIL_FIELD_LABELS[key], value: stripHtml(value) }))
+}
+
+function ContentLocationMap({ latitude, longitude, title }) {
+  const containerRef = useRef(null)
+
+  useEffect(() => {
+    const lat = Number(latitude)
+    const lng = Number(longitude)
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return undefined
+
+    const renderMap = () => {
+      if (!containerRef.current || !window.kakao?.maps) return
+      window.kakao.maps.load(() => {
+        if (!containerRef.current) return
+        const position = new window.kakao.maps.LatLng(lat, lng)
+        const map = new window.kakao.maps.Map(containerRef.current, { center: position, level: 4 })
+        new window.kakao.maps.Marker({ map, position, title })
+      })
+    }
+
+    if (window.kakao?.maps) {
+      renderMap()
+    } else {
+      const script = document.querySelector('script[src*="dapi.kakao.com"]')
+      script?.addEventListener('load', renderMap)
+      return () => script?.removeEventListener('load', renderMap)
+    }
+    return undefined
+  }, [latitude, longitude, title])
+
+  return <div className="event-detail-map" ref={containerRef} aria-label={`${title} 위치 지도`} />
 }
 
 function buildWorkSchedule(planner) {
@@ -153,6 +250,7 @@ export default function EventsPage() {
   const [category, setCategory] = useState('festivals')
   const [festivals, setFestivals] = useState([])
   const [attractions, setAttractions] = useState([])
+  const [restaurants, setRestaurants] = useState([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [hasNextPage, setHasNextPage] = useState(false)
@@ -163,6 +261,8 @@ export default function EventsPage() {
   const [selectedRegions, setSelectedRegions] = useState([])
   const [regionMenuOpen, setRegionMenuOpen] = useState(false)
   const [selectedFestival, setSelectedFestival] = useState(null)
+  const [detailContent, setDetailContent] = useState(null)
+  const [detailData, setDetailData] = useState({ common: null, intro: {}, loading: false, error: '' })
   const [selectedDate, setSelectedDate] = useState('')
   const [mode, setMode] = useState('single')
   const [startTime, setStartTime] = useState('18:00')
@@ -171,7 +271,7 @@ export default function EventsPage() {
 
   useEffect(() => {
     setLoading(true)
-    const endpoint = category === 'attractions' ? '/api/attractions' : '/api/festivals'
+    const endpoint = CATEGORY_CONFIG[category].endpoint
     api.get(`${endpoint}?numOfRows=${PAGE_SIZE}&pageNo=${page}`)
       .then((result) => {
         const rawItems = unwrap(result)
@@ -183,20 +283,26 @@ export default function EventsPage() {
         })
         const items = [...unique.values()]
         if (category === 'attractions') setAttractions(items)
+        else if (category === 'restaurants') setRestaurants(items)
         else setFestivals(items)
         setHasNextPage(rawItems.length >= PAGE_SIZE)
         if (rawItems.length < PAGE_SIZE) setLastPage(page)
       })
       .catch(() => {
         if (category === 'attractions') setAttractions([])
+        else if (category === 'restaurants') setRestaurants([])
         else setFestivals([])
         setHasNextPage(false)
       })
       .finally(() => setLoading(false))
   }, [category, page])
 
-  const activeContents = category === 'attractions' ? attractions : festivals
-  const activeCategoryLabel = category === 'attractions' ? '관광지' : '축제'
+  const activeContents = category === 'attractions'
+    ? attractions
+    : category === 'restaurants'
+      ? restaurants
+      : festivals
+  const activeCategoryLabel = CATEGORY_CONFIG[category].label
 
   const selectedPlanner = useMemo(
     () => planners.find((planner) => planner.id === selectedPlannerId) ?? null,
@@ -240,6 +346,23 @@ export default function EventsPage() {
     setNotice('')
   }
 
+  const openDetailModal = async (content) => {
+    setDetailContent(content)
+    setDetailData({ common: null, intro: {}, loading: true, error: '' })
+    const [commonResult, introResult] = await Promise.allSettled([
+      api.get(`/api/tour/detail/common?contentId=${encodeURIComponent(content.id)}`),
+      api.get(`/api/tour/detail/intro?contentId=${encodeURIComponent(content.id)}&contentTypeId=${content.contentTypeId}`),
+    ])
+    setDetailData({
+      common: commonResult.status === 'fulfilled' ? unwrap(commonResult.value) : null,
+      intro: introResult.status === 'fulfilled' ? unwrap(introResult.value) : {},
+      loading: false,
+      error: commonResult.status === 'rejected' && introResult.status === 'rejected'
+        ? '상세 정보를 불러오지 못했습니다.'
+        : '',
+    })
+  }
+
   const addRegionFilter = (region) => {
     if (!region) return
     setRegionFilter('all')
@@ -264,7 +387,11 @@ export default function EventsPage() {
     const events = dates.map((date, index) => ({
       id: `event-${selectedFestival.title}-${toDateKey(date)}-${createdAt}-${index}`,
       title: selectedFestival.title,
-      type: selectedFestival.contentTypeId === 12 ? 'attraction' : 'event',
+      type: selectedFestival.contentTypeId === 12
+        ? 'attraction'
+        : selectedFestival.contentTypeId === 39
+          ? 'restaurant'
+          : 'event',
       day: scheduleDayFromDate(date),
       dateKey: toDateKey(date),
       start: startTime,
@@ -283,6 +410,15 @@ export default function EventsPage() {
     setNotice('플래너에 이벤트를 담았습니다.')
   }
 
+  const detailCommon = detailData.common ?? {}
+  const detailImage = detailCommon.firstImage || detailCommon.firstImage2 || detailContent?.imageUrl
+  const detailAddress = [detailCommon.addr1, detailCommon.addr2].filter(Boolean).join(' ')
+    || detailContent?.address
+    || '상세 위치 미제공'
+  const detailLatitude = detailCommon.mapy ?? detailContent?.latitude
+  const detailLongitude = detailCommon.mapx ?? detailContent?.longitude
+  const availableDetailFields = detailFields(detailData.intro)
+
   return (
     <main className="directory-page events-page">
       <div className="directory-shell">
@@ -291,7 +427,7 @@ export default function EventsPage() {
             <p className="directory-kicker">EVENTS</p>
             <h1 className="directory-title">이벤트</h1>
             <p className="directory-desc">
-              일하는 지역 근처에서 갈 만한 축제와 관광지를 플래너에 바로 담아보세요.
+              일하는 지역 근처의 축제, 관광지와 식당을 살펴보고 플래너에 바로 담아보세요.
             </p>
           </div>
           <div className="directory-actions">
@@ -437,7 +573,10 @@ export default function EventsPage() {
                   <p>{content.location ?? '지역 정보 없음'}</p>
                   <div className="event-meta"><span>{content.address ?? '상세 위치 미제공'}</span></div>
                 </div>
-                <button className="directory-btn primary" onClick={() => openAddModal(content)}>플래너에 담기</button>
+                <div className="event-card-actions">
+                  <button className="directory-btn" onClick={() => openDetailModal(content)}>자세히 보기</button>
+                  <button className="directory-btn primary" onClick={() => openAddModal(content)}>플래너에 담기</button>
+                </div>
               </article>
             ))}
           </section>
@@ -475,6 +614,72 @@ export default function EventsPage() {
               다음
             </button>
           </nav>
+        )}
+
+        {detailContent && (
+          <div className="planner-modal-backdrop" onClick={() => setDetailContent(null)}>
+            <section className="event-detail-modal" onClick={(event) => event.stopPropagation()} aria-label={`${detailContent.title} 상세정보`}>
+              <div className="planner-day-modal-head">
+                <div>
+                  <p>{detailContent.category ?? '관광정보'} 상세</p>
+                  <h2>{detailCommon.title || detailContent.title}</h2>
+                </div>
+                <button type="button" onClick={() => setDetailContent(null)} aria-label="닫기">x</button>
+              </div>
+
+              {detailData.loading ? (
+                <LoadingScreen message="상세 정보를 불러오는 중입니다" description="이미지와 위치 정보를 확인하고 있습니다." />
+              ) : (
+                <>
+                  <DetailImage imageUrl={detailImage} title={detailContent.title} />
+
+                  {detailData.error && <div className="event-detail-error">{detailData.error}</div>}
+
+                  <div className="event-detail-location">
+                    <span>위치</span>
+                    <strong>{detailAddress}</strong>
+                    {(detailCommon.tel || detailContent.tel) && <small>문의 {detailCommon.tel || detailContent.tel}</small>}
+                  </div>
+
+                  {detailCommon.overview && (
+                    <section className="event-detail-section">
+                      <h3>소개</h3>
+                      <p>{stripHtml(detailCommon.overview)}</p>
+                    </section>
+                  )}
+
+                  {availableDetailFields.length > 0 && (
+                    <dl className="event-detail-fields">
+                      {availableDetailFields.map((field) => (
+                        <div key={field.label}>
+                          <dt>{field.label}</dt>
+                          <dd>{field.value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  )}
+
+                  {detailLatitude != null && detailLongitude != null ? (
+                    <ContentLocationMap
+                      latitude={detailLatitude}
+                      longitude={detailLongitude}
+                      title={detailContent.title}
+                    />
+                  ) : (
+                    <div className="event-map-unavailable">지도 위치정보가 제공되지 않았습니다.</div>
+                  )}
+
+                  <div className="directory-actions editor-actions">
+                    <button className="directory-btn primary" onClick={() => {
+                      setDetailContent(null)
+                      openAddModal(detailContent)
+                    }}>플래너에 담기</button>
+                    <button className="directory-btn" onClick={() => setDetailContent(null)}>닫기</button>
+                  </div>
+                </>
+              )}
+            </section>
+          </div>
         )}
 
         {selectedFestival && (
