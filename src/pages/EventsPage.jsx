@@ -88,6 +88,29 @@ function sanitizeFestival(festival) {
     : { ...festival, location: null }
 }
 
+function EventVisual({ imageUrl, title }) {
+  const [imageFailed, setImageFailed] = useState(false)
+
+  if (imageUrl && !imageFailed) {
+    return (
+      <img
+        className="event-thumbnail"
+        src={imageUrl}
+        alt={`${title} 대표 이미지`}
+        loading="lazy"
+        onError={() => setImageFailed(true)}
+      />
+    )
+  }
+
+  return (
+    <div className="event-date-card">
+      <span>행사</span>
+      <strong>일정 미제공</strong>
+    </div>
+  )
+}
+
 function buildWorkSchedule(planner) {
   return (planner.jobs ?? []).flatMap((job, jobIndex) => [0, 1, 2, 3, 4].map((day) => ({
     id: createWorkScheduleId(planner.id, job.id ?? jobIndex, day),
@@ -372,10 +395,7 @@ export default function EventsPage() {
           <section className="event-grid" aria-label={`${activeRegionLabel} 축제 목록`}>
             {visibleFestivals.map((festival) => (
               <article className="event-card" key={festival.id ?? `${festival.title}-${festival.location}`}>
-                <div className="event-date-card">
-                  <span>행사</span>
-                  <strong>일정 미제공</strong>
-                </div>
+                <EventVisual imageUrl={festival.imageUrl} title={festival.title} />
                 <div className="event-card-body">
                   <span className="directory-badge">축제</span>
                   <h2>{festival.title}</h2>
