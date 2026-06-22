@@ -1841,11 +1841,34 @@
   margin-top: 20px;
 }
 
-.event-pagination strong {
-  min-width: 72px;
-  color: #334155;
-  text-align: center;
+.event-page-numbers {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.event-page-numbers button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: white;
+  color: #475569;
   font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.event-page-numbers button.active {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: white;
+}
+
+.event-page-numbers span {
+  color: #94a3b8;
 }
 
 .event-pagination .directory-btn:disabled {

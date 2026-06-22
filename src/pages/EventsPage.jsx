@@ -11,9 +11,23 @@ const CATEGORIES = [
   { id: 'attractions', label: '관광지' },
 ]
 const PAGE_SIZE = 20
+const PAGE_GROUP_SIZE = 5
+
+function pageGroupStart(currentPage) {
+  return Math.floor((currentPage - 1) / PAGE_GROUP_SIZE) * PAGE_GROUP_SIZE + 1
+}
 
 function unwrap(res) {
   return res.data ?? res.result ?? res
+}
+
+function paginationPages(currentPage, lastPage) {
+  const startPage = pageGroupStart(currentPage)
+  const endPage = Math.min(startPage + PAGE_GROUP_SIZE - 1, lastPage ?? Number.MAX_SAFE_INTEGER)
+  return Array.from(
+    { length: Math.max(0, endPage - startPage + 1) },
+    (_, index) => startPage + index,
+  )
 }
 
 function pad(value) {
@@ -142,6 +156,7 @@ export default function EventsPage() {
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [hasNextPage, setHasNextPage] = useState(false)
+  const [lastPage, setLastPage] = useState(null)
   const [planners, setPlanners] = useState(() => initialPlanners)
   const [selectedPlannerId, setSelectedPlannerId] = useState(location.state?.plannerId ?? initialPlanners[0]?.id ?? '')
   const [regionFilter, setRegionFilter] = useState('all')
@@ -160,15 +175,17 @@ export default function EventsPage() {
     api.get(`${endpoint}?numOfRows=${PAGE_SIZE}&pageNo=${page}`)
       .then((result) => {
         const rawItems = unwrap(result)
+        const pageItems = rawItems.slice(0, PAGE_SIZE)
         const unique = new Map()
-        rawItems.map(sanitizeFestival).forEach((item) => {
+        pageItems.map(sanitizeFestival).forEach((item) => {
           const key = item.id ?? `${item.title}-${item.location}-${item.address}`
           unique.set(key, item)
         })
         const items = [...unique.values()]
         if (category === 'attractions') setAttractions(items)
         else setFestivals(items)
-        setHasNextPage(rawItems.length === PAGE_SIZE)
+        setHasNextPage(rawItems.length >= PAGE_SIZE)
+        if (rawItems.length < PAGE_SIZE) setLastPage(page)
       })
       .catch(() => {
         if (category === 'attractions') setAttractions([])
@@ -392,6 +409,7 @@ export default function EventsPage() {
               onClick={() => {
                 setCategory(item.id)
                 setPage(1)
+                setLastPage(null)
               }}
               aria-pressed={category === item.id}
             >
@@ -429,16 +447,30 @@ export default function EventsPage() {
           <nav className="event-pagination" aria-label={`${activeCategoryLabel} 페이지 이동`}>
             <button
               className="directory-btn"
-              disabled={page === 1}
-              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              disabled={pageGroupStart(page) === 1}
+              onClick={() => setPage((current) => Math.max(1, pageGroupStart(current) - PAGE_GROUP_SIZE))}
             >
               이전
             </button>
-            <strong>{page} 페이지</strong>
+            <div className="event-page-numbers">
+              {page > PAGE_GROUP_SIZE && <span>…</span>}
+              {paginationPages(page, lastPage).map((pageNumber) => (
+                <button
+                  type="button"
+                  key={pageNumber}
+                  className={pageNumber === page ? 'active' : ''}
+                  aria-current={pageNumber === page ? 'page' : undefined}
+                  onClick={() => setPage(pageNumber)}
+                >
+                  {pageNumber}
+                </button>
+              ))}
+              {hasNextPage && <span>…</span>}
+            </div>
             <button
               className="directory-btn"
-              disabled={!hasNextPage}
-              onClick={() => setPage((current) => current + 1)}
+              disabled={!hasNextPage || (lastPage != null && pageGroupStart(page) + PAGE_GROUP_SIZE > lastPage)}
+              onClick={() => setPage((current) => pageGroupStart(current) + PAGE_GROUP_SIZE)}
             >
               다음
             </button>
