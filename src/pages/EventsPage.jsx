@@ -10,6 +10,7 @@ const CATEGORIES = [
   { id: 'festivals', label: '축제' },
   { id: 'attractions', label: '관광지' },
 ]
+const PAGE_SIZE = 20
 
 function unwrap(res) {
   return res.data ?? res.result ?? res
@@ -88,7 +89,7 @@ function sanitizeFestival(festival) {
     : { ...festival, location: null }
 }
 
-function EventVisual({ imageUrl, title }) {
+function EventVisual({ imageUrl, title, category = '행사' }) {
   const [imageFailed, setImageFailed] = useState(false)
 
   if (imageUrl && !imageFailed) {
@@ -105,7 +106,7 @@ function EventVisual({ imageUrl, title }) {
 
   return (
     <div className="event-date-card">
-      <span>행사</span>
+      <span>{category}</span>
       <strong>일정 미제공</strong>
     </div>
   )
@@ -137,7 +138,10 @@ export default function EventsPage() {
   const initialPlanners = getStoredPlanners()
   const [category, setCategory] = useState('festivals')
   const [festivals, setFestivals] = useState([])
+  const [attractions, setAttractions] = useState([])
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [hasNextPage, setHasNextPage] = useState(false)
   const [planners, setPlanners] = useState(() => initialPlanners)
   const [selectedPlannerId, setSelectedPlannerId] = useState(location.state?.plannerId ?? initialPlanners[0]?.id ?? '')
   const [regionFilter, setRegionFilter] = useState('all')
@@ -151,19 +155,31 @@ export default function EventsPage() {
   const [notice, setNotice] = useState('')
 
   useEffect(() => {
-    api.get('/api/festivals')
+    setLoading(true)
+    const endpoint = category === 'attractions' ? '/api/attractions' : '/api/festivals'
+    api.get(`${endpoint}?numOfRows=${PAGE_SIZE}&pageNo=${page}`)
       .then((result) => {
-        const items = unwrap(result)
+        const rawItems = unwrap(result)
         const unique = new Map()
-        items.map(sanitizeFestival).forEach((item) => {
+        rawItems.map(sanitizeFestival).forEach((item) => {
           const key = item.id ?? `${item.title}-${item.location}-${item.address}`
           unique.set(key, item)
         })
-        setFestivals([...unique.values()])
+        const items = [...unique.values()]
+        if (category === 'attractions') setAttractions(items)
+        else setFestivals(items)
+        setHasNextPage(rawItems.length === PAGE_SIZE)
       })
-      .catch(() => setFestivals([]))
+      .catch(() => {
+        if (category === 'attractions') setAttractions([])
+        else setFestivals([])
+        setHasNextPage(false)
+      })
       .finally(() => setLoading(false))
-  }, [])
+  }, [category, page])
+
+  const activeContents = category === 'attractions' ? attractions : festivals
+  const activeCategoryLabel = category === 'attractions' ? '관광지' : '축제'
 
   const selectedPlanner = useMemo(
     () => planners.find((planner) => planner.id === selectedPlannerId) ?? null,
@@ -172,18 +188,18 @@ export default function EventsPage() {
 
   const recommendedRegion = plannerRegion(selectedPlanner)
   const availableRegions = useMemo(() => (
-    [...new Set(festivals.map((festival) => festival.location).filter(isDisplayableRegion))]
+    [...new Set(activeContents.map((item) => item.location).filter(isDisplayableRegion))]
       .sort((a, b) => a.localeCompare(b, 'ko'))
-  ), [festivals])
+  ), [activeContents])
 
-  const visibleFestivals = useMemo(() => {
+  const visibleContents = useMemo(() => {
     if (regionFilter === 'all') {
-      if (selectedRegions.length === 0) return festivals
-      return festivals.filter((festival) => selectedRegions.some((region) => matchesRegion(festival, region)))
+      if (selectedRegions.length === 0) return activeContents
+      return activeContents.filter((item) => selectedRegions.some((region) => matchesRegion(item, region)))
     }
     const region = regionFilter === 'planner' ? recommendedRegion : regionFilter
-    return festivals.filter((festival) => matchesRegion(festival, region))
-  }, [festivals, regionFilter, recommendedRegion, selectedRegions])
+    return activeContents.filter((item) => matchesRegion(item, region))
+  }, [activeContents, regionFilter, recommendedRegion, selectedRegions])
 
   const activeRegionLabel = regionFilter === 'all'
     ? (selectedRegions.length > 0 ? `${selectedRegions.length}개 지역` : '전체 지역')
@@ -231,13 +247,13 @@ export default function EventsPage() {
     const events = dates.map((date, index) => ({
       id: `event-${selectedFestival.title}-${toDateKey(date)}-${createdAt}-${index}`,
       title: selectedFestival.title,
-      type: 'event',
+      type: selectedFestival.contentTypeId === 12 ? 'attraction' : 'event',
       day: scheduleDayFromDate(date),
       dateKey: toDateKey(date),
       start: startTime,
       end: endTime,
       color: '#8b5cf6',
-      memo: `${selectedFestival.location ?? ''} ${selectedFestival.startDate ?? ''}~${selectedFestival.endDate ?? ''}`.trim(),
+      memo: `${selectedFestival.location ?? ''} ${selectedFestival.address ?? ''}`.trim(),
     }))
 
     const saved = saveStoredPlanner({
@@ -289,11 +305,11 @@ export default function EventsPage() {
           <div className="event-hero-stats">
             <div>
               <span>표시 중</span>
-              <strong>{loading ? '-' : `${visibleFestivals.length}건`}</strong>
+              <strong>{loading ? '-' : `${visibleContents.length}건`}</strong>
             </div>
             <div>
               <span>수집 범위</span>
-              <strong>전체 행사</strong>
+              <strong>{activeCategoryLabel} 전체</strong>
             </div>
           </div>
         </section>
@@ -373,7 +389,10 @@ export default function EventsPage() {
             <button
               key={item.id}
               className={category === item.id ? 'active' : ''}
-              onClick={() => setCategory(item.id)}
+              onClick={() => {
+                setCategory(item.id)
+                setPage(1)
+              }}
               aria-pressed={category === item.id}
             >
               {item.label}
@@ -381,39 +400,57 @@ export default function EventsPage() {
           ))}
         </div>
 
-        {category === 'attractions' ? (
-          <div className="directory-empty">관광지 데이터 API가 연결되면 지역별 운영시간과 휴무일을 확인하고 플래너에 담을 수 있습니다.</div>
-        ) : loading ? (
-          <LoadingScreen message="축제 정보를 불러오는 중입니다" description="적재된 이벤트 데이터를 확인하고 있습니다." />
-        ) : festivals.length === 0 ? (
-          <div className="directory-empty">표시할 축제 데이터가 없습니다. 적재 데이터 또는 백엔드 응답을 확인해 주세요.</div>
-        ) : visibleFestivals.length === 0 ? (
+        {loading ? (
+          <LoadingScreen message={`${activeCategoryLabel} 정보를 불러오는 중입니다`} description="관광 API 데이터를 확인하고 있습니다." />
+        ) : activeContents.length === 0 ? (
+          <div className="directory-empty">표시할 {activeCategoryLabel} 데이터가 없습니다. 관광 API 응답을 확인해 주세요.</div>
+        ) : visibleContents.length === 0 ? (
           <div className="directory-empty">
-            {recommendedRegion ? `${recommendedRegion} 근처 축제가 없습니다. 전체 보기로 다른 지역 이벤트를 확인해 보세요.` : '선택한 지역의 축제가 없습니다.'}
+            {recommendedRegion ? `${recommendedRegion} 근처 ${activeCategoryLabel}가 없습니다. 전체 보기로 다른 지역을 확인해 보세요.` : `선택한 지역의 ${activeCategoryLabel}가 없습니다.`}
           </div>
         ) : (
-          <section className="event-grid" aria-label={`${activeRegionLabel} 축제 목록`}>
-            {visibleFestivals.map((festival) => (
-              <article className="event-card" key={festival.id ?? `${festival.title}-${festival.location}`}>
-                <EventVisual imageUrl={festival.imageUrl} title={festival.title} />
+          <section className="event-grid" aria-label={`${activeRegionLabel} ${activeCategoryLabel} 목록`}>
+            {visibleContents.map((content) => (
+              <article className="event-card" key={`${content.contentTypeId}-${content.id ?? `${content.title}-${content.location}`}`}>
+                <EventVisual imageUrl={content.imageUrl} title={content.title} category={content.category} />
                 <div className="event-card-body">
-                  <span className="directory-badge">축제</span>
-                  <h2>{festival.title}</h2>
-                  <p>{festival.location ?? '지역 정보 없음'}</p>
-                  <div className="event-meta"><span>{festival.address ?? '상세 위치 미제공'}</span></div>
+                  <span className="directory-badge">{content.category ?? activeCategoryLabel}</span>
+                  <h2>{content.title}</h2>
+                  <p>{content.location ?? '지역 정보 없음'}</p>
+                  <div className="event-meta"><span>{content.address ?? '상세 위치 미제공'}</span></div>
                 </div>
-                <button className="directory-btn primary" onClick={() => openAddModal(festival)}>플래너에 담기</button>
+                <button className="directory-btn primary" onClick={() => openAddModal(content)}>플래너에 담기</button>
               </article>
             ))}
           </section>
         )}
 
+        {!loading && (activeContents.length > 0 || page > 1) && (
+          <nav className="event-pagination" aria-label={`${activeCategoryLabel} 페이지 이동`}>
+            <button
+              className="directory-btn"
+              disabled={page === 1}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+            >
+              이전
+            </button>
+            <strong>{page} 페이지</strong>
+            <button
+              className="directory-btn"
+              disabled={!hasNextPage}
+              onClick={() => setPage((current) => current + 1)}
+            >
+              다음
+            </button>
+          </nav>
+        )}
+
         {selectedFestival && (
           <div className="planner-modal-backdrop" onClick={() => setSelectedFestival(null)}>
-            <section className="event-add-modal" onClick={(event) => event.stopPropagation()} aria-label="축제 플래너 담기">
+            <section className="event-add-modal" onClick={(event) => event.stopPropagation()} aria-label={`${selectedFestival.category ?? '이벤트'} 플래너 담기`}>
               <div className="planner-day-modal-head">
                 <div>
-                  <p>축제 담기</p>
+                  <p>{selectedFestival.category ?? '이벤트'} 담기</p>
                   <h2>{selectedFestival.title}</h2>
                 </div>
                 <button type="button" onClick={() => setSelectedFestival(null)} aria-label="닫기">x</button>
