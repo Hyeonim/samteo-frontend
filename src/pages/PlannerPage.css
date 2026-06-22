@@ -227,6 +227,9 @@
 
 .pkg-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 .pkg-card {
+  height: 520px;
+  display: flex;
+  flex-direction: column;
   background: white;
   border-radius: 16px;
   overflow: hidden;
@@ -269,7 +272,13 @@
 .pi1 { background: linear-gradient(160deg, #1e3a5f, #2d5a8e); }
 .pi2 { background: linear-gradient(160deg, #3b2800, #7c4d1a); }
 .pi3 { background: linear-gradient(160deg, #1a3320, #2d6040); }
-.pkg-body { padding: 16px; }
+.pkg-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: 16px;
+}
 .pkg-type {
   font-size: 10px;
   font-weight: 700;
@@ -280,9 +289,37 @@
   display: inline-block;
   margin-bottom: 7px;
 }
-.pkg-name { font-size: 14px; font-weight: 800; margin-bottom: 5px; line-height: 1.3; }
-.pkg-desc { font-size: 12px; color: #666; line-height: 1.5; margin-bottom: 10px; }
-.pkg-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 12px; }
+.pkg-name {
+  display: -webkit-box;
+  min-height: 37px;
+  overflow: hidden;
+  margin-bottom: 5px;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.pkg-desc {
+  display: -webkit-box;
+  min-height: 90px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  color: #666;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+}
+.pkg-tags {
+  display: flex;
+  max-height: 45px;
+  overflow: hidden;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 12px;
+}
 .ptag { padding: 3px 7px; background: #f4f4f4; border-radius: 4px; font-size: 10px; color: #555; font-weight: 600; }
 .pkg-footer {
   display: flex;
@@ -290,10 +327,48 @@
   justify-content: space-between;
   padding-top: 11px;
   border-top: 1px solid #f0f0f0;
+  margin-top: auto;
 }
+
+.job-detail-copy {
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 16px 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 14px;
+  line-height: 1.75;
+  text-align: left;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+.job-detail-copy p { margin: 0 0 9px; }
+.job-detail-copy p:last-child { margin-bottom: 0; }
 .pkg-price .amount { font-size: 18px; font-weight: 900; }
 .pkg-price .unit { font-size: 11px; color: #888; }
 .pkg-price .sub { font-size: 10px; color: #aaa; display: block; margin-top: 1px; }
+.pkg-price .job-wage-editor {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.pkg-price .job-wage-editor .sub { margin: 0; }
+.pkg-price .job-wage-editor input {
+  width: 104px;
+  padding: 6px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 800;
+}
+.pkg-price .job-wage-editor input:focus {
+  border-color: #3563e9;
+  outline: 2px solid rgba(53, 99, 233, 0.14);
+}
 .pkg-btn {
   padding: 7px 13px;
   border: none;
@@ -1260,6 +1335,7 @@
 
   /* 카드를 가로 배치로 변경 */
   .pkg-card {
+    height: 180px;
     display: flex;
     flex-direction: row;
     border-radius: 12px;
@@ -1341,4 +1417,81 @@
   .planner-month-grid {
     min-width: 520px;
   }
+}
+.pkg-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.pkg-btn.detail,
+.acc-detail-btn {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+}
+
+.acc-detail-btn {
+  margin-top: 7px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.planner-edit-later-note {
+  margin: 12px 16px 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.job-detail-placeholder {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  min-height: 210px;
+  gap: 8px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #1e3a5f, #315b8a);
+  color: white;
+}
+
+.job-detail-placeholder span { font-size: 48px; }
+.job-detail-placeholder small { color: #dbeafe; }
+
+.event-detail-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.planner-finance-editor {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 14px 0;
+}
+
+.planner-finance-editor > div {
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.planner-finance-editor h3 { margin: 0 0 4px; font-size: 14px; }
+.planner-finance-editor p { margin: 0 0 10px; color: #64748b; font-size: 11px; }
+.planner-finance-editor label { display: flex; align-items: center; gap: 8px; margin-top: 7px; }
+.planner-finance-editor label span { flex: 1; min-width: 0; font-size: 12px; font-weight: 700; }
+.planner-finance-editor input { width: 120px; padding: 7px 8px; border: 1px solid #cbd5e1; border-radius: 8px; }
+.planner-finance-editor small { color: #64748b; white-space: nowrap; }
+
+@media (max-width: 720px) {
+  .planner-finance-editor { grid-template-columns: 1fr; }
 }

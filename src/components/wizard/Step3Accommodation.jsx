@@ -24,6 +24,8 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
   const [routeLoading, setRouteLoading] = useState(false)
   const [mapReady, setMapReady] = useState(false)
   const [mobileTab, setMobileTab] = useState('list')
+  const [detailHotel, setDetailHotel] = useState(null)
+  const [detailLoading, setDetailLoading] = useState(false)
   const sliderRef = useRef(null)
   const mapRef = useRef(null)
   const kakaoMapRef = useRef(null)
@@ -64,6 +66,20 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
 
   function scrollSlider(dir) {
     sliderRef.current?.scrollBy({ left: dir * 250, behavior: 'smooth' })
+  }
+
+  async function openHotelDetail(hotel) {
+    setDetailHotel(hotel)
+    setDetailLoading(true)
+    try {
+      const res = await api.get(`/api/tour/detail/common?contentId=${encodeURIComponent(hotel.id)}`)
+      const detail = res.data ?? res.result ?? res
+      setDetailHotel({ ...hotel, detail })
+    } catch {
+      setDetailHotel(hotel)
+    } finally {
+      setDetailLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -569,36 +585,42 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
                         <span className="acc-price">{h.price == null ? '월 비용 미제공' : `월 ${Number(h.price).toLocaleString()}원`}</span>
                         <span className={h.posType === 'pos' ? 'acc-pos' : 'acc-neg'}>{h.pos}</span>
                       </div>
+                      <button className="acc-detail-btn" onClick={(event) => { event.stopPropagation(); openHotelDetail(h) }}>자세히 보기</button>
                     </div>
                   </div>
                 ))}
               </div>
             ))}
           </div>
-          {selectedHotel.name && (
-            <div className="directory-metric" style={{ margin: '12px 16px 16px' }}>
-              <label htmlFor="planner-accommodation-price">월 숙박비 직접 입력</label>
-              <input
-                id="planner-accommodation-price"
-                type="number"
-                min="0"
-                step="10000"
-                placeholder="미제공 — 직접 입력할 수 있습니다"
-                value={selectedHotel.price ?? ''}
-                onChange={(event) => onSelect({
-                  ...selectedHotel,
-                  price: event.target.value === '' ? null : Number(event.target.value),
-                  monthlyPrice: event.target.value === '' ? null : Number(event.target.value),
-                })}
-              />
-            </div>
-          )}
+          {selectedHotel.name && <div className="planner-edit-later-note">월 숙박비는 플래너 완성 후 수정할 수 있습니다.</div>}
         </div>
 
         <div className="map-wrapper">
           <div ref={mapRef} className="map-canvas" />
         </div>
       </div>
+      {detailHotel && (
+        <div className="planner-modal-backdrop" onClick={() => setDetailHotel(null)}>
+          <section className="event-detail-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="planner-day-modal-head">
+              <div><p>숙박 상세</p><h2>{detailHotel.detail?.title ?? detailHotel.name}</h2></div>
+              <button type="button" onClick={() => setDetailHotel(null)} aria-label="닫기">x</button>
+            </div>
+            {detailLoading ? <div className="event-detail-overview">상세 정보를 불러오는 중입니다.</div> : (
+              <>
+                {(detailHotel.detail?.firstImage ?? detailHotel.imageUrl) ? (
+                  <img className="event-detail-image" src={detailHotel.detail?.firstImage ?? detailHotel.imageUrl} alt={detailHotel.name} />
+                ) : <div className="job-detail-placeholder"><span>🏠</span><strong>{detailHotel.name}</strong><small>이미지 미제공</small></div>}
+                <div className="event-detail-location"><span>위치</span><strong>{[detailHotel.detail?.addr1, detailHotel.detail?.addr2].filter(Boolean).join(' ') || detailHotel.location}</strong></div>
+                <div className="event-detail-overview">{detailHotel.detail?.overview || '숙박 상세 설명이 제공되지 않았습니다.'}</div>
+                <div className="event-detail-actions">
+                  <button className="directory-btn primary" onClick={() => { onSelect({ ...detailHotel, detail: undefined }); setDetailHotel(null) }}>이 숙소 선택</button>
+                </div>
+              </>
+            )}
+          </section>
+        </div>
+      )}
     </div>
   )
 }

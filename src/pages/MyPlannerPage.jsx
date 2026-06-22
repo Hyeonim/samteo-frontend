@@ -324,6 +324,30 @@ export default function MyPlannerPage() {
     persistPlanner({ title, memo })
   }
 
+  const updateJobHourlyWage = (jobId, value) => {
+    const hourlyWage = Math.max(0, Number(value) || 0)
+    const jobs = (activePlanner.jobs ?? []).map((job) => job.id === jobId
+      ? { ...job, hourlyWage, salary: hourlyWage * 209 }
+      : job)
+    const totalSalary = jobs.reduce((sum, job) => sum + Number(job.salary ?? 0), 0)
+    const accommodationCost = Number(activePlanner.accommodationCost ?? activePlanner.accommodation?.price ?? 0)
+    persistPlanner({
+      jobs,
+      totalSalary,
+      disposableIncome: Math.max(0, totalSalary - accommodationCost - Number(activePlanner.fixedExpense ?? 0)),
+    })
+  }
+
+  const updateAccommodationCost = (value) => {
+    const accommodationCost = Math.max(0, Number(value) || 0)
+    const totalSalary = Number(activePlanner.totalSalary ?? 0)
+    persistPlanner({
+      accommodation: { ...activePlanner.accommodation, price: accommodationCost },
+      accommodationCost,
+      disposableIncome: Math.max(0, totalSalary - accommodationCost - Number(activePlanner.fixedExpense ?? 0)),
+    })
+  }
+
   const removePlanner = async () => {
     if (!activePlanner) return
     try { await myPlannerApi.remove(activePlanner.id) } catch { return }
@@ -534,6 +558,29 @@ export default function MyPlannerPage() {
                     <div className="directory-metric"><span>예상 급여</span><strong>{(activePlanner.totalSalary ?? 0).toLocaleString()}원</strong></div>
                     <div className="directory-metric"><span>월 잔액</span><strong>{(activePlanner.disposableIncome ?? 0).toLocaleString()}원</strong></div>
                   </div>
+
+                  <section className="planner-finance-editor">
+                    <div>
+                      <h3>일자리 시급 수정</h3>
+                      <p>ALIO에 급여가 없어 기본 최저시급으로 생성되었습니다.</p>
+                      {(activePlanner.jobs ?? []).map((job) => (
+                        <label key={job.id}>
+                          <span>{job.name}</span>
+                          <input type="number" min="0" step="10" defaultValue={job.hourlyWage ?? 10320} onBlur={(event) => updateJobHourlyWage(job.id, event.target.value)} />
+                          <small>원/시간</small>
+                        </label>
+                      ))}
+                    </div>
+                    <div>
+                      <h3>월 숙박비 수정</h3>
+                      <p>숙박 API에서 비용을 제공하지 않아 직접 입력합니다.</p>
+                      <label>
+                        <span>{activePlanner.accommodation?.name ?? '선택 숙소'}</span>
+                        <input type="number" min="0" step="10000" defaultValue={activePlanner.accommodationCost || ''} placeholder="월 숙박비" onBlur={(event) => updateAccommodationCost(event.target.value)} />
+                        <small>원/월</small>
+                      </label>
+                    </div>
+                  </section>
 
                   <div className="planner-scheduler">
                     <section className="scheduler-main">

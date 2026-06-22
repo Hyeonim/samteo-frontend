@@ -2,6 +2,29 @@ import { useState, useEffect, useMemo } from 'react'
 import { api } from '../../api'
 
 const BG_CYCLE = ['pi1', 'pi2', 'pi3']
+const PAGE_SIZE = 20
+const PAGE_GROUP_SIZE = 5
+
+function pageGroupStart(page) {
+  return Math.floor((page - 1) / PAGE_GROUP_SIZE) * PAGE_GROUP_SIZE + 1
+}
+
+function paginationPages(page, totalPages) {
+  const start = pageGroupStart(page)
+  const end = Math.min(start + PAGE_GROUP_SIZE - 1, totalPages)
+  return Array.from({ length: Math.max(0, end - start + 1) }, (_, index) => start + index)
+}
+
+function formatJobDetail(value) {
+  const text = String(value ?? '').trim()
+  if (!text) return ['상세 자격조건은 원문 공고에서 확인해 주세요.']
+  return text
+    .replace(/\s+(?=[□○※·])/g, '\n')
+    .replace(/\s+(?=\d+[.)]\s)/g, '\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+}
 
 const CITY_LABELS = {
   seoul: '서울',
@@ -154,7 +177,8 @@ function normalizeJob(job) {
   const cityId = inferCityId(job, addressText)
   const district = DAEGU_REGION_LABELS[job.regionId] ?? parseDistrict(addressText)
   const districtRegionId = job.regionId ?? DAEGU_DISTRICT_REGION_IDS[district] ?? district
-  const salary = Number(job.monthlySalary ?? job.salary ?? job.wage ?? 0)
+  const hourlyWage = Number(job.hourlyWage ?? job.wage ?? 10320)
+  const salary = Number(job.monthlySalary ?? job.salary ?? hourlyWage * 209)
   const type = translateCategory(job.type ?? job.category)
 
   return {
@@ -170,8 +194,9 @@ function normalizeJob(job) {
     lng: parseFloat(job.lng ?? job.longitude),
     salary,
     monthlySalary: salary,
-    priceLabel: salary ? `${salary.toLocaleString()}원` : '-',
-    unit: job.unit === '/month' ? '/월' : (job.unit ?? '/월'),
+    hourlyWage,
+    priceLabel: `${hourlyWage.toLocaleString()}원`,
+    unit: '/시간',
     sub: job.sub === 'dummy job data' ? '샘플 일자리 데이터' : (job.sub ?? job.workingDays ?? ''),
     desc: job.desc ?? job.company ?? addressText,
     location: job.location ?? addressText,
@@ -195,6 +220,10 @@ export default function Step2Jobs({
   const [search, setSearch] = useState('')
   const [activeType, setActiveType] = useState('전체')
   const [showAll, setShowAll] = useState(false)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const [detailJob, setDetailJob] = useState(null)
 
   useEffect(() => {
     if (!cityId) return
@@ -202,11 +231,18 @@ export default function Step2Jobs({
     setSearch('')
     setActiveType('전체')
     setShowAll(false)
-    api.get(`/api/planner/jobs?cityId=${cityId}`)
-      .then((res) => setJobs(unwrap(res).map(normalizeJob)))
+    api.get(`/api/planner/jobs/page?cityId=${encodeURIComponent(cityId)}&page=${page}&size=${PAGE_SIZE}`)
+      .then((res) => {
+        const data = unwrap(res)
+        setJobs((data.items ?? []).map(normalizeJob))
+        setTotalPages(Math.max(1, Number(data.totalPages ?? 1)))
+        setTotalCount(Number(data.totalCount ?? 0))
+      })
       .catch(() => setJobs([]))
       .finally(() => setLoading(false))
-  }, [cityId])
+  }, [cityId, page])
+
+  useEffect(() => { setPage(1) }, [cityId])
 
   // 필터 바뀌면 더 보기 리셋
   useEffect(() => { setShowAll(false) }, [search, activeType, selectedDistrictId])
@@ -253,6 +289,7 @@ export default function Step2Jobs({
       <div className="step-subtitle" style={{ color: '#ef4444', fontWeight: 600 }}>
         실제 일자리 주소에서 도시와 구·군을 추출해 체류 지역을 좁혀갑니다.
       </div>
+      <div className="step-subtitle">진행 중 공고 총 {totalCount.toLocaleString()}건 · 시급은 플래너 완성 후 수정할 수 있습니다.</div>
 
       {selectedJobs.length > 0 && (
         <div className="job-selected-count">
@@ -326,7 +363,7 @@ export default function Step2Jobs({
       ) : (
         <>
           <div className="pkg-grid">
-            {(showAll ? filtered : filtered.slice(0, MOBILE_INITIAL)).map((job, idx) => {
+            {filtered.map((job, idx) => {
               const isSelected = selectedJobs.some((j) => j.id === job.id)
               const bg = BG_CYCLE[idx % 3]
               return (
@@ -358,24 +395,56 @@ export default function Step2Jobs({
                         <span className="unit">{job.unit}</span>
                         <span className="sub">{job.sub}</span>
                       </div>
-                      <button
-                        className={`pkg-btn${isSelected ? ' sel' : ''}`}
-                        onClick={(e) => { e.stopPropagation(); selectJob(job) }}
-                      >
-                        {isSelected ? '✓ 선택됨' : '선택하기'}
-                      </button>
+                      <div className="pkg-actions">
+                        <button className="pkg-btn detail" onClick={(e) => { e.stopPropagation(); setDetailJob(job) }}>자세히 보기</button>
+                        <button
+                          className={`pkg-btn${isSelected ? ' sel' : ''}`}
+                          onClick={(e) => { e.stopPropagation(); selectJob(job) }}
+                        >
+                          {isSelected ? '✓ 선택됨' : '선택하기'}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
               )
             })}
           </div>
-          {!showAll && filtered.length > MOBILE_INITIAL && (
-            <button className="pkg-show-more" onClick={() => setShowAll(true)}>
-              더 보기 ({filtered.length - MOBILE_INITIAL}개 남음)
-            </button>
-          )}
+          <nav className="event-pagination" aria-label="일자리 페이지 이동">
+            <button className="directory-btn" disabled={pageGroupStart(page) === 1} onClick={() => setPage(Math.max(1, pageGroupStart(page) - PAGE_GROUP_SIZE))}>이전</button>
+            <div className="event-page-numbers">
+              {page > PAGE_GROUP_SIZE && <span>…</span>}
+              {paginationPages(page, totalPages).map((number) => (
+                <button key={number} className={number === page ? 'active' : ''} onClick={() => setPage(number)}>{number}</button>
+              ))}
+              {pageGroupStart(page) + PAGE_GROUP_SIZE <= totalPages && <span>…</span>}
+            </div>
+            <button className="directory-btn" disabled={pageGroupStart(page) + PAGE_GROUP_SIZE > totalPages} onClick={() => setPage(pageGroupStart(page) + PAGE_GROUP_SIZE)}>다음</button>
+          </nav>
         </>
+      )}
+
+      {detailJob && (
+        <div className="planner-modal-backdrop" onClick={() => setDetailJob(null)}>
+          <section className="event-detail-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="planner-day-modal-head">
+              <div><p>ALIO 채용공고 상세</p><h2>{detailJob.title}</h2></div>
+              <button type="button" onClick={() => setDetailJob(null)} aria-label="닫기">x</button>
+            </div>
+            <div className="job-detail-placeholder"><span>💼</span><strong>{detailJob.company}</strong><small>ALIO 채용공고는 별도 이미지를 제공하지 않습니다.</small></div>
+            <div className="event-detail-location"><span>근무지역</span><strong>{detailJob.location || '-'}</strong></div>
+            <div className="event-detail-overview job-detail-copy">
+              {formatJobDetail(detailJob.desc).map((line, index) => <p key={`${index}-${line.slice(0, 20)}`}>{line}</p>)}
+            </div>
+            <div className="directory-tags">
+              {(detailJob.tags ?? []).map((tag) => <span className="directory-tag" key={tag}>{tag}</span>)}
+            </div>
+            <div className="event-detail-actions">
+              {detailJob.sourceUrl && <a className="directory-btn" href={detailJob.sourceUrl} target="_blank" rel="noreferrer">원문 공고 보기</a>}
+              <button className="directory-btn primary" onClick={() => { selectJob(detailJob); setDetailJob(null) }}>{selectedJobs.some((job) => job.id === detailJob.id) ? '선택 해제' : '이 일자리 선택'}</button>
+            </div>
+          </section>
+        </div>
       )}
     </div>
   )

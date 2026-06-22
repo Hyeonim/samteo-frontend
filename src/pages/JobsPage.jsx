@@ -13,6 +13,29 @@ const RECOMMEND_TABS = [
 ]
 
 const MOBILE_INITIAL = 5
+const PAGE_SIZE = 20
+const PAGE_GROUP_SIZE = 5
+
+function pageGroupStart(page) {
+  return Math.floor((page - 1) / PAGE_GROUP_SIZE) * PAGE_GROUP_SIZE + 1
+}
+
+function paginationPages(page, totalPages) {
+  const start = pageGroupStart(page)
+  const end = Math.min(start + PAGE_GROUP_SIZE - 1, totalPages)
+  return Array.from({ length: Math.max(0, end - start + 1) }, (_, index) => start + index)
+}
+
+function formatJobDetail(value) {
+  const text = String(value ?? '').trim()
+  if (!text) return ['상세 자격조건은 원문 공고에서 확인해 주세요.']
+  return text
+    .replace(/\s+(?=[□○※·])/g, '\n')
+    .replace(/\s+(?=\d+[.)]\s)/g, '\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+}
 
 function getRegionLabel(regionId, fallback) {
   const labels = {
@@ -113,7 +136,8 @@ function unwrap(res) {
 }
 
 function normalizeJob(job, index) {
-  const salary = Number(job.monthlySalary ?? job.salary ?? 0)
+  const hourlyWage = Number(job.hourlyWage ?? job.wage ?? 10320)
+  const salary = Number(job.monthlySalary ?? job.salary ?? hourlyWage * 209)
   const commute = Number(job.commuteMinutes ?? 20 + index * 4)
   const tags = (job.tags ?? []).map(translateTag)
   const popularity = Number(job.popularity ?? job.viewCount ?? 92 - index * 7)
@@ -129,6 +153,7 @@ function normalizeJob(job, index) {
     type: translateCategory(job.type ?? job.category),
     salary,
     monthlySalary: salary,
+    hourlyWage,
     commute,
     commuteMinutes: commute,
     tags,
@@ -180,13 +205,22 @@ export default function JobsPage() {
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState(() => isMobile() ? 'list' : 'card')
   const [showAll, setShowAll] = useState(false)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const [detailJob, setDetailJob] = useState(null)
 
   useEffect(() => {
-    api.get('/api/planner/jobs')
-      .then((res) => setJobs(unwrap(res).map(normalizeJob)))
+    api.get(`/api/planner/jobs/page?page=${page}&size=${PAGE_SIZE}`)
+      .then((res) => {
+        const data = unwrap(res)
+        setJobs((data.items ?? []).map(normalizeJob))
+        setTotalPages(Math.max(1, Number(data.totalPages ?? 1)))
+        setTotalCount(Number(data.totalCount ?? 0))
+      })
       .catch(() => setJobs([]))
       .finally(() => setLoading(false))
-  }, [])
+  }, [page])
 
   // 탭 바뀌면 "더 보기" 리셋
   useEffect(() => { setShowAll(false) }, [activeTab, query, type])
@@ -205,11 +239,10 @@ export default function JobsPage() {
 
   // "전체" 탭에서만 더 보기 제한 적용
   const displayed = useMemo(() => {
-    if (activeTab !== 'all' || showAll) return filtered
-    return filtered.slice(0, MOBILE_INITIAL * 2)
+    return filtered
   }, [filtered, activeTab, showAll])
 
-  const hasMore = activeTab === 'all' && !showAll && filtered.length > MOBILE_INITIAL * 2
+  const hasMore = false
 
   const popularJobs = useMemo(() => sectionJobs(jobs, 'popular'), [jobs])
   const closingJobs = useMemo(() => sectionJobs(jobs, 'closing'), [jobs])
@@ -330,13 +363,18 @@ export default function JobsPage() {
                     </div>
                     <p className="job-shop-reason">{job.recommendReason}</p>
                     <div className="job-shop-meta">
-                      <div><span>예상 급여</span><strong>{job.salary.toLocaleString()}원</strong></div>
+                      <div>
+                        <span>기본 시급</span><strong>{job.hourlyWage.toLocaleString()}원</strong>
+                      </div>
                       <div><span>출퇴근</span><strong>{job.commute}분</strong></div>
                     </div>
                     <div className="directory-tags job-shop-tags">
                       {job.tags.slice(0, 3).map((tag) => <span className="directory-tag" key={tag}>{tag}</span>)}
                     </div>
-                    <button className="job-card-action" onClick={() => startAccommodationMatching(job)}>숙소 매칭 시작</button>
+                    <div className="event-card-actions">
+                      <button className="directory-btn" onClick={() => setDetailJob(job)}>자세히 보기</button>
+                      <button className="job-card-action" onClick={() => startAccommodationMatching(job)}>숙소 매칭 시작</button>
+                    </div>
                   </div>
                 </article>
               ))}
@@ -368,7 +406,9 @@ export default function JobsPage() {
                     </div>
                     <p className="job-reason">{job.recommendReason}</p>
                     <div className="directory-metrics compact">
-                      <div className="directory-metric"><span>예상 급여</span><strong>{job.salary.toLocaleString()}원</strong></div>
+                      <div className="directory-metric">
+                        <span>기본 시급</span><strong>{job.hourlyWage.toLocaleString()}원</strong>
+                      </div>
                       <div className="directory-metric"><span>출퇴근</span><strong>{job.commute}분</strong></div>
                       <div className="directory-metric"><span>근무</span><strong>{job.workingDays ?? '-'}</strong></div>
                       <div className="directory-metric"><span>고용</span><strong>{job.employmentType ?? '단기'}</strong></div>
@@ -377,7 +417,10 @@ export default function JobsPage() {
                       {job.tags.map((tag) => <span className="directory-tag" key={tag}>{tag}</span>)}
                     </div>
                   </div>
-                  <button className="job-card-action" onClick={() => startAccommodationMatching(job)}>숙소 매칭 시작</button>
+                  <div className="event-card-actions">
+                    <button className="directory-btn" onClick={() => setDetailJob(job)}>자세히 보기</button>
+                    <button className="job-card-action" onClick={() => startAccommodationMatching(job)}>숙소 매칭 시작</button>
+                  </div>
                 </article>
               ))}
             </section>
@@ -387,6 +430,40 @@ export default function JobsPage() {
               </button>
             )}
           </>
+        )}
+
+        {!loading && (
+          <nav className="event-pagination" aria-label="일자리 페이지 이동">
+            <button className="directory-btn" disabled={pageGroupStart(page) === 1} onClick={() => setPage(Math.max(1, pageGroupStart(page) - PAGE_GROUP_SIZE))}>이전</button>
+            <div className="event-page-numbers">
+              {page > PAGE_GROUP_SIZE && <span>…</span>}
+              {paginationPages(page, totalPages).map((number) => (
+                <button key={number} className={number === page ? 'active' : ''} onClick={() => setPage(number)}>{number}</button>
+              ))}
+              {pageGroupStart(page) + PAGE_GROUP_SIZE <= totalPages && <span>…</span>}
+            </div>
+            <button className="directory-btn" disabled={pageGroupStart(page) + PAGE_GROUP_SIZE > totalPages} onClick={() => setPage(pageGroupStart(page) + PAGE_GROUP_SIZE)}>다음</button>
+          </nav>
+        )}
+
+        {detailJob && (
+          <div className="planner-modal-backdrop" onClick={() => setDetailJob(null)}>
+            <section className="event-detail-modal" onClick={(event) => event.stopPropagation()}>
+              <div className="planner-day-modal-head">
+                <div><p>ALIO 채용공고 상세</p><h2>{detailJob.title}</h2></div>
+                <button type="button" onClick={() => setDetailJob(null)} aria-label="닫기">x</button>
+              </div>
+              <div className="job-detail-placeholder"><span>💼</span><strong>{detailJob.company}</strong><small>ALIO 채용공고는 별도 이미지를 제공하지 않습니다.</small></div>
+              <div className="event-detail-location"><span>근무지역</span><strong>{detailJob.location || detailJob.region || '-'}</strong></div>
+              <div className="event-detail-overview job-detail-copy">
+                {formatJobDetail(detailJob.desc).map((line, index) => <p key={`${index}-${line.slice(0, 20)}`}>{line}</p>)}
+              </div>
+              <div className="event-detail-actions">
+                {detailJob.sourceUrl && <a className="directory-btn" href={detailJob.sourceUrl} target="_blank" rel="noreferrer">원문 공고 보기</a>}
+                <button className="directory-btn primary" onClick={() => startAccommodationMatching(detailJob)}>이 일자리로 플래너 시작</button>
+              </div>
+            </section>
+          </div>
         )}
       </div>
     </main>
