@@ -564,7 +564,6 @@ export default function MyPlannerPage() {
                   <section className="planner-finance-editor">
                     <div>
                       <h3>일자리 급여 수정</h3>
-                      <p>시급 또는 월급 중 하나를 입력하면 자동으로 계산됩니다. (기준: 월 209시간)</p>
                       {(activePlanner.jobs ?? []).map((job) => (
                         <div key={job.id} className="pfe-job-row">
                           <span className="pfe-job-name">{job.name}</span>
@@ -596,7 +595,6 @@ export default function MyPlannerPage() {
                     </div>
                     <div>
                       <h3>월 숙박비 수정</h3>
-                      <p>숙박 API에서 비용을 제공하지 않아 직접 입력합니다.</p>
                       <label>
                         <span>{activePlanner.accommodation?.name ?? '선택 숙소'}</span>
                         <input type="number" min="0" step="10000" defaultValue={activePlanner.accommodationCost || ''} placeholder="월 숙박비" onBlur={(event) => updateAccommodationCost(event.target.value)} />
