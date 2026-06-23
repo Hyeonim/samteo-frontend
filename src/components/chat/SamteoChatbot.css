@@ -1,4 +1,4 @@
-.samteo-chat {
+﻿.samteo-chat {
   position: fixed;
   right: 24px;
   bottom: 24px;
@@ -69,6 +69,13 @@
 }
 
 .samteo-chat.dragging .samteo-chat-head { cursor: grabbing; }
+
+.samteo-chat:not(.open) .samteo-chat-launcher {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.samteo-chat.dragging:not(.open) .samteo-chat-launcher { cursor: grabbing; }
 
 .samteo-chat-identity { display: flex; align-items: center; gap: 10px; }
 .samteo-chat-identity img {
@@ -190,3 +197,4 @@
 @media (prefers-reduced-motion: reduce) {
   .samteo-chat-panel, .samteo-chat-launcher, .samteo-chat-typing i { animation: none; transition: none; }
 }
+

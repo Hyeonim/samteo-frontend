@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+﻿import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { chatApi } from '../../api/chatApi'
 import { useAuth } from '../../context/AuthContext'
@@ -42,6 +42,7 @@ export default function SamteoChatbot() {
   const listRef = useRef(null)
   const inputRef = useRef(null)
   const dragRef = useRef(null)
+  const dragMovedRef = useRef(false)
 
   useEffect(() => {
     if (!open) return undefined
@@ -107,27 +108,35 @@ export default function SamteoChatbot() {
   }
 
   function startDrag(event) {
-    if (window.innerWidth <= 600 || event.button !== 0 || event.target.closest('button')) return
-    const panel = event.currentTarget.closest('.samteo-chat-panel')
-    if (!panel) return
+    if (window.innerWidth <= 600 || event.button !== 0) return
+    if (event.target.closest('input, textarea')) return
+    // 채팅창이 열려있을 때는 헤더 영역에서만, 버튼 제외
+    if (open && !event.target.closest('.samteo-chat-head')) return
+    if (open && event.target.closest('button')) return
+    const rect = event.currentTarget.getBoundingClientRect()
     dragRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
       startPosition: position,
-      panelRect: panel.getBoundingClientRect(),
+      panelRect: rect,
     }
+    dragMovedRef.current = false
     event.currentTarget.setPointerCapture(event.pointerId)
-    setDragging(true)
     event.preventDefault()
   }
 
   function moveDrag(event) {
     const drag = dragRef.current
     if (!drag || drag.pointerId !== event.pointerId) return
-    const margin = 8
     const rawX = event.clientX - drag.startX
     const rawY = event.clientY - drag.startY
+    if (!dragMovedRef.current) {
+      if (Math.hypot(rawX, rawY) < 5) return
+      dragMovedRef.current = true
+      setDragging(true)
+    }
+    const margin = 8
     const minX = margin - drag.panelRect.left
     const maxX = window.innerWidth - margin - drag.panelRect.right
     const minY = margin - drag.panelRect.top
@@ -146,19 +155,27 @@ export default function SamteoChatbot() {
     setDragging(false)
   }
 
+  function handleLauncherClick() {
+    if (dragMovedRef.current) {
+      dragMovedRef.current = false
+      return
+    }
+    setOpen((value) => !value)
+  }
+
   return (
     <div
       className={`samteo-chat${open ? ' open' : ''}${dragging ? ' dragging' : ''}`}
       style={{ transform: `translate3d(${position.x}px, ${position.y}px, 0)` }}
+      onPointerDown={startDrag}
+      onPointerMove={moveDrag}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
     >
       {open && (
         <section className="samteo-chat-panel" role="dialog" aria-label="삼터 도우미" aria-modal="false">
           <header
             className="samteo-chat-head"
-            onPointerDown={startDrag}
-            onPointerMove={moveDrag}
-            onPointerUp={endDrag}
-            onPointerCancel={endDrag}
             title="드래그하여 이동"
           >
             <div className="samteo-chat-identity">
@@ -223,7 +240,7 @@ export default function SamteoChatbot() {
       <button
         type="button"
         className="samteo-chat-launcher"
-        onClick={() => setOpen((value) => !value)}
+        onClick={handleLauncherClick}
         aria-label={open ? '삼터 도우미 닫기' : '삼터 도우미 열기'}
         aria-expanded={open}
       >
