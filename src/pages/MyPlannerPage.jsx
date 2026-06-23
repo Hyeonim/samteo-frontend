@@ -526,11 +526,17 @@ export default function MyPlannerPage() {
           <section className="planner-workbench">
             <aside className="planner-list-panel">
               <div className="planner-panel-title">플래너 목록</div>
-              <div className="planner-type-filter">
+              <div
+                className={`planner-type-filter is-${plannerFilter}`}
+                role="group"
+                aria-label="플래너 유형 필터"
+              >
                 {[['all', '전체'], ['short', '단기'], ['long', '장기']].map(([val, label]) => (
                   <button
                     key={val}
                     className={`ptf-btn${plannerFilter === val ? ' active' : ''} ptf-${val}`}
+                    type="button"
+                    aria-pressed={plannerFilter === val}
                     onClick={() => setPlannerFilter(val)}
                   >
                     {label}

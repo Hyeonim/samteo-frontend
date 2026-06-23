@@ -263,25 +263,61 @@
 }
 
 .planner-type-filter {
-  display: flex;
-  gap: 6px;
+  --planner-filter-thumb-width: calc((100% - 8px) / 3);
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  padding: 4px;
   margin-bottom: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #f1f5f9;
+  overflow: hidden;
+}
+.planner-type-filter::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: var(--planner-filter-thumb-width);
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 2px 7px rgba(15, 23, 42, 0.14);
+  transform: translateX(0);
+  transition:
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 220ms ease,
+    box-shadow 220ms ease;
+}
+.planner-type-filter.is-short::before {
+  background: #fef3c7;
+  transform: translateX(100%);
+}
+.planner-type-filter.is-long::before {
+  background: #dbeafe;
+  transform: translateX(200%);
 }
 .ptf-btn {
-  flex: 1;
-  padding: 5px 0;
-  border-radius: 8px;
-  border: 1.5px solid #e5e7eb;
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  padding: 7px 0;
+  border-radius: 999px;
+  border: 0;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
-  background: #f8fafc;
+  background: transparent;
   color: #64748b;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition: color 180ms ease, transform 180ms ease;
 }
-.ptf-btn.ptf-short.active { background: #fef3c7; border-color: #f59e0b; color: #92400e; }
-.ptf-btn.ptf-long.active  { background: #dbeafe; border-color: #3b82f6; color: #1e40af; }
-.ptf-btn.ptf-all.active   { background: #f1f5f9; border-color: #475569; color: #0f172a; }
+.ptf-btn:hover:not(.active) { color: #334155; }
+.ptf-btn.active { transform: scale(1.03); }
+.ptf-btn.ptf-short.active { color: #92400e; }
+.ptf-btn.ptf-long.active  { color: #1e40af; }
+.ptf-btn.ptf-all.active   { color: #0f172a; }
 
 .planner-item-header {
   display: flex;
@@ -2289,6 +2325,8 @@
 @media (prefers-reduced-motion: reduce) {
   .job-view-toggle::before,
   .job-view-toggle button,
+  .planner-type-filter::before,
+  .planner-type-filter button,
   .job-recommend-grid,
   .job-recommend-list {
     animation: none;
