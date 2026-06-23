@@ -1,6 +1,52 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { api } from '../../api'
 
+const DEFAULT_MAP_POINT = { lat: 35.8714, lng: 128.6014 }
+
+// meta_region.region_id 기준 광역 지역 대표 좌표입니다.
+// ALIO는 상세 근무지 좌표를 제공하지 않으므로 지도 중심/마커의 안전한 대체값으로 사용합니다.
+const META_REGION_CENTERS = {
+  1: { lat: 37.5665, lng: 126.9780 }, // 서울
+  2: { lat: 37.4563, lng: 126.7052 }, // 인천
+  3: { lat: 36.3504, lng: 127.3845 }, // 대전
+  4: { lat: 35.8714, lng: 128.6014 }, // 대구
+  5: { lat: 35.1595, lng: 126.8526 }, // 광주
+  6: { lat: 35.1796, lng: 129.0756 }, // 부산
+  7: { lat: 35.5384, lng: 129.3114 }, // 울산
+  8: { lat: 36.4800, lng: 127.2890 }, // 세종
+  31: { lat: 37.2636, lng: 127.0286 }, // 경기
+  32: { lat: 37.8813, lng: 127.7300 }, // 강원
+  33: { lat: 36.6357, lng: 127.4917 }, // 충북
+  34: { lat: 36.6013, lng: 126.6608 }, // 충남
+  35: { lat: 36.5684, lng: 128.7294 }, // 경북
+  36: { lat: 35.2279, lng: 128.6811 }, // 경남
+  37: { lat: 35.8242, lng: 127.1480 }, // 전북
+  38: { lat: 34.8161, lng: 126.4630 }, // 전남
+  39: { lat: 33.4996, lng: 126.5312 }, // 제주
+}
+
+function finitePoint(lat, lng) {
+  if (lat == null || lng == null || lat === '' || lng === '') return null
+  const parsedLat = Number(lat)
+  const parsedLng = Number(lng)
+  if (!Number.isFinite(parsedLat) || !Number.isFinite(parsedLng)) return null
+  if (parsedLat < -90 || parsedLat > 90 || parsedLng < -180 || parsedLng > 180) return null
+  return { lat: parsedLat, lng: parsedLng }
+}
+
+function directJobPoint(job) {
+  if (!job) return null
+  return finitePoint(job.lat ?? job.latitude, job.lng ?? job.longitude)
+}
+
+function resolveJobPoint(job) {
+  const direct = directJobPoint(job)
+  if (direct) return direct
+
+  const regionId = Number(job?.districtRegionId ?? job?.regionId ?? job?.cityId)
+  return META_REGION_CENTERS[regionId] ?? null
+}
+
 async function fetchTransitRoute(accommodation, job) {
   const data = await api.post('/api/planner/transit-routes', {
     startName: accommodation.name,
@@ -53,6 +99,8 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
   }, [selectedJobs])
 
   const activeJob = selectedJobs.find((j) => j.id === activeJobId) ?? null
+  const activeJobPoint = useMemo(() => resolveJobPoint(activeJob), [activeJob])
+  const activeJobUsesRegionCenter = Boolean(activeJob && !directJobPoint(activeJob) && activeJobPoint)
   const selectedRegionIds = useMemo(
     () => [...new Set(selectedJobs.map((job) => job.districtRegionId ?? job.regionId).filter(Boolean))],
     [selectedJobs]
@@ -104,8 +152,9 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
         const container = mapRef.current
         if (!container || kakaoMapRef.current) return
 
+        const initialPoint = resolveJobPoint(selectedJobsRef.current[0]) ?? DEFAULT_MAP_POINT
         const map = new window.kakao.maps.Map(container, {
-          center: new window.kakao.maps.LatLng(35.8714, 128.6014),
+          center: new window.kakao.maps.LatLng(initialPoint.lat, initialPoint.lng),
           level: 5,
         })
         kakaoMapRef.current = map
@@ -121,7 +170,7 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
       })
     }
 
-    if (window.kakao) {
+    if (window.kakao?.maps) {
       initMap()
     } else {
       const script = document.querySelector('script[src*="dapi.kakao.com"]')
@@ -234,8 +283,15 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
     const hotel = visibleHotels.find((h) => h.name === selectedHotel.name)
     if (!hotel || !mapReady || !kakaoMapRef.current) return
 
-    const dLat = hotel.lat - activeJob.lat
-    const dLng = hotel.lng - activeJob.lng
+    const hotelPoint = finitePoint(hotel.lat, hotel.lng)
+    if (!hotelPoint || !activeJobPoint) {
+      clearRoute()
+      setRouteInfo(null)
+      return
+    }
+
+    const dLat = hotelPoint.lat - activeJobPoint.lat
+    const dLng = hotelPoint.lng - activeJobPoint.lng
     const distKm = Math.sqrt(dLat * dLat + dLng * dLng) * 111
 
     if (distKm > 50) {
@@ -254,7 +310,15 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
 
     ;(async () => {
       try {
-        const routeRes = await fetchTransitRoute(hotel, activeJob)
+        const routeRes = await fetchTransitRoute({
+          ...hotel,
+          lat: hotelPoint.lat,
+          lng: hotelPoint.lng,
+        }, {
+          ...activeJob,
+          lat: activeJobPoint.lat,
+          lng: activeJobPoint.lng,
+        })
         if (cancelled) return
 
         const rawOdsay = routeRes.raw ?? routeRes
@@ -349,8 +413,8 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
           })
 
           const bounds = new window.kakao.maps.LatLngBounds()
-          bounds.extend(new window.kakao.maps.LatLng(hotel.lat, hotel.lng))
-          bounds.extend(new window.kakao.maps.LatLng(activeJob.lat, activeJob.lng))
+          bounds.extend(new window.kakao.maps.LatLng(hotelPoint.lat, hotelPoint.lng))
+          bounds.extend(new window.kakao.maps.LatLng(activeJobPoint.lat, activeJobPoint.lng))
           kakaoMapRef.current.setBounds(bounds, 80, 80, 80, 80)
           if (kakaoMapRef.current.getLevel() > 7) kakaoMapRef.current.setLevel(7)
         }
@@ -362,7 +426,7 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
     })()
 
     return () => { cancelled = true }
-  }, [activeJob, selectedHotel, clearRoute, drawPolyline, mapReady, visibleHotels])
+  }, [activeJob, activeJobPoint, selectedHotel, clearRoute, drawPolyline, mapReady, visibleHotels])
 
   useEffect(() => {
     if (visibleHotels.length === 0) return
@@ -381,8 +445,9 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
       jobMarkerRef.current = null
     }
 
-    if (activeJob) {
-      const position = new window.kakao.maps.LatLng(activeJob.lat, activeJob.lng)
+    if (activeJobPoint) {
+      const position = new window.kakao.maps.LatLng(activeJobPoint.lat, activeJobPoint.lng)
+      kakaoMapRef.current.relayout()
       kakaoMapRef.current.panTo(position)
 
       const jobContent = `
@@ -397,7 +462,7 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
       jobMarker.setMap(kakaoMapRef.current)
       jobMarkerRef.current = jobMarker
     }
-  }, [mapReady, activeJob])
+  }, [mapReady, activeJob, activeJobPoint])
 
   return (
     <div className="step-card">
@@ -442,7 +507,12 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
         {activeJob && (
           <div className="job-active-banner">
             <span>{activeJob.emoji}</span>
-            <span><strong>{activeJob.name}</strong> 위치로 지도가 이동했습니다</span>
+            <span>
+              <strong>{activeJob.name}</strong>{' '}
+              {activeJobUsesRegionCenter
+                ? '상세 좌표가 없어 선택 지역의 대표 위치를 표시합니다'
+                : '위치로 지도가 이동했습니다'}
+            </span>
             <button className="job-active-close" onClick={() => setActiveJobId(null)}>✕</button>
           </div>
         )}
