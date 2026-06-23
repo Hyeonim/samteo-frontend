@@ -16,6 +16,14 @@ const CALENDAR_DAYS = [
 const HOURS = Array.from({ length: 18 }, (_, index) => index + 6)
 const COLORS = ['#ef7f72', '#6b9ee8', '#9ac768', '#6ec7bd', '#f3bf58', '#9b7ae5', '#f59e73']
 const VIEW_LABELS = { day: '일간', week: '주간', month: '월간' }
+const FINANCE_PRESETS = [
+  { label: '주말 수당', kind: 'income' },
+  { label: '인센티브', kind: 'income' },
+  { label: '추가 근무', kind: 'income' },
+  { label: '이벤트 비용', kind: 'expense' },
+  { label: '교통비', kind: 'expense' },
+  { label: '식비', kind: 'expense' },
+]
 const DEFAULT_EVENT_TYPES = [
   { value: 'personal', label: '개인 일정', color: '#f59e73' },
   { value: 'study', label: '준비/학습', color: '#9ac768' },
@@ -29,6 +37,45 @@ const COLOR_SWATCHES = ['#ef7f72', '#f59e73', '#f3bf58', '#9ac768', '#6ec7bd', '
 
 function getEventTypeMeta(type) {
   return EVENT_TYPES.find((item) => item.value === type) ?? EVENT_TYPES[0]
+}
+
+function getFinanceAdjustments(planner) {
+  const adjustments = planner?.accommodation?.financeAdjustments
+  return Array.isArray(adjustments) ? adjustments : []
+}
+
+function getFinanceTotals(planner, adjustments = getFinanceAdjustments(planner)) {
+  const salary = Number(planner?.totalSalary ?? 0)
+  const accommodation = Number(planner?.accommodationCost ?? planner?.accommodation?.price ?? 0)
+  const living = Number(planner?.fixedExpense ?? 0)
+  const extraIncome = adjustments
+    .filter((item) => item.kind === 'income')
+    .reduce((sum, item) => sum + Number(item.amount ?? 0), 0)
+  const extraExpense = adjustments
+    .filter((item) => item.kind === 'expense')
+    .reduce((sum, item) => sum + Number(item.amount ?? 0), 0)
+
+  return {
+    salary,
+    accommodation,
+    living,
+    extraIncome,
+    extraExpense,
+    balance: salary + extraIncome - accommodation - living - extraExpense,
+  }
+}
+
+function formatMoneyInput(value) {
+  const digits = String(value ?? '').replace(/\D/g, '')
+  return digits ? Number(digits).toLocaleString('ko-KR') : ''
+}
+
+function applyMoneyInputFormat(event) {
+  event.currentTarget.value = formatMoneyInput(event.currentTarget.value)
+}
+
+function parseMoneyInput(value) {
+  return Number(String(value ?? '').replace(/,/g, '')) || 0
 }
 
 function createCustomTypeValue(label) {
@@ -155,6 +202,8 @@ export default function MyPlannerPage() {
   const [planners, setPlanners] = useState([])
   const [activeId, setActiveId] = useState(null)
   const [plannerFilter, setPlannerFilter] = useState('all')
+  const [financeOpen, setFinanceOpen] = useState(false)
+  const [adjustmentDraft, setAdjustmentDraft] = useState({ kind: 'income', label: '', amount: '' })
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState('week')
   const [selectedDay, setSelectedDay] = useState(0)
@@ -166,6 +215,11 @@ export default function MyPlannerPage() {
     if (plannerFilter === 'all') return planners
     return planners.filter((p) => (p.plannerType ?? 'long') === plannerFilter)
   }, [planners, plannerFilter])
+  const financeAdjustments = useMemo(() => getFinanceAdjustments(activePlanner), [activePlanner])
+  const financeTotals = useMemo(
+    () => getFinanceTotals(activePlanner, financeAdjustments),
+    [activePlanner, financeAdjustments]
+  )
   const [title, setTitle] = useState(() => activePlanner?.title ?? '')
   const [memo, setMemo] = useState(() => activePlanner?.memo ?? '')
   const [editingId, setEditingId] = useState(null)
@@ -323,6 +377,8 @@ export default function MyPlannerPage() {
     setMemo(planner.memo ?? '')
     setEventTypes(planner.eventTypes ?? [...DEFAULT_EVENT_TYPES, ...(planner.customEventTypes ?? [])])
     setEditingId(null)
+    setFinanceOpen(false)
+    setAdjustmentDraft({ kind: 'income', label: '', amount: '' })
   }
 
   const saveSummary = () => {
@@ -337,22 +393,58 @@ export default function MyPlannerPage() {
       ? { ...job, hourlyWage, salary }
       : job)
     const totalSalary = jobs.reduce((sum, job) => sum + Number(job.salary ?? 0), 0)
-    const accommodationCost = Number(activePlanner.accommodationCost ?? activePlanner.accommodation?.price ?? 0)
+    const nextTotals = getFinanceTotals({ ...activePlanner, totalSalary, jobs })
     persistPlanner({
       jobs,
       totalSalary,
-      disposableIncome: Math.max(0, totalSalary - accommodationCost - Number(activePlanner.fixedExpense ?? 0)),
+      disposableIncome: nextTotals.balance,
     })
   }
 
   const updateAccommodationCost = (value) => {
     const accommodationCost = Math.max(0, Number(value) || 0)
-    const totalSalary = Number(activePlanner.totalSalary ?? 0)
+    const accommodation = { ...activePlanner.accommodation, price: accommodationCost }
+    const nextTotals = getFinanceTotals({ ...activePlanner, accommodation, accommodationCost })
     persistPlanner({
-      accommodation: { ...activePlanner.accommodation, price: accommodationCost },
+      accommodation,
       accommodationCost,
-      disposableIncome: Math.max(0, totalSalary - accommodationCost - Number(activePlanner.fixedExpense ?? 0)),
+      disposableIncome: nextTotals.balance,
     })
+  }
+
+  const updateLivingCost = (value) => {
+    const fixedExpense = Math.max(0, Number(value) || 0)
+    const nextTotals = getFinanceTotals({ ...activePlanner, fixedExpense })
+    persistPlanner({ fixedExpense, disposableIncome: nextTotals.balance })
+  }
+
+  const saveFinanceAdjustments = (adjustments) => {
+    const accommodation = { ...activePlanner.accommodation, financeAdjustments: adjustments }
+    const nextTotals = getFinanceTotals({ ...activePlanner, accommodation }, adjustments)
+    persistPlanner({ accommodation, disposableIncome: nextTotals.balance })
+  }
+
+  const addFinanceAdjustment = () => {
+    const label = adjustmentDraft.label.trim()
+    const amount = Math.max(0, parseMoneyInput(adjustmentDraft.amount))
+    if (!label || amount === 0) return
+    const nextSequence = financeAdjustments.reduce((max, item) => {
+      const sequence = Number(String(item.id ?? '').match(/adjustment-(\d+)/)?.[1] ?? 0)
+      return Math.max(max, sequence)
+    }, 0) + 1
+    saveFinanceAdjustments([
+      ...financeAdjustments,
+      { id: `adjustment-${nextSequence}`, kind: adjustmentDraft.kind, label, amount },
+    ])
+    setAdjustmentDraft({ kind: adjustmentDraft.kind, label: '', amount: '' })
+  }
+
+  const removeFinanceAdjustment = (id) => {
+    saveFinanceAdjustments(financeAdjustments.filter((item) => item.id !== id))
+  }
+
+  const chooseFinancePreset = (preset) => {
+    setAdjustmentDraft((prev) => ({ ...prev, kind: preset.kind, label: preset.label }))
   }
 
   const removePlanner = async () => {
@@ -587,53 +679,141 @@ export default function MyPlannerPage() {
                     </div>
                   </div>
 
-                  <div className="directory-metrics compact planner-summary-strip">
-                    <div className="directory-metric"><span>지역</span><strong>{activePlanner.regionName}</strong></div>
-                    <div className="directory-metric"><span>숙소</span><strong>{activePlanner.accommodation?.name ?? '-'}</strong></div>
-                    <div className="directory-metric"><span>예상 급여</span><strong>{(activePlanner.totalSalary ?? 0).toLocaleString()}원</strong></div>
-                    <div className="directory-metric"><span>월 잔액</span><strong>{(activePlanner.disposableIncome ?? 0).toLocaleString()}원</strong></div>
-                  </div>
+                  <section className={`planner-finance-hub${financeOpen ? ' open' : ''}`}>
+                    <div className="pfh-head">
+                      <div>
+                        <span className="pfh-eyebrow">이번 달 예상 정산</span>
+                        <div className={`pfh-balance${financeTotals.balance < 0 ? ' negative' : ''}`}>
+                          {financeTotals.balance.toLocaleString()}원
+                        </div>
+                        <p>현재 입력된 수입과 지출을 기준으로 계산한 금액입니다.</p>
+                      </div>
+                      <button
+                        type="button"
+                        className="pfh-toggle"
+                        aria-expanded={financeOpen}
+                        onClick={() => setFinanceOpen((open) => !open)}
+                      >
+                        {financeOpen ? '접기' : '자세히 보기'}
+                        <svg aria-hidden="true" viewBox="0 0 20 20" fill="none">
+                          <path d="M5 7.5 10 12.5 15 7.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
+                    </div>
 
-                  <section className="planner-finance-editor">
-                    <div>
-                      <h3>일자리 급여 수정</h3>
-                      {(activePlanner.jobs ?? []).map((job) => (
-                        <div key={job.id} className="pfe-job-row">
-                          <span className="pfe-job-name">{job.name}</span>
-                          <div className="pfe-wage-inputs">
-                            <label>
-                              <small>시급</small>
-                              <input
-                                type="number" min="0" step="10"
-                                key={`hourly-${job.id}-${job.hourlyWage}`}
-                                defaultValue={job.hourlyWage ?? 10320}
-                                onBlur={(event) => updateJobWage(job.id, 'hourly', event.target.value)}
-                              />
-                              <small>원/시간</small>
-                            </label>
-                            <span className="pfe-wage-sep">·</span>
-                            <label>
-                              <small>월급</small>
-                              <input
-                                type="number" min="0" step="10000"
-                                key={`salary-${job.id}-${job.salary}`}
-                                defaultValue={job.salary ?? (job.hourlyWage ?? 10320) * 209}
-                                onBlur={(event) => updateJobWage(job.id, 'salary', event.target.value)}
-                              />
-                              <small>원/월</small>
-                            </label>
+                    <div className="pfh-summary" aria-label="월 예상 수입과 지출 요약">
+                      <div className="income">
+                        <span>기본 급여</span>
+                        <strong>+{financeTotals.salary.toLocaleString()}원</strong>
+                      </div>
+                      <div className="income">
+                        <span>추가 수입</span>
+                        <strong>+{financeTotals.extraIncome.toLocaleString()}원</strong>
+                      </div>
+                      <div className="expense">
+                        <span>숙박비</span>
+                        <strong>-{financeTotals.accommodation.toLocaleString()}원</strong>
+                      </div>
+                      <div className="expense">
+                        <span>생활·추가 지출</span>
+                        <strong>-{(financeTotals.living + financeTotals.extraExpense).toLocaleString()}원</strong>
+                      </div>
+                    </div>
+
+                    {financeOpen && (
+                      <div className="pfh-detail">
+                        <div className="pfh-section-head">
+                          <div>
+                            <h3>기본 금액</h3>
+                            <p>자주 바뀌는 세 항목만 먼저 조정하세요. 입력 후 포커스를 벗어나면 저장됩니다.</p>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                    <div>
-                      <h3>월 숙박비 수정</h3>
-                      <label>
-                        <span>{activePlanner.accommodation?.name ?? '선택 숙소'}</span>
-                        <input type="number" min="0" step="10000" defaultValue={activePlanner.accommodationCost || ''} placeholder="월 숙박비" onBlur={(event) => updateAccommodationCost(event.target.value)} />
-                        <small>원/월</small>
-                      </label>
-                    </div>
+
+                        <div className="pfh-base-grid">
+                          <article className="pfh-base-card salary">
+                            <div className="pfh-card-title"><span>💼</span><strong>일자리 급여</strong></div>
+                            {(activePlanner.jobs ?? []).map((job) => (
+                              <div key={job.id} className="pfh-field-group">
+                                <span className="pfh-field-name">{job.name}</span>
+                                <label className="pfh-salary-input">
+                                  <small>
+                                    월급
+                                    <em>(예상 시급 {Math.round(Number(job.salary ?? (job.hourlyWage ?? 10320) * 209) / 209).toLocaleString()}원)</em>
+                                  </small>
+                                  <span>
+                                    <input
+                                      type="text"
+                                      inputMode="numeric"
+                                      key={`salary-${job.id}-${job.salary}`}
+                                      defaultValue={formatMoneyInput(job.salary ?? (job.hourlyWage ?? 10320) * 209)}
+                                      onChange={applyMoneyInputFormat}
+                                      onBlur={(event) => updateJobWage(job.id, 'salary', parseMoneyInput(event.target.value))}
+                                    />
+                                    원
+                                  </span>
+                                </label>
+                              </div>
+                            ))}
+                          </article>
+
+                          <article className="pfh-base-card">
+                            <div className="pfh-card-title"><span>🏠</span><strong>기본 지출</strong></div>
+                            <label className="pfh-money-field">
+                              <span>{activePlanner.accommodation?.name ?? '월 숙박비'}</span>
+                              <div><input type="text" inputMode="numeric" defaultValue={formatMoneyInput(activePlanner.accommodationCost)} placeholder="0" onChange={applyMoneyInputFormat} onBlur={(event) => updateAccommodationCost(parseMoneyInput(event.target.value))} /><small>원</small></div>
+                            </label>
+                            <label className="pfh-money-field">
+                              <span>기본 생활비 <small>식비·교통·통신 등</small></span>
+                              <div><input type="text" inputMode="numeric" defaultValue={formatMoneyInput(activePlanner.fixedExpense)} placeholder="0" onChange={applyMoneyInputFormat} onBlur={(event) => updateLivingCost(parseMoneyInput(event.target.value))} /><small>원</small></div>
+                            </label>
+                          </article>
+                        </div>
+
+                        <div className="pfh-adjustments">
+                          <div className="pfh-section-head">
+                            <div>
+                              <h3>추가 수입·지출</h3>
+                              <p>필요한 항목만 추가하세요. 아무것도 추가하지 않아도 괜찮습니다.</p>
+                            </div>
+                            <span className="pfh-count">{financeAdjustments.length}개 항목</span>
+                          </div>
+
+                          <div className="pfh-presets">
+                            {FINANCE_PRESETS.map((preset) => (
+                              <button type="button" key={`${preset.kind}-${preset.label}`} className={preset.kind} onClick={() => chooseFinancePreset(preset)}>
+                                {preset.kind === 'income' ? '+' : '−'} {preset.label}
+                              </button>
+                            ))}
+                          </div>
+
+                          <div className="pfh-add-row">
+                            <select value={adjustmentDraft.kind} onChange={(event) => setAdjustmentDraft((prev) => ({ ...prev, kind: event.target.value }))} aria-label="금액 유형">
+                              <option value="income">수입</option>
+                              <option value="expense">지출</option>
+                            </select>
+                            <input value={adjustmentDraft.label} onChange={(event) => setAdjustmentDraft((prev) => ({ ...prev, label: event.target.value }))} placeholder="항목명" aria-label="추가 항목명" />
+                            <div className="pfh-amount-input">
+                              <input type="text" inputMode="numeric" value={adjustmentDraft.amount} onChange={(event) => setAdjustmentDraft((prev) => ({ ...prev, amount: formatMoneyInput(event.target.value) }))} placeholder="금액" aria-label="추가 금액" />
+                              <span>원</span>
+                            </div>
+                            <button type="button" className="directory-btn primary" onClick={addFinanceAdjustment}>추가</button>
+                          </div>
+
+                          {financeAdjustments.length > 0 && (
+                            <div className="pfh-adjustment-list">
+                              {financeAdjustments.map((item) => (
+                                <div key={item.id} className={item.kind}>
+                                  <span className="pfh-kind-icon">{item.kind === 'income' ? '+' : '−'}</span>
+                                  <strong>{item.label}</strong>
+                                  <b>{item.kind === 'income' ? '+' : '−'}{Number(item.amount).toLocaleString()}원</b>
+                                  <button type="button" onClick={() => removeFinanceAdjustment(item.id)} aria-label={`${item.label} 삭제`}>×</button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </section>
 
                   <div className="planner-scheduler">
