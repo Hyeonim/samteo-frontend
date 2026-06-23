@@ -232,7 +232,6 @@ export default function PlannerPage() {
     <div className="planner-wizard">
       <div className="wizard-inner">
         <StepIndicator currentStep={currentStep} total={TOTAL} />
-        {stepContent[currentStep - 1]}
         <div className="wizard-nav">
           <button
             className="btn-prev"
@@ -250,6 +249,7 @@ export default function PlannerPage() {
             {isLastStep ? (saving ? '저장 중...' : '플래너 저장하고 결과 보기') : '다음 단계'}
           </button>
         </div>
+        {stepContent[currentStep - 1]}
       </div>
     </div>
   )

@@ -13,7 +13,7 @@ const RECOMMEND_TABS = [
 ]
 
 const MOBILE_INITIAL = 5
-const PAGE_SIZE = 20
+const PAGE_SIZE = 12
 const PAGE_GROUP_SIZE = 5
 
 function pageGroupStart(page) {

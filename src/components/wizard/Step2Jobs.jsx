@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { api } from '../../api'
 
 const BG_CYCLE = ['pi1', 'pi2', 'pi3']
-const PAGE_SIZE = 20
+const PAGE_SIZE = 12
 const PAGE_GROUP_SIZE = 5
 
 function pageGroupStart(page) {
@@ -383,7 +383,6 @@ export default function Step2Jobs({
                   <div className="pkg-body">
                     <div className="pkg-type">{job.type}</div>
                     <div className="pkg-name">{job.name}</div>
-                    <div className="pkg-desc">{job.desc}</div>
                     <div className="pkg-tags">
                       {(job.tags ?? []).map((t) => (
                         <span key={t} className="ptag">{t}</span>
