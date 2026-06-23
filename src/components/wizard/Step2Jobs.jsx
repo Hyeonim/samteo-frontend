@@ -209,6 +209,7 @@ const MOBILE_INITIAL = 6
 
 export default function Step2Jobs({
   plannerType = 'long',
+  onPlannerTypeChange,
   cityId,
   cityName = CITY_LABELS[cityId] ?? cityId,
   selectedDistrictId,
@@ -286,7 +287,27 @@ export default function Step2Jobs({
   }
 
   return (
-    <div className="step-card">
+    <div className="step-card job-mode-card">
+      <div className="job-type-switch" role="group" aria-label="체류 유형 선택">
+        <button
+          type="button"
+          className={`job-type-option short${isShortTerm ? ' active' : ''}`}
+          aria-pressed={isShortTerm}
+          onClick={() => onPlannerTypeChange?.('short')}
+        >
+          <span>⚡</span>
+          단기 체류
+        </button>
+        <button
+          type="button"
+          className={`job-type-option long${!isShortTerm ? ' active' : ''}`}
+          aria-pressed={!isShortTerm}
+          onClick={() => onPlannerTypeChange?.('long')}
+        >
+          <span>🌱</span>
+          장기 체류
+        </button>
+      </div>
       <div className="step-title">
         <span className="job-region-tag">{cityName}</span>
         {isShortTerm ? ' 단기 알바 일자리를 선택해요' : ' 일자리 주소를 검증했어요'}

@@ -83,9 +83,8 @@ export default function PlannerPage() {
     ? getDistrictLabel(seedDistrictId, location.state?.selectedRegionName ?? seedJob?.region)
     : null
   const seedStep = seedJob ? Number(location.state?.startStep ?? 3) : 1
-  const plannerType = location.state?.plannerType ?? 'long'
-
   const [currentStep, setCurrentStep] = useState(Math.min(Math.max(seedStep, 1), TOTAL))
+  const [plannerType, setPlannerType] = useState(location.state?.plannerType ?? 'long')
   const [selectedCity, setSelectedCity] = useState(seedCityId)
   const [selectedCityName, setSelectedCityName] = useState(seedCityName)
   const [selectedRegion, setSelectedRegion] = useState(seedDistrictId)
@@ -118,6 +117,15 @@ export default function PlannerPage() {
       const exists = prev.find((j) => j.id === job.id)
       return exists ? prev.filter((j) => j.id !== job.id) : [...prev, job]
     })
+  }
+
+  function changePlannerType(nextType) {
+    if (nextType === plannerType) return
+    setPlannerType(nextType)
+    setSelectedRegion(null)
+    setSelectedRegionName(null)
+    setSelectedJobs([])
+    setSelectedHotel(DEFAULT_HOTEL)
   }
 
   function moveStep(dir) {
@@ -179,7 +187,7 @@ export default function PlannerPage() {
   const previewPlanner = useMemo(() => {
     const planner = buildPlannerDraft()
     return { ...planner, schedule: createJobSchedule(planner) }
-  }, [draftPlannerId, selectedCity, selectedCityName, selectedRegion, selectedRegionName, selectedJobs, selectedHotel])
+  }, [draftPlannerId, plannerType, selectedCity, selectedCityName, selectedRegion, selectedRegionName, selectedJobs, selectedHotel])
 
   async function completePlanner() {
     if (selectedJobs.length === 0) {
@@ -217,8 +225,9 @@ export default function PlannerPage() {
   const stepContent = [
     <Step1Region key={1} selectedRegion={selectedCity} onSelect={selectCity} />,
     <Step2Jobs
-      key={2}
+      key={`2-${plannerType}`}
       plannerType={plannerType}
+      onPlannerTypeChange={changePlannerType}
       cityId={selectedCity}
       cityName={selectedCityName}
       selectedDistrictId={selectedRegion}

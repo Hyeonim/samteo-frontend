@@ -182,6 +182,56 @@
 .rg-badge-green { background: #ECFDF5 !important; color: #10B981 !important; }
 
 /* ── STEP 2: JOBS ── */
+.job-mode-card {
+  animation: job-mode-enter 0.24s ease-out;
+}
+
+@keyframes job-mode-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.job-type-switch {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 24px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f1f5f9;
+}
+
+.job-type-option {
+  min-width: 118px;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+.job-type-option:hover:not(.active) {
+  color: #334155;
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.job-type-option.active {
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+  transform: translateY(-1px);
+}
+
+.job-type-option.short.active { color: #b45309; }
+.job-type-option.long.active { color: #2563eb; }
+
+.job-type-option span {
+  margin-right: 5px;
+}
+
 .job-region-tag {
   display: inline-block;
   background: linear-gradient(135deg, #1e3a5f, #2d5a8e);
@@ -224,6 +274,21 @@
 .jchip { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; }
 .jchip.active { background: #EFF6FF; color: #3B82F6; border: 1.5px solid #BFDBFE; }
 .jchip.def { background: white; color: #666; border: 1.5px solid #e0e0e0; }
+
+@media (max-width: 600px) {
+  .job-type-switch {
+    display: flex;
+    width: 100%;
+    margin-bottom: 18px;
+  }
+
+  .job-type-option {
+    flex: 1;
+    min-width: 0;
+    padding: 9px 8px;
+    font-size: 13px;
+  }
+}
 
 .pkg-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 .pkg-card {
