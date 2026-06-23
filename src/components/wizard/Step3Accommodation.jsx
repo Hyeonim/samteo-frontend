@@ -94,6 +94,9 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
   const routePolylinesRef = useRef([])
   const selectedJobsRef = useRef(selectedJobs)
   selectedJobsRef.current = selectedJobs
+  // 기관명 기반 지오코딩 캐시 (jobId → {lat, lng})
+  const geocodeCache = useRef({})
+  const [geocodedPoint, setGeocodedPoint] = useState(null)
 
   useEffect(() => {
     const regionId = selectedJobs[0]?.districtRegionId ?? selectedJobs[0]?.regionId
@@ -112,8 +115,14 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
   }, [selectedJobs])
 
   const activeJob = selectedJobs.find((j) => j.id === activeJobId) ?? null
-  const activeJobPoint = useMemo(() => resolveJobPoint(activeJob), [activeJob])
-  const activeJobUsesRegionCenter = Boolean(activeJob && !directJobPoint(activeJob) && activeJobPoint)
+  // geocodedPoint(Kakao Places 결과) > 직접 좌표 > 지역 중심 순으로 우선순위 적용
+  const activeJobPoint = useMemo(() => {
+    if (!activeJob) return null
+    return geocodedPoint ?? resolveJobPoint(activeJob)
+  }, [activeJob, geocodedPoint])
+  const activeJobUsesRegionCenter = Boolean(
+    activeJob && !directJobPoint(activeJob) && !geocodedPoint && activeJobPoint
+  )
   const selectedRegionIds = useMemo(
     () => [...new Set(selectedJobs.map((job) => job.districtRegionId ?? job.regionId).filter(Boolean))],
     [selectedJobs]
@@ -148,6 +157,30 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
       setActiveJobId(null)
     }
   }, [selectedJobs, activeJobId])
+
+  // 직접 좌표가 없는 일자리: Kakao Places 키워드 검색으로 기관명 지오코딩
+  useEffect(() => {
+    if (!activeJob) { setGeocodedPoint(null); return }
+    if (directJobPoint(activeJob)) { setGeocodedPoint(null); return }
+
+    const cached = geocodeCache.current[activeJob.id]
+    if (cached !== undefined) { setGeocodedPoint(cached); return }
+
+    const keyword = [activeJob.company, activeJob.location].filter(Boolean).join(' ')
+    if (!keyword || !window.kakao?.maps?.services) return
+
+    const ps = new window.kakao.maps.services.Places()
+    ps.keywordSearch(keyword, (result, status) => {
+      if (status === window.kakao.maps.services.Status.OK && result.length > 0) {
+        const point = { lat: Number(result[0].y), lng: Number(result[0].x) }
+        geocodeCache.current[activeJob.id] = point
+        setGeocodedPoint(point)
+      } else {
+        geocodeCache.current[activeJob.id] = null
+        setGeocodedPoint(null)
+      }
+    })
+  }, [activeJob])
 
   // 모바일에서 지도 탭으로 전환할 때 relayout
   useEffect(() => {
@@ -562,9 +595,11 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
             <span>{activeJob.emoji}</span>
             <span>
               <strong>{activeJob.name}</strong>{' '}
-              {activeJobUsesRegionCenter
-                ? '상세 좌표가 없어 선택 지역의 대표 위치를 표시합니다'
-                : '위치로 지도가 이동했습니다'}
+              {geocodedPoint
+                ? '기관명으로 위치를 찾았습니다'
+                : activeJobUsesRegionCenter
+                  ? '정확한 좌표가 없어 지역 중심 위치를 표시합니다'
+                  : '위치로 지도가 이동했습니다'}
             </span>
             <button className="job-active-close" onClick={() => setActiveJobId(null)}>✕</button>
           </div>
