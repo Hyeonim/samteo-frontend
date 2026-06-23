@@ -520,6 +520,8 @@
 }
 .route-badge.subway { background: #dbeafe; color: #1d4ed8; }
 .route-badge.bus { background: #d1fae5; color: #065f46; }
+.route-badge.driving { background: #e0e7ff; color: #3730a3; }
+.route-badge.walk { background: #f1f5f9; color: #475569; }
 .route-divider { width: 1px; height: 16px; background: #bae6fd; flex-shrink: 0; }
 .route-time { font-weight: 800; font-size: 13px; color: #0c4a6e; }
 .route-fare { color: #475569; font-size: 12px; }
@@ -647,7 +649,7 @@
 .acc-pos { font-size: 10px; color: #10B981; font-weight: 700; }
 .acc-neg { font-size: 10px; color: #F97316; font-weight: 700; }
 
-.map-wrapper { flex: 1; min-width: 0; height: 100%; }
+.map-wrapper { flex: 1; min-width: 0; height: 100%; position: relative; }
 
 /* Leaflet popup overrides */
 .lf-popup .leaflet-popup-content-wrapper {
@@ -1496,4 +1498,155 @@
 
 @media (max-width: 720px) {
   .planner-finance-editor { grid-template-columns: 1fr; }
+}
+
+/* ── SIDEBAR ROUTE PANEL ── */
+.sidebar-route-panel {
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+  border-bottom: 1px solid #bae6fd;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.srp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+  font-size: 12px;
+  color: #0c4a6e;
+  margin-bottom: 8px;
+}
+.srp-total-time {
+  font-size: 13px;
+  font-weight: 800;
+  color: #1d4ed8;
+  background: #dbeafe;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+.srp-loading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #64748b;
+  min-height: 28px;
+}
+.srp-body { display: flex; flex-direction: column; gap: 2px; }
+.srp-driving-note {
+  font-size: 11px;
+  color: #1e40af;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.srp-steps { display: flex; flex-direction: column; gap: 0; }
+.srp-step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 5px 0;
+  position: relative;
+}
+.srp-step-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 21px;
+  width: 2px;
+  height: calc(100% - 12px);
+  background: #cbd5e1;
+  z-index: 0;
+}
+.srp-step-walk:not(:last-child)::after { background: #94A3B8; }
+.srp-step-subway:not(:last-child)::after { background: #3B82F6; }
+.srp-step-bus:not(:last-child)::after { background: #10B981; }
+.srp-step-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  border: 2px solid #cbd5e1;
+  flex-shrink: 0;
+  margin-top: 1px;
+  z-index: 1;
+  position: relative;
+}
+.srp-step-walk .srp-step-dot { border-color: #94A3B8; }
+.srp-step-subway .srp-step-dot { border-color: #3B82F6; background: #dbeafe; }
+.srp-step-bus .srp-step-dot { border-color: #10B981; background: #d1fae5; }
+.srp-step-icon {
+  font-size: 13px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  margin-left: -4px;
+  width: 18px;
+  text-align: center;
+}
+.srp-step-detail {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 11px;
+  color: #1e293b;
+  line-height: 1.45;
+}
+.srp-step-detail strong { font-weight: 700; color: #0f172a; }
+.srp-step-route { color: #374151; }
+.srp-step-meta { color: #6b7280; font-size: 10px; }
+.srp-walk-only {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0369a1;
+}
+.srp-no-transit { font-size: 10px; font-weight: 400; color: #64748b; }
+.srp-error { color: #dc2626; font-size: 11px; }
+
+/* ── MAP ROUTE OVERLAY ── */
+.map-route-overlay {
+  position: absolute;
+  bottom: 28px;
+  left: 12px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 8px 12px;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.14);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  pointer-events: none;
+  min-width: 110px;
+}
+.mro-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.mro-time { font-size: 15px; font-weight: 800; color: #0c4a6e; }
+.mro-fare { font-size: 11px; color: #475569; font-weight: 600; }
+.mro-dist { font-size: 11px; color: #475569; font-weight: 600; }
+.mro-legend { display: flex; gap: 8px; flex-wrap: wrap; }
+.mro-leg {
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.mro-leg.subway { color: #3B82F6; }
+.mro-leg.bus { color: #10B981; }
+.mro-leg.walk { color: #94A3B8; }
+.mro-leg.driving { color: #2563EB; }
+
+/* 모바일: 사이드바 경로 패널 최대 높이 제한 */
+@media (max-width: 720px) {
+  .sidebar-route-panel { padding: 10px 12px; }
+  .map-route-overlay { bottom: 16px; left: 8px; padding: 6px 10px; }
+  .mro-time { font-size: 13px; }
 }

@@ -60,7 +60,20 @@ async function fetchTransitRoute(accommodation, job) {
 }
 
 async function fetchLane(mapObj) {
-  return api.get(`/api/planner/load-lane?mapObject=${encodeURIComponent(mapObj)}`)
+  const data = await api.get(`/api/planner/load-lane?mapObject=${encodeURIComponent(mapObj)}`)
+  return data.data ?? data.result ?? data
+}
+
+async function fetchDrivingRoute(accommodation, job) {
+  const data = await api.post('/api/planner/driving-route', {
+    startName: accommodation.name,
+    startLatitude: accommodation.lat,
+    startLongitude: accommodation.lng,
+    endName: job.name ?? job.title,
+    endLatitude: job.lat,
+    endLongitude: job.lng,
+  })
+  return data.data ?? data.result ?? data
 }
 
 export default function Step3Accommodation({ selectedJobs, selectedHotel, onSelect }) {
@@ -419,7 +432,47 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
           if (kakaoMapRef.current.getLevel() > 7) kakaoMapRef.current.setLevel(7)
         }
       } catch {
-        if (!cancelled) setRouteInfo({ error: '경로 조회 중 오류가 발생했습니다' })
+        try {
+          const driving = await fetchDrivingRoute({
+            ...hotel,
+            lat: hotelPoint.lat,
+            lng: hotelPoint.lng,
+          }, {
+            ...activeJob,
+            lat: activeJobPoint.lat,
+            lng: activeJobPoint.lng,
+          })
+          if (cancelled) return
+
+          const route = driving.routes?.find((item) => item.result_code === 0)
+          const coordinates = (route?.sections ?? []).flatMap((section) => (
+            (section.roads ?? []).flatMap((road) => {
+              const vertexes = road.vertexes ?? []
+              const points = []
+              for (let index = 0; index + 1 < vertexes.length; index += 2) {
+                points.push({ x: Number(vertexes[index]), y: Number(vertexes[index + 1]) })
+              }
+              return points
+            })
+          ))
+
+          if (!route || coordinates.length < 2) throw new Error('No driving route')
+
+          clearRoute()
+          drawPolyline(coordinates, '#2563EB')
+          setRouteInfo({
+            driving: true,
+            totalTime: Math.max(1, Math.ceil((route.summary?.duration ?? 0) / 60)),
+            distanceKm: (route.summary?.distance ?? 0) / 1000,
+          })
+
+          const bounds = new window.kakao.maps.LatLngBounds()
+          bounds.extend(new window.kakao.maps.LatLng(hotelPoint.lat, hotelPoint.lng))
+          bounds.extend(new window.kakao.maps.LatLng(activeJobPoint.lat, activeJobPoint.lng))
+          kakaoMapRef.current.setBounds(bounds, 80, 80, 80, 80)
+        } catch {
+          if (!cancelled) setRouteInfo({ error: '대중교통 및 자동차 경로를 조회할 수 없습니다' })
+        }
       } finally {
         if (!cancelled) setRouteLoading(false)
       }
@@ -521,61 +574,19 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
             {routeLoading && (
               <div className="route-loading">
                 <span className="route-spinner" />
-                <span>ODsay 대중교통 경로 조회 중...</span>
+                <span>출퇴근 경로 조회 중... 지도 좌측 패널에서 상세 경로를 확인하세요</span>
               </div>
             )}
             {!routeLoading && routeInfo && !routeInfo.error && (
-              <>
-                <div className="route-summary">
-                  {routeInfo.subwayCount > 0 && <span className="route-badge subway">🚇 지하철 {routeInfo.subwayCount}회</span>}
-                  {routeInfo.busCount > 0 && <span className="route-badge bus">🚌 버스 {routeInfo.busCount}회</span>}
-                  <span className="route-divider" />
-                  <span className="route-time">🕐 총 {routeInfo.totalTime}분</span>
-                  {routeInfo.payment > 0 && <span className="route-fare">₩ {routeInfo.payment.toLocaleString()}원</span>}
-                </div>
-                {routeInfo.steps?.length > 0 && (
-                  <div className="route-steps">
-                    {routeInfo.steps.map((s, i) => (
-                      <div key={i} className="route-step">
-                        {s.type === 'walk' && (
-                          <>
-                            <span className="rs-icon walk">🚶</span>
-                            <span className="rs-text">도보 {s.time}분{s.distance >= 100 ? ` (${Math.round(s.distance)}m)` : ''}</span>
-                          </>
-                        )}
-                        {s.type === 'subway' && (
-                          <>
-                            <span className="rs-icon subway">🚇</span>
-                            <span className="rs-text">
-                              <strong>{s.lineName}</strong> · {s.start} → {s.end}
-                              <span className="rs-meta">{s.stops}정거장 · {s.time}분</span>
-                            </span>
-                          </>
-                        )}
-                        {s.type === 'bus' && (
-                          <>
-                            <span className="rs-icon bus">🚌</span>
-                            <span className="rs-text">
-                              <strong>{s.busNo}번</strong> · {s.start} → {s.end}
-                              <span className="rs-meta">{s.stops}정거장 · {s.time}분</span>
-                            </span>
-                          </>
-                        )}
-                        {i < routeInfo.steps.length - 1 && <span className="rs-arrow">↓</span>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-            {!routeLoading && routeInfo?.walk && (
               <div className="route-summary">
-                <span className="rs-icon walk">🚶</span>
-                <span style={{ fontWeight: 700, color: '#0369a1' }}>
-                  도보 약 {Math.max(1, Math.round(routeInfo.distKm * 1000 / 80))}분
-                </span>
+                {routeInfo.subwayCount > 0 && <span className="route-badge subway">🚇 지하철 {routeInfo.subwayCount}회</span>}
+                {routeInfo.busCount > 0 && <span className="route-badge bus">🚌 버스 {routeInfo.busCount}회</span>}
+                {routeInfo.driving && <span className="route-badge driving">🚗 자동차 대체 경로</span>}
+                {routeInfo.walk && <span className="route-badge walk">🚶 도보 이동 가능</span>}
                 <span className="route-divider" />
-                <span style={{ color: '#64748b', fontSize: 11 }}>{Math.round(routeInfo.distKm * 1000)}m · 대중교통 불필요</span>
+                <span className="route-time">🕐 총 {routeInfo.totalTime}분</span>
+                {routeInfo.payment > 0 && <span className="route-fare">₩ {routeInfo.payment.toLocaleString()}원</span>}
+                <span className="route-legend">좌측 지도 패널에서 경로 상세 확인</span>
               </div>
             )}
             {!routeLoading && routeInfo?.error && (
@@ -610,6 +621,72 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
               <div className="mchip green">🍽 숙식 제공</div>
             </div>
           </div>
+          {activeJob && (
+            <div className="sidebar-route-panel">
+              <div className="srp-header">
+                <span>출퇴근 경로</span>
+                {!routeLoading && routeInfo && !routeInfo.error && (
+                  <span className="srp-total-time">
+                    🕐 {routeInfo.totalTime}분
+                    {routeInfo.payment > 0 && ` · ₩${routeInfo.payment.toLocaleString()}`}
+                  </span>
+                )}
+              </div>
+              {routeLoading && (
+                <div className="srp-loading">
+                  <span className="route-spinner" />
+                  <span>경로 조회 중...</span>
+                </div>
+              )}
+              {!routeLoading && routeInfo && !routeInfo.error && !routeInfo.walk && (
+                <div className="srp-body">
+                  {routeInfo.driving && (
+                    <div className="srp-driving-note">🚗 자동차 경로 · {routeInfo.distanceKm?.toFixed(1)}km</div>
+                  )}
+                  {(routeInfo.steps ?? []).length > 0 && (
+                    <div className="srp-steps">
+                      {(routeInfo.steps ?? []).map((s, i) => (
+                        <div key={i} className={`srp-step-item srp-step-${s.type}`}>
+                          <div className="srp-step-dot" />
+                          <div className="srp-step-icon">
+                            {s.type === 'walk' ? '🚶' : s.type === 'subway' ? '🚇' : '🚌'}
+                          </div>
+                          <div className="srp-step-detail">
+                            {s.type === 'walk' && (
+                              <span>도보 {s.time}분{s.distance >= 100 ? ` · ${Math.round(s.distance)}m` : ''}</span>
+                            )}
+                            {s.type === 'subway' && (
+                              <>
+                                <strong>{s.lineName}</strong>
+                                <span className="srp-step-route">{s.start} → {s.end}</span>
+                                <span className="srp-step-meta">{s.stops}정거장 · {s.time}분</span>
+                              </>
+                            )}
+                            {s.type === 'bus' && (
+                              <>
+                                <strong>{s.busNo}번</strong>
+                                <span className="srp-step-route">{s.start} → {s.end}</span>
+                                <span className="srp-step-meta">{s.stops}정거장 · {s.time}분</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {!routeLoading && routeInfo?.walk && (
+                <div className="srp-walk-only">
+                  🚶 도보 약 {Math.max(1, Math.round(routeInfo.distKm * 1000 / 80))}분
+                  <span className="srp-no-transit">{Math.round(routeInfo.distKm * 1000)}m · 대중교통 불필요</span>
+                </div>
+              )}
+              {!routeLoading && routeInfo?.error && (
+                <div className="srp-error">{routeInfo.error}</div>
+              )}
+            </div>
+          )}
           <div className="map-result-info">
             <span>숙소 {visibleHotels.length}개 표시 중</span>
             <span style={{ color: '#3B82F6', cursor: 'pointer', fontWeight: 600 }}>거리순 ▾</span>
@@ -667,6 +744,30 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
 
         <div className="map-wrapper">
           <div ref={mapRef} className="map-canvas" />
+          {activeJob && routeInfo && !routeInfo.error && !routeLoading && (
+            <div className="map-route-overlay">
+              <div className="mro-row">
+                <span className="mro-time">🕐 {routeInfo.totalTime}분</span>
+                {routeInfo.payment > 0 && <span className="mro-fare">₩{routeInfo.payment.toLocaleString()}</span>}
+                {routeInfo.driving && routeInfo.distanceKm > 0 && (
+                  <span className="mro-dist">{routeInfo.distanceKm.toFixed(1)}km</span>
+                )}
+              </div>
+              {!routeInfo.driving && !routeInfo.walk && (
+                <div className="mro-legend">
+                  {routeInfo.subwayCount > 0 && <span className="mro-leg subway">━ 지하철</span>}
+                  {routeInfo.busCount > 0 && <span className="mro-leg bus">━ 버스</span>}
+                  <span className="mro-leg walk">- - 도보</span>
+                </div>
+              )}
+              {routeInfo.driving && (
+                <div className="mro-legend"><span className="mro-leg driving">━ 자동차</span></div>
+              )}
+              {routeInfo.walk && (
+                <div className="mro-legend"><span className="mro-leg walk">🚶 도보 이동 가능</span></div>
+              )}
+            </div>
+          )}
         </div>
       </div>
       {detailHotel && (
