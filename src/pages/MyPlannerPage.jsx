@@ -154,6 +154,7 @@ export default function MyPlannerPage() {
   const navigate = useNavigate()
   const [planners, setPlanners] = useState([])
   const [activeId, setActiveId] = useState(null)
+  const [plannerFilter, setPlannerFilter] = useState('all')
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState('week')
   const [selectedDay, setSelectedDay] = useState(0)
@@ -161,6 +162,10 @@ export default function MyPlannerPage() {
     () => planners.find((planner) => planner.id === activeId) ?? null,
     [planners, activeId]
   )
+  const filteredPlanners = useMemo(() => {
+    if (plannerFilter === 'all') return planners
+    return planners.filter((p) => (p.plannerType ?? 'long') === plannerFilter)
+  }, [planners, plannerFilter])
   const [title, setTitle] = useState(() => activePlanner?.title ?? '')
   const [memo, setMemo] = useState(() => activePlanner?.memo ?? '')
   const [editingId, setEditingId] = useState(null)
@@ -521,17 +526,39 @@ export default function MyPlannerPage() {
           <section className="planner-workbench">
             <aside className="planner-list-panel">
               <div className="planner-panel-title">플래너 목록</div>
-              {planners.map((planner) => (
-                <button
-                  className={`planner-item${planner.id === activeId ? ' active' : ''}`}
-                  key={planner.id}
-                  onClick={() => selectPlanner(planner)}
-                >
-                  <h2 className="directory-card-title">{planner.title}</h2>
-                  <p className="directory-card-sub">{planner.regionName} · {planner.jobs?.length ?? 0}개 일자리</p>
-                  <p className="directory-card-sub">수정 {formatDate(planner.updatedAt ?? planner.createdAt)}</p>
-                </button>
-              ))}
+              <div className="planner-type-filter">
+                {[['all', '전체'], ['short', '단기'], ['long', '장기']].map(([val, label]) => (
+                  <button
+                    key={val}
+                    className={`ptf-btn${plannerFilter === val ? ' active' : ''} ptf-${val}`}
+                    onClick={() => setPlannerFilter(val)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {filteredPlanners.length === 0 && (
+                <p className="planner-filter-empty">해당 유형의 플래너가 없습니다.</p>
+              )}
+              {filteredPlanners.map((planner) => {
+                const isShort = (planner.plannerType ?? 'long') === 'short'
+                return (
+                  <button
+                    className={`planner-item${planner.id === activeId ? ' active' : ''}`}
+                    key={planner.id}
+                    onClick={() => selectPlanner(planner)}
+                  >
+                    <div className="planner-item-header">
+                      <span className={`planner-type-badge ${isShort ? 'ptb-short' : 'ptb-long'}`}>
+                        {isShort ? '단기' : '장기'}
+                      </span>
+                      <h2 className="directory-card-title">{planner.title}</h2>
+                    </div>
+                    <p className="directory-card-sub">{planner.regionName} · {planner.jobs?.length ?? 0}개 일자리</p>
+                    <p className="directory-card-sub">수정 {formatDate(planner.updatedAt ?? planner.createdAt)}</p>
+                  </button>
+                )
+              })}
             </aside>
 
             <article className="planner-detail-panel timetable-panel">

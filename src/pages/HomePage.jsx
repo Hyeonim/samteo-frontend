@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import PlannerTypeModal from '../components/PlannerTypeModal'
 import './HomePage.css'
 
 const FEATURES = [
@@ -29,9 +31,21 @@ const FEATURES = [
 function HomePage() {
   const navigate = useNavigate()
   const { isLoggedIn, user } = useAuth()
+  const [showTypeModal, setShowTypeModal] = useState(false)
+
+  function handlePlannerTypeSelect(type) {
+    setShowTypeModal(false)
+    navigate('/planner', { state: { plannerType: type } })
+  }
 
   return (
     <div className="home">
+      {showTypeModal && (
+        <PlannerTypeModal
+          onSelect={handlePlannerTypeSelect}
+          onClose={() => setShowTypeModal(false)}
+        />
+      )}
       {/* Hero */}
       <section className="hero">
         <div className="hero__inner">
@@ -48,7 +62,7 @@ function HomePage() {
             {isLoggedIn ? (
               <>
                 <span className="hero__welcome">{user.name}님, 환영해요!</span>
-                <button className="btn-primary" onClick={() => navigate('/planner')}>
+                <button className="btn-primary" onClick={() => setShowTypeModal(true)}>
                   내 플래너 시작하기
                 </button>
               </>

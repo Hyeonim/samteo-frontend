@@ -83,6 +83,7 @@ export default function PlannerPage() {
     ? getDistrictLabel(seedDistrictId, location.state?.selectedRegionName ?? seedJob?.region)
     : null
   const seedStep = seedJob ? Number(location.state?.startStep ?? 3) : 1
+  const plannerType = location.state?.plannerType ?? 'long'
 
   const [currentStep, setCurrentStep] = useState(Math.min(Math.max(seedStep, 1), TOTAL))
   const [selectedCity, setSelectedCity] = useState(seedCityId)
@@ -146,6 +147,7 @@ export default function PlannerPage() {
     return {
       id: draftPlannerId,
       title: `${selectedRegionName ?? selectedCityName} 체류 플래너`,
+      plannerType,
       cityId: selectedCity,
       cityName: selectedCityName,
       regionId: selectedRegion,
@@ -216,6 +218,7 @@ export default function PlannerPage() {
     <Step1Region key={1} selectedRegion={selectedCity} onSelect={selectCity} />,
     <Step2Jobs
       key={2}
+      plannerType={plannerType}
       cityId={selectedCity}
       cityName={selectedCityName}
       selectedDistrictId={selectedRegion}

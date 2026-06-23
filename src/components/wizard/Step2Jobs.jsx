@@ -208,6 +208,7 @@ function normalizeJob(job) {
 const MOBILE_INITIAL = 6
 
 export default function Step2Jobs({
+  plannerType = 'long',
   cityId,
   cityName = CITY_LABELS[cityId] ?? cityId,
   selectedDistrictId,
@@ -215,6 +216,8 @@ export default function Step2Jobs({
   onDistrictSelect,
   onToggle,
 }) {
+  const isShortTerm = plannerType === 'short'
+
   const [jobs, setJobs] = useState([])
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
@@ -231,7 +234,8 @@ export default function Step2Jobs({
     setSearch('')
     setActiveType('전체')
     setShowAll(false)
-    api.get(`/api/planner/jobs/page?cityId=${encodeURIComponent(cityId)}&page=${page}&size=${PAGE_SIZE}`)
+    const typeParam = isShortTerm ? '&type=short' : ''
+    api.get(`/api/planner/jobs/page?cityId=${encodeURIComponent(cityId)}&page=${page}&size=${PAGE_SIZE}${typeParam}`)
       .then((res) => {
         const data = unwrap(res)
         setJobs((data.items ?? []).map(normalizeJob))
@@ -240,9 +244,9 @@ export default function Step2Jobs({
       })
       .catch(() => setJobs([]))
       .finally(() => setLoading(false))
-  }, [cityId, page])
+  }, [cityId, page, isShortTerm])
 
-  useEffect(() => { setPage(1) }, [cityId])
+  useEffect(() => { setPage(1) }, [cityId, isShortTerm])
 
   // 필터 바뀌면 더 보기 리셋
   useEffect(() => { setShowAll(false) }, [search, activeType, selectedDistrictId])
@@ -284,12 +288,19 @@ export default function Step2Jobs({
   return (
     <div className="step-card">
       <div className="step-title">
-        <span className="job-region-tag">{cityName}</span> 일자리 주소를 검증했어요
+        <span className="job-region-tag">{cityName}</span>
+        {isShortTerm ? ' 단기 알바 일자리를 선택해요' : ' 일자리 주소를 검증했어요'}
       </div>
-      <div className="step-subtitle" style={{ color: '#ef4444', fontWeight: 600 }}>
-        실제 일자리 주소에서 도시와 구·군을 추출해 체류 지역을 좁혀갑니다.
+      {!isShortTerm && (
+        <div className="step-subtitle" style={{ color: '#ef4444', fontWeight: 600 }}>
+          실제 일자리 주소에서 도시와 구·군을 추출해 체류 지역을 좁혀갑니다.
+        </div>
+      )}
+      <div className="step-subtitle">
+        {isShortTerm
+          ? `샘플 알바 일자리 ${totalCount}개 · 실제 시급은 플래너 완성 후 수정할 수 있습니다.`
+          : `진행 중 공고 총 ${totalCount.toLocaleString()}건 · 시급은 플래너 완성 후 수정할 수 있습니다.`}
       </div>
-      <div className="step-subtitle">진행 중 공고 총 {totalCount.toLocaleString()}건 · 시급은 플래너 완성 후 수정할 수 있습니다.</div>
 
       {selectedJobs.length > 0 && (
         <div className="job-selected-count">
@@ -409,17 +420,19 @@ export default function Step2Jobs({
               )
             })}
           </div>
-          <nav className="event-pagination" aria-label="일자리 페이지 이동">
-            <button className="directory-btn" disabled={pageGroupStart(page) === 1} onClick={() => setPage(Math.max(1, pageGroupStart(page) - PAGE_GROUP_SIZE))}>이전</button>
-            <div className="event-page-numbers">
-              {page > PAGE_GROUP_SIZE && <span>…</span>}
-              {paginationPages(page, totalPages).map((number) => (
-                <button key={number} className={number === page ? 'active' : ''} onClick={() => setPage(number)}>{number}</button>
-              ))}
-              {pageGroupStart(page) + PAGE_GROUP_SIZE <= totalPages && <span>…</span>}
-            </div>
-            <button className="directory-btn" disabled={pageGroupStart(page) + PAGE_GROUP_SIZE > totalPages} onClick={() => setPage(pageGroupStart(page) + PAGE_GROUP_SIZE)}>다음</button>
-          </nav>
+          {!isShortTerm && (
+            <nav className="event-pagination" aria-label="일자리 페이지 이동">
+              <button className="directory-btn" disabled={pageGroupStart(page) === 1} onClick={() => setPage(Math.max(1, pageGroupStart(page) - PAGE_GROUP_SIZE))}>이전</button>
+              <div className="event-page-numbers">
+                {page > PAGE_GROUP_SIZE && <span>…</span>}
+                {paginationPages(page, totalPages).map((number) => (
+                  <button key={number} className={number === page ? 'active' : ''} onClick={() => setPage(number)}>{number}</button>
+                ))}
+                {pageGroupStart(page) + PAGE_GROUP_SIZE <= totalPages && <span>…</span>}
+              </div>
+              <button className="directory-btn" disabled={pageGroupStart(page) + PAGE_GROUP_SIZE > totalPages} onClick={() => setPage(pageGroupStart(page) + PAGE_GROUP_SIZE)}>다음</button>
+            </nav>
+          )}
         </>
       )}
 
@@ -427,7 +440,7 @@ export default function Step2Jobs({
         <div className="planner-modal-backdrop" onClick={() => setDetailJob(null)}>
           <section className="event-detail-modal" onClick={(event) => event.stopPropagation()}>
             <div className="planner-day-modal-head">
-              <div><p>ALIO 채용공고 상세</p><h2>{detailJob.title}</h2></div>
+              <div><p>{isShortTerm ? '단기 알바 상세' : 'ALIO 채용공고 상세'}</p><h2>{detailJob.title}</h2></div>
               <button type="button" onClick={() => setDetailJob(null)} aria-label="닫기">x</button>
             </div>
             <div className="job-detail-placeholder"><span>💼</span><strong>{detailJob.company}</strong><small>ALIO 채용공고는 별도 이미지를 제공하지 않습니다.</small></div>
