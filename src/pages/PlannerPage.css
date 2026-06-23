@@ -1491,10 +1491,17 @@
 
 .planner-finance-editor h3 { margin: 0 0 4px; font-size: 14px; }
 .planner-finance-editor p { margin: 0 0 10px; color: #64748b; font-size: 11px; }
-.planner-finance-editor label { display: flex; align-items: center; gap: 8px; margin-top: 7px; }
+.planner-finance-editor label { display: flex; align-items: center; gap: 6px; margin-top: 0; }
 .planner-finance-editor label span { flex: 1; min-width: 0; font-size: 12px; font-weight: 700; }
-.planner-finance-editor input { width: 120px; padding: 7px 8px; border: 1px solid #cbd5e1; border-radius: 8px; }
-.planner-finance-editor small { color: #64748b; white-space: nowrap; }
+.planner-finance-editor input { width: 100px; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; }
+.planner-finance-editor small { color: #64748b; white-space: nowrap; font-size: 11px; }
+.pfe-job-row { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #e2e8f0; }
+.pfe-job-row:first-of-type { margin-top: 0; padding-top: 0; border-top: none; }
+.pfe-job-name { font-size: 12px; font-weight: 700; color: #1e293b; }
+.pfe-wage-inputs { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pfe-wage-inputs label { display: flex; align-items: center; gap: 5px; margin: 0; }
+.pfe-wage-inputs label small:first-child { font-size: 11px; color: #475569; font-weight: 600; min-width: 22px; }
+.pfe-wage-sep { color: #cbd5e1; font-size: 16px; }
 
 @media (max-width: 720px) {
   .planner-finance-editor { grid-template-columns: 1fr; }

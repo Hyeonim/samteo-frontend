@@ -324,10 +324,12 @@ export default function MyPlannerPage() {
     persistPlanner({ title, memo })
   }
 
-  const updateJobHourlyWage = (jobId, value) => {
-    const hourlyWage = Math.max(0, Number(value) || 0)
+  const updateJobWage = (jobId, field, value) => {
+    const num = Math.max(0, Number(value) || 0)
+    const hourlyWage = field === 'hourly' ? num : Math.round(num / 209)
+    const salary = field === 'salary' ? num : hourlyWage * 209
     const jobs = (activePlanner.jobs ?? []).map((job) => job.id === jobId
-      ? { ...job, hourlyWage, salary: hourlyWage * 209 }
+      ? { ...job, hourlyWage, salary }
       : job)
     const totalSalary = jobs.reduce((sum, job) => sum + Number(job.salary ?? 0), 0)
     const accommodationCost = Number(activePlanner.accommodationCost ?? activePlanner.accommodation?.price ?? 0)
@@ -561,14 +563,35 @@ export default function MyPlannerPage() {
 
                   <section className="planner-finance-editor">
                     <div>
-                      <h3>일자리 시급 수정</h3>
-                      <p>ALIO에 급여가 없어 기본 최저시급으로 생성되었습니다.</p>
+                      <h3>일자리 급여 수정</h3>
+                      <p>시급 또는 월급 중 하나를 입력하면 자동으로 계산됩니다. (기준: 월 209시간)</p>
                       {(activePlanner.jobs ?? []).map((job) => (
-                        <label key={job.id}>
-                          <span>{job.name}</span>
-                          <input type="number" min="0" step="10" defaultValue={job.hourlyWage ?? 10320} onBlur={(event) => updateJobHourlyWage(job.id, event.target.value)} />
-                          <small>원/시간</small>
-                        </label>
+                        <div key={job.id} className="pfe-job-row">
+                          <span className="pfe-job-name">{job.name}</span>
+                          <div className="pfe-wage-inputs">
+                            <label>
+                              <small>시급</small>
+                              <input
+                                type="number" min="0" step="10"
+                                key={`hourly-${job.id}-${job.hourlyWage}`}
+                                defaultValue={job.hourlyWage ?? 10320}
+                                onBlur={(event) => updateJobWage(job.id, 'hourly', event.target.value)}
+                              />
+                              <small>원/시간</small>
+                            </label>
+                            <span className="pfe-wage-sep">·</span>
+                            <label>
+                              <small>월급</small>
+                              <input
+                                type="number" min="0" step="10000"
+                                key={`salary-${job.id}-${job.salary}`}
+                                defaultValue={job.salary ?? (job.hourlyWage ?? 10320) * 209}
+                                onBlur={(event) => updateJobWage(job.id, 'salary', event.target.value)}
+                              />
+                              <small>원/월</small>
+                            </label>
+                          </div>
+                        </div>
                       ))}
                     </div>
                     <div>
