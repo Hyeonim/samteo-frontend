@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import LoadingScreen from '../common/LoadingScreen'
 import Header from './Header'
+import SamteoChatbot from '../chat/SamteoChatbot'
 
 function Layout() {
   const location = useLocation()
@@ -35,6 +36,7 @@ function Layout() {
         />
       )}
       <Outlet />
+      <SamteoChatbot />
     </>
   )
 }
