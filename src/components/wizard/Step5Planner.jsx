@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef } from 'react'
+import CandidatePairChip from './CandidatePairChip'
 
 const FIXED_EXPENSES = 380000
 const CALENDAR_DAYS = [
@@ -47,22 +48,24 @@ function createMonthPreview(schedule) {
   }
 }
 
-export default function Step5Planner({ selectedJobs, selectedHotel, plannerPreview }) {
-  const [activeJobId, setActiveJobId] = useState(selectedJobs[0]?.id ?? null)
+export default function Step5Planner({
+  selectedJobs,
+  activeJobId,
+  onActiveJobChange,
+  selectedHotelsByJobId,
+  plannerPreview,
+}) {
   const sliderRef = useRef(null)
 
   const activeJob = selectedJobs.find((job) => job.id === activeJobId) ?? selectedJobs[0] ?? null
+  const selectedHotel = selectedHotelsByJobId[activeJob?.id] ?? { name: '', price: null }
   const rawAccommodationCost = selectedHotel.price ?? selectedHotel.monthlyPrice
   const accommodationCost = Number(rawAccommodationCost ?? 0)
   const total = activeJob ? Math.max(0, Number(activeJob.salary ?? 0) - accommodationCost - FIXED_EXPENSES) : 0
-  const previewSchedule = plannerPreview?.schedule ?? []
-  const monthPreview = useMemo(() => createMonthPreview(previewSchedule), [previewSchedule])
-
-  useEffect(() => {
-    if (!selectedJobs.some((job) => job.id === activeJobId)) {
-      setActiveJobId(selectedJobs[0]?.id ?? null)
-    }
-  }, [activeJobId, selectedJobs])
+  const monthPreview = useMemo(
+    () => createMonthPreview(plannerPreview?.schedule ?? []),
+    [plannerPreview?.schedule]
+  )
 
   function scrollSlider(dir) {
     sliderRef.current?.scrollBy({ left: dir * 250, behavior: 'smooth' })
@@ -70,15 +73,15 @@ export default function Step5Planner({ selectedJobs, selectedHotel, plannerPrevi
 
   return (
     <div className="step-card">
-      <div className="step-title">플래너 저장 준비가 끝났어요</div>
+      <div className="step-title">저장할 후보 플래너를 선택해 주세요</div>
       <div className="step-subtitle">
-        선택한 일자리와 숙소 기준으로 저장될 플래너 요약을 확인하세요.
+        선택한 후보의 주 일자리 1개와 숙소 1개만 내 플래너에 저장됩니다.
       </div>
 
       <div className="budget-top-info">
         <div className="budget-top-label">
           {selectedJobs.length > 0
-            ? `선택한 일자리 ${selectedJobs.length}개 · 클릭하면 기준 일자리를 바꿀 수 있어요`
+            ? `비교 후보 ${selectedJobs.length}개 · 저장할 후보를 클릭해 선택하세요`
             : 'Step 2에서 일자리를 선택하면 여기에 표시됩니다.'}
         </div>
         {selectedJobs.length === 0 ? (
@@ -90,18 +93,15 @@ export default function Step5Planner({ selectedJobs, selectedHotel, plannerPrevi
           <div className="job-slider-carousel">
             <button className="slider-arrow" onClick={() => scrollSlider(-1)} aria-label="이전">‹</button>
             <div className="job-slider" ref={sliderRef}>
-              {selectedJobs.map((job) => (
-                <div
+              {selectedJobs.map((job, index) => (
+                <CandidatePairChip
                   key={job.id}
-                  className={`job-chip${activeJob?.id === job.id ? ' active' : ''}`}
-                  onClick={() => setActiveJobId(job.id)}
-                >
-                  <span className="job-chip-emoji">{job.emoji}</span>
-                  <div>
-                    <div className="job-chip-name">{job.name}</div>
-                    <div className="job-chip-sub">{job.type} · {job.priceLabel}{job.unit}</div>
-                  </div>
-                </div>
+                  index={index}
+                  job={job}
+                  hotel={selectedHotelsByJobId[job.id]}
+                  active={activeJob?.id === job.id}
+                  onClick={() => onActiveJobChange?.(job.id)}
+                />
               ))}
             </div>
             <button className="slider-arrow" onClick={() => scrollSlider(1)} aria-label="다음">›</button>
@@ -121,7 +121,9 @@ export default function Step5Planner({ selectedJobs, selectedHotel, plannerPrevi
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <div className="summary-icon" style={{ fontSize: 22 }}>{activeJob.emoji}</div>
               <div>
-                <div className="summary-job-name">{activeJob.name}</div>
+                <div className="summary-job-name summary-pair-name">
+                  <span>{activeJob.name}</span><b>↔</b><span>{selectedHotel.name || '숙소 미선택'}</span>
+                </div>
                 <div className="summary-meta">
                   <span className="meta-tag">📍 {activeJob.region ?? activeJob.district ?? '-'}</span>
                   <span className="meta-tag">🕒 {activeJob.workingDays ?? activeJob.sub ?? '-'}</span>
@@ -174,8 +176,8 @@ export default function Step5Planner({ selectedJobs, selectedHotel, plannerPrevi
                   </div>
                 </div>
 
-                <div className="planner-preview-section-title">선택한 일자리</div>
-                {selectedJobs.map((job) => (
+                <div className="planner-preview-section-title">저장할 주 일자리</div>
+                {[activeJob].filter(Boolean).map((job) => (
                   <article className="directory-card" key={job.id}>
                     <div className="directory-card-top">
                       <div>
@@ -222,7 +224,7 @@ export default function Step5Planner({ selectedJobs, selectedHotel, plannerPrevi
               </div>
               <div className="planner-actions">
                 <div className="directory-empty" style={{ padding: 18 }}>
-                  다음 버튼을 누르면 이 플래너가 내 플래너에 저장됩니다.
+                  다음 버튼을 누르면 현재 선택한 후보만 저장되며, 다른 비교 후보는 이 플래너에 함께 담기지 않습니다.
                 </div>
               </div>
             </div>

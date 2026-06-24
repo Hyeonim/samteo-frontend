@@ -1,14 +1,20 @@
-import { useState, useRef } from 'react'
+import { useRef } from 'react'
+import CandidatePairChip from './CandidatePairChip'
 
 const FIXED_EXPENSES = 380000
 const FOOD = 300000
 const TRANSPORT = 80000
 
-export default function Step4Budget({ selectedJobs, selectedHotel }) {
-  const [activeJobId, setActiveJobId] = useState(selectedJobs[0]?.id ?? null)
+export default function Step4Budget({
+  selectedJobs,
+  activeJobId,
+  onActiveJobChange,
+  selectedHotelsByJobId,
+}) {
   const sliderRef = useRef(null)
 
   const activeJob = selectedJobs.find((j) => j.id === activeJobId) ?? selectedJobs[0] ?? null
+  const selectedHotel = selectedHotelsByJobId[activeJob?.id] ?? { name: '', price: null }
   const accommodationPrice = selectedHotel.price == null ? null : Number(selectedHotel.price)
   const total = activeJob ? Math.max(0, activeJob.salary - (accommodationPrice ?? 0) - FIXED_EXPENSES) : 0
   const chartData = activeJob
@@ -30,14 +36,14 @@ export default function Step4Budget({ selectedJobs, selectedHotel }) {
 
   return (
     <div className="step-card">
-      <div className="step-title">이번 달 체류 가계부 시뮬레이션</div>
-      <div className="step-subtitle">내가 고른 조건으로 정산된 최종 자립 손익 계산서입니다.</div>
+      <div className="step-title">후보 플래너를 비교해 보세요</div>
+      <div className="step-subtitle">각 일자리와 해당 숙소를 한 쌍으로 계산한 월 예상 잔액입니다.</div>
 
       {/* 상단 선택 정보 */}
       <div className="budget-top-info">
         <div className="budget-top-label">
           {selectedJobs.length > 0
-            ? `선택한 알바 ${selectedJobs.length}개 · 알바를 클릭하면 해당 기준 가계부를 확인해요`
+            ? `비교 후보 ${selectedJobs.length}개 · 후보를 클릭하면 해당 일자리와 숙소의 가계부를 확인해요`
             : 'Step 2에서 알바를 선택하면 여기에 표시됩니다'}
         </div>
         {selectedJobs.length === 0 ? (
@@ -49,18 +55,15 @@ export default function Step4Budget({ selectedJobs, selectedHotel }) {
           <div className="job-slider-carousel">
             <button className="slider-arrow" onClick={() => scrollSlider(-1)} aria-label="이전">‹</button>
             <div className="job-slider" ref={sliderRef}>
-              {selectedJobs.map((j) => (
-                <div
+              {selectedJobs.map((j, index) => (
+                <CandidatePairChip
                   key={j.id}
-                  className={`job-chip${activeJob?.id === j.id ? ' active' : ''}`}
-                  onClick={() => setActiveJobId(j.id)}
-                >
-                  <span className="job-chip-emoji">{j.emoji}</span>
-                  <div>
-                    <div className="job-chip-name">{j.name}</div>
-                    <div className="job-chip-sub">{j.type} · {j.priceLabel}{j.unit}</div>
-                  </div>
-                </div>
+                  index={index}
+                  job={j}
+                  hotel={selectedHotelsByJobId[j.id]}
+                  active={activeJob?.id === j.id}
+                  onClick={() => onActiveJobChange?.(j.id)}
+                />
               ))}
             </div>
             <button className="slider-arrow" onClick={() => scrollSlider(1)} aria-label="다음">›</button>
@@ -75,7 +78,13 @@ export default function Step4Budget({ selectedJobs, selectedHotel }) {
           <div style={{ fontSize: 13, color: '#bbb' }}>이전 단계로 돌아가 알바를 선택해 주세요</div>
         </div>
       ) : (
-        <div className="budget-layout">
+        <>
+          <div className="candidate-focus-bar">
+            <span><small>현재 비교 중</small><strong>{activeJob.name}</strong></span>
+            <b>↔</b>
+            <span><small>매칭 숙소</small><strong>{selectedHotel.name || '숙소 미선택'}</strong></span>
+          </div>
+          <div className="budget-layout">
           <div className="summary-box">
             <div className="srow">
               <div className="slabel">📅 근무일</div>
@@ -153,13 +162,14 @@ export default function Step4Budget({ selectedJobs, selectedHotel }) {
                 <div>
                   <div className="ai-title">출퇴근 소요 시간</div>
                   <div className="ai-desc">
-                    {selectedHotel.name} → {activeJob.name}: 카카오 모빌리티 대중교통 검증 완료.
+                    {selectedHotel.name || '선택한 숙소 없음'} → {activeJob.name}: 후보별 출퇴근 경로를 기준으로 확인합니다.
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+          </div>
+        </>
       )}
     </div>
   )

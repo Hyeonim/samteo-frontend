@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import StepIndicator from '../components/wizard/StepIndicator'
 import Step1Region from '../components/wizard/Step1Region'
@@ -12,6 +12,7 @@ import './PlannerPage.css'
 
 const TOTAL = 5
 const FIXED_EXPENSES = 380000
+const MAX_COMPARISON_JOBS = 3
 
 const DEFAULT_HOTEL = {
   id: null,
@@ -90,7 +91,8 @@ export default function PlannerPage() {
   const [selectedRegion, setSelectedRegion] = useState(seedDistrictId)
   const [selectedRegionName, setSelectedRegionName] = useState(seedDistrictName)
   const [selectedJobs, setSelectedJobs] = useState(seedJob ? [seedJob] : [])
-  const [selectedHotel, setSelectedHotel] = useState(DEFAULT_HOTEL)
+  const [activeJobId, setActiveJobId] = useState(seedJob?.id ?? null)
+  const [selectedHotelsByJobId, setSelectedHotelsByJobId] = useState({})
   const [draftPlannerId] = useState(() => createPlannerId())
   const [saving, setSaving] = useState(false)
 
@@ -100,12 +102,16 @@ export default function PlannerPage() {
     setSelectedRegion(null)
     setSelectedRegionName(null)
     setSelectedJobs([])
+    setActiveJobId(null)
+    setSelectedHotelsByJobId({})
   }
 
   function selectDistrict(regionId, regionName) {
     setSelectedRegion(regionId)
     setSelectedRegionName(regionId ? getDistrictLabel(regionId, regionName) : null)
     setSelectedJobs([])
+    setActiveJobId(null)
+    setSelectedHotelsByJobId({})
   }
 
   function toggleJob(job) {
@@ -113,10 +119,30 @@ export default function PlannerPage() {
       setSelectedRegion(job.districtRegionId)
       setSelectedRegionName(getDistrictLabel(job.districtRegionId, job.district))
     }
-    setSelectedJobs((prev) => {
-      const exists = prev.find((j) => j.id === job.id)
-      return exists ? prev.filter((j) => j.id !== job.id) : [...prev, job]
+    const exists = selectedJobs.some((selectedJob) => selectedJob.id === job.id)
+    if (!exists) {
+      if (selectedJobs.length >= MAX_COMPARISON_JOBS) {
+        alert(`비교할 일자리는 최대 ${MAX_COMPARISON_JOBS}개까지 선택할 수 있습니다.`)
+        return
+      }
+      setSelectedJobs((prev) => [...prev, job])
+      setActiveJobId((current) => current ?? job.id)
+      return
+    }
+
+    const next = selectedJobs.filter((selectedJob) => selectedJob.id !== job.id)
+    setSelectedJobs(next)
+    setActiveJobId((current) => current === job.id ? (next[0]?.id ?? null) : current)
+    setSelectedHotelsByJobId((hotels) => {
+      const nextHotels = { ...hotels }
+      delete nextHotels[job.id]
+      return nextHotels
     })
+  }
+
+  function selectHotelForActiveJob(hotel) {
+    if (!activeJobId) return
+    setSelectedHotelsByJobId((prev) => ({ ...prev, [activeJobId]: hotel }))
   }
 
   function changePlannerType(nextType) {
@@ -125,7 +151,8 @@ export default function PlannerPage() {
     setSelectedRegion(null)
     setSelectedRegionName(null)
     setSelectedJobs([])
-    setSelectedHotel(DEFAULT_HOTEL)
+    setActiveJobId(null)
+    setSelectedHotelsByJobId({})
   }
 
   function moveStep(dir) {
@@ -149,8 +176,10 @@ export default function PlannerPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  function buildPlannerDraft(createdAt = new Date().toISOString()) {
-    const totalSalary = selectedJobs.reduce((sum, job) => sum + Number(job.salary ?? job.monthlySalary ?? 0), 0)
+  const buildPlannerDraft = useCallback((createdAt = new Date().toISOString()) => {
+    const primaryJob = selectedJobs.find((job) => job.id === activeJobId) ?? selectedJobs[0]
+    const selectedHotel = selectedHotelsByJobId[primaryJob?.id] ?? DEFAULT_HOTEL
+    const totalSalary = Number(primaryJob?.salary ?? primaryJob?.monthlySalary ?? 0)
     const accommodationCost = Number(selectedHotel.price ?? selectedHotel.monthlyPrice ?? 0)
     return {
       id: draftPlannerId,
@@ -160,16 +189,17 @@ export default function PlannerPage() {
       cityName: selectedCityName,
       regionId: selectedRegion,
       regionName: selectedRegionName ?? selectedCityName,
-      jobs: selectedJobs.map((job) => ({
-        id: job.id,
-        name: job.name ?? job.title,
-        type: job.type ?? job.category,
-        company: job.company ?? job.desc ?? '',
-        workingDays: job.workingDays ?? job.sub ?? job.schedule ?? '',
-        schedule: job.schedule ?? job.workingDays ?? job.sub ?? '',
-        hourlyWage: Number(job.hourlyWage ?? job.wage ?? 10320),
-        salary: Number(job.salary ?? job.monthlySalary ?? 0),
-      })),
+      jobs: primaryJob ? [{
+        id: primaryJob.id,
+        name: primaryJob.name ?? primaryJob.title,
+        type: primaryJob.type ?? primaryJob.category,
+        role: 'PRIMARY',
+        company: primaryJob.company ?? primaryJob.desc ?? '',
+        workingDays: primaryJob.workingDays ?? primaryJob.sub ?? primaryJob.schedule ?? '',
+        schedule: primaryJob.schedule ?? primaryJob.workingDays ?? primaryJob.sub ?? '',
+        hourlyWage: Number(primaryJob.hourlyWage ?? primaryJob.wage ?? 10320),
+        salary: Number(primaryJob.salary ?? primaryJob.monthlySalary ?? 0),
+      }] : [],
       accommodation: {
         id: selectedHotel.id,
         name: selectedHotel.name,
@@ -182,12 +212,12 @@ export default function PlannerPage() {
       createdAt,
       memo: '',
     }
-  }
+  }, [activeJobId, draftPlannerId, plannerType, selectedCity, selectedCityName, selectedHotelsByJobId, selectedJobs, selectedRegion, selectedRegionName])
 
   const previewPlanner = useMemo(() => {
     const planner = buildPlannerDraft()
     return { ...planner, schedule: createJobSchedule(planner) }
-  }, [draftPlannerId, plannerType, selectedCity, selectedCityName, selectedRegion, selectedRegionName, selectedJobs, selectedHotel])
+  }, [buildPlannerDraft])
 
   async function completePlanner() {
     if (selectedJobs.length === 0) {
@@ -235,9 +265,30 @@ export default function PlannerPage() {
       onDistrictSelect={selectDistrict}
       onToggle={toggleJob}
     />,
-    <Step3Accommodation key={3} selectedJobs={selectedJobs} selectedHotel={selectedHotel} onSelect={setSelectedHotel} />,
-    <Step4Budget key={4} selectedJobs={selectedJobs} selectedHotel={selectedHotel} />,
-    <Step5Planner key={5} selectedJobs={selectedJobs} selectedHotel={selectedHotel} plannerPreview={previewPlanner} />,
+    <Step3Accommodation
+      key={3}
+      selectedJobs={selectedJobs}
+      activeJobId={activeJobId}
+      onActiveJobChange={setActiveJobId}
+      selectedHotelsByJobId={selectedHotelsByJobId}
+      selectedHotel={selectedHotelsByJobId[activeJobId] ?? DEFAULT_HOTEL}
+      onSelect={selectHotelForActiveJob}
+    />,
+    <Step4Budget
+      key={4}
+      selectedJobs={selectedJobs}
+      activeJobId={activeJobId}
+      onActiveJobChange={setActiveJobId}
+      selectedHotelsByJobId={selectedHotelsByJobId}
+    />,
+    <Step5Planner
+      key={5}
+      selectedJobs={selectedJobs}
+      activeJobId={activeJobId}
+      onActiveJobChange={setActiveJobId}
+      selectedHotelsByJobId={selectedHotelsByJobId}
+      plannerPreview={previewPlanner}
+    />,
   ]
 
   return (

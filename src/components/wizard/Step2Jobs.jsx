@@ -325,7 +325,7 @@ export default function Step2Jobs({
 
       {selectedJobs.length > 0 && (
         <div className="job-selected-count">
-          ✓ {selectedJobs.length}개 선택됨 · 선택한 일자리의 구·군을 기준으로 다음 단계를 진행합니다.
+          ✓ 비교 후보 {selectedJobs.length}개 선택됨 · 최대 3개까지 고르고 후보별 숙소와 예상 잔액을 비교합니다.
         </div>
       )}
 

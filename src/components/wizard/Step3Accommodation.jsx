@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { api } from '../../api'
+import CandidatePairChip from './CandidatePairChip'
 
 const DEFAULT_MAP_POINT = { lat: 35.8714, lng: 128.6014 }
 
@@ -76,9 +77,15 @@ async function fetchDrivingRoute(accommodation, job) {
   return data.data ?? data.result ?? data
 }
 
-export default function Step3Accommodation({ selectedJobs, selectedHotel, onSelect }) {
+export default function Step3Accommodation({
+  selectedJobs,
+  activeJobId,
+  onActiveJobChange,
+  selectedHotelsByJobId,
+  selectedHotel,
+  onSelect,
+}) {
   const [hotels, setHotels] = useState([])
-  const [activeJobId, setActiveJobId] = useState(null)
   const [routeInfo, setRouteInfo] = useState(null)
   const [routeLoading, setRouteLoading] = useState(false)
   const [mapReady, setMapReady] = useState(false)
@@ -99,7 +106,8 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
   const [geocodedPoint, setGeocodedPoint] = useState(null)
 
   useEffect(() => {
-    const regionId = selectedJobs[0]?.districtRegionId ?? selectedJobs[0]?.regionId
+    const activeJob = selectedJobs.find((job) => job.id === activeJobId) ?? selectedJobs[0]
+    const regionId = activeJob?.districtRegionId ?? activeJob?.regionId
     const query = regionId ? `?regionId=${encodeURIComponent(regionId)}` : ''
     api.get(`/api/planner/accommodations${query}`)
       .then((res) => {
@@ -112,7 +120,7 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
         })))
       })
       .catch(() => {})
-  }, [selectedJobs])
+  }, [selectedJobs, activeJobId])
 
   const activeJob = selectedJobs.find((j) => j.id === activeJobId) ?? null
   // geocodedPoint(Kakao Places 결과) > 직접 좌표 > 지역 중심 순으로 우선순위 적용
@@ -123,16 +131,13 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
   const activeJobUsesRegionCenter = Boolean(
     activeJob && !directJobPoint(activeJob) && !geocodedPoint && activeJobPoint
   )
-  const selectedRegionIds = useMemo(
-    () => [...new Set(selectedJobs.map((job) => job.districtRegionId ?? job.regionId).filter(Boolean))],
-    [selectedJobs]
-  )
+  const activeRegionId = activeJob?.districtRegionId ?? activeJob?.regionId
   const visibleHotels = useMemo(() => (
-    selectedRegionIds.length === 0
+    !activeRegionId
       ? hotels
-      : hotels.filter((hotel) => selectedRegionIds.includes(hotel.regionId))
-  ), [hotels, selectedRegionIds])
-  const noMatchedHotels = selectedRegionIds.length > 0 && visibleHotels.length === 0
+      : hotels.filter((hotel) => hotel.regionId === activeRegionId)
+  ), [hotels, activeRegionId])
+  const noMatchedHotels = Boolean(activeRegionId) && visibleHotels.length === 0
 
   function scrollSlider(dir) {
     sliderRef.current?.scrollBy({ left: dir * 250, behavior: 'smooth' })
@@ -154,9 +159,9 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
 
   useEffect(() => {
     if (activeJobId && !selectedJobs.find((j) => j.id === activeJobId)) {
-      setActiveJobId(null)
+      onActiveJobChange?.(selectedJobs[0]?.id ?? null)
     }
-  }, [selectedJobs, activeJobId])
+  }, [selectedJobs, activeJobId, onActiveJobChange])
 
   // 직접 좌표가 없는 일자리: Kakao Places 키워드 검색으로 기관명 지오코딩
   useEffect(() => {
@@ -210,7 +215,7 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             const first = selectedJobsRef.current[0]
-            if (first) setActiveJobId(first.id)
+            if (first) onActiveJobChange?.(first.id)
           })
         })
       })
@@ -231,7 +236,7 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
       infoWindowsRef.current = []
       routePolylinesRef.current = []
     }
-  }, [])
+  }, [onActiveJobChange])
 
   useEffect(() => {
     if (!mapReady || !kakaoMapRef.current) return
@@ -552,7 +557,7 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
 
   return (
     <div className="step-card">
-      <div className="step-title">출퇴근 1시간 이내 숙소를 지도에서 선택해 주세요</div>
+      <div className="step-title">비교 후보마다 숙소를 하나씩 선택해 주세요</div>
       <div className="step-subtitle">
         관광공사 데이터 기반 엄선 체류지 · Haversine 반경 필터 + 카카오 대중교통 검증 완료
       </div>
@@ -560,7 +565,7 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
       <div className="job-slider-wrap">
         <div className="job-slider-label">
           {selectedJobs.length > 0
-            ? `선택한 알바 ${selectedJobs.length}개 · 클릭하면 지도에서 알바 위치를 확인할 수 있어요`
+            ? `비교 후보 ${selectedJobs.length}개 · 후보를 바꾸면 선택한 숙소도 따로 보관돼요`
             : 'Step 2에서 알바를 선택하면 여기에 표시됩니다'}
         </div>
         {selectedJobs.length === 0 ? (
@@ -572,19 +577,15 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
           <div className="job-slider-carousel">
             <button className="slider-arrow" onClick={() => scrollSlider(-1)} aria-label="이전">‹</button>
             <div className="job-slider" ref={sliderRef}>
-              {selectedJobs.map((j) => (
-                <div
+              {selectedJobs.map((j, index) => (
+                <CandidatePairChip
                   key={j.id}
-                  className={`job-chip${activeJobId === j.id ? ' active' : ''}`}
-                  onClick={() => setActiveJobId(activeJobId === j.id ? null : j.id)}
-                >
-                  <span className="job-chip-emoji">{j.emoji}</span>
-                  <div>
-                    <div className="job-chip-name">{j.name}</div>
-                    <div className="job-chip-sub">{j.type} · {j.priceLabel}{j.unit}</div>
-                  </div>
-                  {activeJobId === j.id && <span className="job-chip-pin">📍</span>}
-                </div>
+                  index={index}
+                  job={j}
+                  hotel={selectedHotelsByJobId[j.id]}
+                  active={activeJobId === j.id}
+                  onClick={() => onActiveJobChange?.(j.id)}
+                />
               ))}
             </div>
             <button className="slider-arrow" onClick={() => scrollSlider(1)} aria-label="다음">›</button>
@@ -592,16 +593,23 @@ export default function Step3Accommodation({ selectedJobs, selectedHotel, onSele
         )}
         {activeJob && (
           <div className="job-active-banner">
-            <span>{activeJob.emoji}</span>
-            <span>
-              <strong>{activeJob.name}</strong>{' '}
+            <span className="job-active-pair-icon">🔗</span>
+            <span className="job-active-pair-copy">
+              <span className="job-active-pair-names">
+                <strong>{activeJob.name}</strong>
+                <b>↔</b>
+                <strong className={selectedHotel.name ? 'matched' : 'pending'}>
+                  {selectedHotel.name || '숙소를 선택해 주세요'}
+                </strong>
+              </span>
+              <small>
               {geocodedPoint
                 ? '기관명으로 위치를 찾았습니다'
                 : activeJobUsesRegionCenter
                   ? '정확한 좌표가 없어 지역 중심 위치를 표시합니다'
                   : '위치로 지도가 이동했습니다'}
+              </small>
             </span>
-            <button className="job-active-close" onClick={() => setActiveJobId(null)}>✕</button>
           </div>
         )}
         {activeJob && (
