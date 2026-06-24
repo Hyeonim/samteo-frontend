@@ -122,8 +122,6 @@ export default function SamteoChatbot() {
       panelRect: rect,
     }
     dragMovedRef.current = false
-    event.currentTarget.setPointerCapture(event.pointerId)
-    event.preventDefault()
   }
 
   function moveDrag(event) {
@@ -135,7 +133,9 @@ export default function SamteoChatbot() {
       if (Math.hypot(rawX, rawY) < 5) return
       dragMovedRef.current = true
       setDragging(true)
+      event.currentTarget.setPointerCapture(event.pointerId)
     }
+    event.preventDefault()
     const margin = 8
     const minX = margin - drag.panelRect.left
     const maxX = window.innerWidth - margin - drag.panelRect.right
@@ -153,6 +153,9 @@ export default function SamteoChatbot() {
     if (!dragRef.current || dragRef.current.pointerId !== event.pointerId) return
     dragRef.current = null
     setDragging(false)
+    if (dragMovedRef.current) {
+      requestAnimationFrame(() => { dragMovedRef.current = false })
+    }
   }
 
   function handleLauncherClick() {
