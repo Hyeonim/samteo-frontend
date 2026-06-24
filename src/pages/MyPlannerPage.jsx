@@ -900,6 +900,7 @@ export default function MyPlannerPage() {
                              </div>
                            )}
                            <p>{VIEW_LABELS[viewMode]} 보기 · 근무 일정은 자동으로 채워지고 빈 시간은 직접 추가할 수 있습니다.</p>
+                           <p className="scheduler-hint">원하시는 날짜를 클릭하여 편집할 수 있습니다.</p>
                         </div>
                         <div className="scheduler-tabs">
                           {Object.entries(VIEW_LABELS).map(([value, label]) => (
