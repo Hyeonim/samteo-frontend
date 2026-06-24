@@ -247,6 +247,8 @@ export default function MyPlannerPage() {
   const [title, setTitle] = useState(() => activePlanner?.title ?? '')
   const [memo, setMemo] = useState(() => activePlanner?.memo ?? '')
   const [editingId, setEditingId] = useState(null)
+  const [editorOpen, setEditorOpen] = useState(false)
+  const [editorClosing, setEditorClosing] = useState(false)
   const [monthDetail, setMonthDetail] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [eventTypes, setEventTypes] = useState([...DEFAULT_EVENT_TYPES])
@@ -262,6 +264,15 @@ export default function MyPlannerPage() {
     dateKey: null,
     repeatMode: 'weekly',
   })
+
+  const closeEditor = () => {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      setEditorOpen(false)
+      setEditorClosing(false)
+      return
+    }
+    setEditorClosing(true)
+  }
 
   useEffect(() => {
     myPlannerApi.getAll()
@@ -423,6 +434,8 @@ export default function MyPlannerPage() {
     setMemo(planner.memo ?? '')
     setEventTypes(planner.eventTypes ?? [...DEFAULT_EVENT_TYPES, ...(planner.customEventTypes ?? [])])
     setEditingId(null)
+    setEditorOpen(false)
+    setEditorClosing(false)
     setFinanceOpen(false)
     setWeekOffset(0)
     setAdjustmentDraft({ kind: 'income', label: '', amount: '' })
@@ -510,6 +523,8 @@ export default function MyPlannerPage() {
   const startCreate = (day = selectedDay, startTime = '18:00', dateKey = null) => {
     const start = toMinutes(startTime, 18 * 60)
     setEditingId(null)
+    setEditorOpen(true)
+    setEditorClosing(false)
     setForm({
       title: '',
       day,
@@ -527,6 +542,8 @@ export default function MyPlannerPage() {
   const startEdit = (event) => {
     const typeMeta = getEventTypeMeta(event.type)
     if (event.locked) {
+      setEditorOpen(true)
+      setEditorClosing(false)
       setForm({
         ...event,
         typeLabel: event.typeLabel ?? typeMeta.label,
@@ -538,6 +555,8 @@ export default function MyPlannerPage() {
       return
     }
     setEditingId(event.id)
+    setEditorOpen(true)
+    setEditorClosing(false)
     setForm({
       title: event.title,
       day: event.day,
@@ -576,6 +595,7 @@ export default function MyPlannerPage() {
     persistPlanner({ schedule: nextSchedule })
     setEditingId(null)
     startCreate(Number(form.day))
+    closeEditor()
   }
 
   const deleteEvent = () => {
@@ -585,6 +605,7 @@ export default function MyPlannerPage() {
     persistPlanner({ schedule: schedule.filter((event) => event.id !== editingId) })
     setEditingId(null)
     startCreate()
+    closeEditor()
   }
 
   const goToEvents = () => {
@@ -598,6 +619,8 @@ export default function MyPlannerPage() {
     const start = (HOURS[0] + hourOffset) * 60
     setSelectedDay(day)
     setEditingId(null)
+    setEditorOpen(true)
+    setEditorClosing(false)
     setForm({
       title: '',
       day,
@@ -619,7 +642,6 @@ export default function MyPlannerPage() {
     const start = clamp(Math.ceil(latestEnd / 60) * 60, HOURS[0] * 60, (HOURS[HOURS.length - 1]) * 60)
 
     setSelectedDay(cell.day)
-    setViewMode('day')
     startCreate(cell.day, minutesToTime(start), cell.dateKey)
     setMonthDetail(null)
   }
@@ -863,7 +885,7 @@ export default function MyPlannerPage() {
                     )}
                   </section>
 
-                  <div className="planner-scheduler">
+                  <div className={`planner-scheduler${editorOpen ? ' editor-open' : ''}`}>
                     <section className="scheduler-main">
                       <div className="scheduler-toolbar">
                         <div>
@@ -985,8 +1007,19 @@ export default function MyPlannerPage() {
                       )}
                     </section>
 
-                    <aside className="schedule-editor">
-                      <div className="planner-panel-title">{editingId ? '일정 수정' : '일정 추가'}</div>
+                    {editorOpen && (
+                    <aside
+                      className={`schedule-editor${editorClosing ? ' closing' : ''}`}
+                      onAnimationEnd={(event) => {
+                        if (event.target !== event.currentTarget || event.animationName !== 'schedule-editor-slide-out') return
+                        setEditorOpen(false)
+                        setEditorClosing(false)
+                      }}
+                    >
+                      <div className="schedule-editor-head">
+                        <div className="planner-panel-title">{editingId ? '일정 수정' : '일정 추가'}</div>
+                        <button type="button" onClick={closeEditor} aria-label="일정 편집기 닫기">×</button>
+                      </div>
                       {!editingId && (
                         <div className="schedule-event-finder">
                           <div>
@@ -1180,6 +1213,7 @@ export default function MyPlannerPage() {
                         <button className="directory-btn danger" onClick={deleteEvent} disabled={!editingId || form.locked}>삭제</button>
                       </div>
                     </aside>
+                    )}
                   </div>
                 </>
               )}
