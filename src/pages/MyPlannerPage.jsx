@@ -423,9 +423,17 @@ export default function MyPlannerPage() {
 
   const persistPlanner = (patch) => {
     if (!activePlanner) return
-    myPlannerApi.update(activePlanner.id, { ...activePlanner, schedule, eventTypes, ...patch })
-      .then((res) => refresh(res?.data))
-      .catch(() => {})
+    const body = { ...activePlanner, schedule, eventTypes, ...patch }
+    console.log('[persistPlanner] 전송 schedule 건수:', body.schedule?.length, 'patch:', patch)
+    myPlannerApi.update(activePlanner.id, body)
+      .then((res) => {
+        console.log('[persistPlanner] 응답:', res)
+        refresh(res?.data)
+      })
+      .catch((err) => {
+        console.error('[persistPlanner] 에러:', err)
+        alert('일정 저장에 실패했습니다. 다시 시도해 주세요.')
+      })
   }
 
   const selectPlanner = (planner) => {
@@ -572,6 +580,7 @@ export default function MyPlannerPage() {
   }
 
   const saveEvent = () => {
+    console.log('[saveEvent] activePlanner:', !!activePlanner, 'editorDisabledReason:', editorDisabledReason)
     if (!activePlanner || editorDisabledReason) return
     const start = toMinutes(form.start, 0)
     const end = toMinutes(form.end, start + 60)
@@ -594,7 +603,6 @@ export default function MyPlannerPage() {
       : [...schedule, { ...normalized, id: `event-${Date.now()}` }]
     persistPlanner({ schedule: nextSchedule })
     setEditingId(null)
-    startCreate(Number(form.day))
     closeEditor()
   }
 
@@ -617,6 +625,7 @@ export default function MyPlannerPage() {
     const rect = event.currentTarget.getBoundingClientRect()
     const hourOffset = clamp(Math.floor((event.clientY - rect.top) / 56), 0, HOURS.length - 1)
     const start = (HOURS[0] + hourOffset) * 60
+    const dateKey = weekDates.find((d) => d.value === day)?.dateKey ?? null
     setSelectedDay(day)
     setEditingId(null)
     setEditorOpen(true)
@@ -630,8 +639,8 @@ export default function MyPlannerPage() {
       typeLabel: getEventTypeMeta('personal').label,
       color: getEventTypeMeta('personal').color,
       memo: '',
-      dateKey: null,
-      repeatMode: 'weekly',
+      dateKey,
+      repeatMode: dateKey ? 'date' : 'weekly',
     })
   }
 
@@ -950,7 +959,7 @@ export default function MyPlannerPage() {
                               <button
                                 key={day.label}
                                 className={day.weekend ?? ''}
-                                onClick={() => { setSelectedDay(day.value); startCreate(day.value) }}
+                                onClick={() => { setSelectedDay(day.value); startCreate(day.value, '18:00', day.dateKey) }}
                               >
                                 <span>{day.label}</span>
                                 <small>{day.dateLabel}</small>
