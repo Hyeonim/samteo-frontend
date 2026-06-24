@@ -39,10 +39,27 @@ export default function SamteoChatbot() {
   const [loading, setLoading] = useState(false)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [dragging, setDragging] = useState(false)
+  const [panelPlacement, setPanelPlacement] = useState({ below: false, left: false })
   const listRef = useRef(null)
   const inputRef = useRef(null)
   const dragRef = useRef(null)
   const dragMovedRef = useRef(false)
+  const launcherRef = useRef(null)
+
+  // launcher 위치 기준으로 패널이 잘리지 않는 방향 계산 (열릴 때 + 드래그 중)
+  useEffect(() => {
+    if (!open || !launcherRef.current) return
+    const rect = launcherRef.current.getBoundingClientRect()
+    const panelH = Math.min(620, window.innerHeight - 116)
+    const panelW = Math.min(380, window.innerWidth - 32)
+    const MARGIN = 8
+    const topIfAbove = rect.top - 12 - panelH
+    const leftIfRightAligned = rect.right - panelW
+    setPanelPlacement({
+      below: topIfAbove < MARGIN,
+      left: leftIfRightAligned < MARGIN,
+    })
+  }, [open, position])
 
   useEffect(() => {
     if (!open) return undefined
@@ -110,9 +127,7 @@ export default function SamteoChatbot() {
   function startDrag(event) {
     if (window.innerWidth <= 600 || event.button !== 0) return
     if (event.target.closest('input, textarea')) return
-    // 채팅창이 열려있을 때는 헤더 영역에서만, 버튼 제외
-    if (open && !event.target.closest('.samteo-chat-head')) return
-    if (open && event.target.closest('button')) return
+    if (open && !event.target.closest('.samteo-chat-head') && !event.target.closest('.samteo-chat-launcher')) return
     const rect = event.currentTarget.getBoundingClientRect()
     dragRef.current = {
       pointerId: event.pointerId,
@@ -158,6 +173,14 @@ export default function SamteoChatbot() {
     }
   }
 
+  function handleCloseClick() {
+    if (dragMovedRef.current) {
+      dragMovedRef.current = false
+      return
+    }
+    setOpen(false)
+  }
+
   function handleLauncherClick() {
     if (dragMovedRef.current) {
       dragMovedRef.current = false
@@ -165,6 +188,12 @@ export default function SamteoChatbot() {
     }
     setOpen((value) => !value)
   }
+
+  const panelClass = [
+    'samteo-chat-panel',
+    panelPlacement.below ? 'panel-below' : '',
+    panelPlacement.left ? 'panel-left' : '',
+  ].filter(Boolean).join(' ')
 
   return (
     <div
@@ -176,7 +205,7 @@ export default function SamteoChatbot() {
       onPointerCancel={endDrag}
     >
       {open && (
-        <section className="samteo-chat-panel" role="dialog" aria-label="삼터 도우미" aria-modal="false">
+        <section className={panelClass} role="dialog" aria-label="삼터 도우미" aria-modal="false">
           <header
             className="samteo-chat-head"
             title="드래그하여 이동"
@@ -188,7 +217,7 @@ export default function SamteoChatbot() {
                 <span><i /> 상담 가능</span>
               </div>
             </div>
-            <button type="button" onClick={() => setOpen(false)} aria-label="챗봇 닫기">×</button>
+            <button type="button" onClick={handleCloseClick} aria-label="챗봇 닫기">×</button>
           </header>
 
           <div className="samteo-chat-context">
@@ -241,6 +270,7 @@ export default function SamteoChatbot() {
       )}
 
       <button
+        ref={launcherRef}
         type="button"
         className="samteo-chat-launcher"
         onClick={handleLauncherClick}
