@@ -667,6 +667,36 @@
 }
 .job-active-close:hover { background: #f0f0f0; color: #555; }
 
+.transport-mode-tabs {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+.tmt-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 20px;
+  background: #fff;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.tmt-btn:hover {
+  border-color: #3B82F6;
+  color: #3B82F6;
+  background: #eff6ff;
+}
+.tmt-btn.active {
+  border-color: #3B82F6;
+  background: #3B82F6;
+  color: #fff;
+}
+
 .route-info-bar {
   display: flex;
   flex-direction: column;
@@ -709,6 +739,7 @@
 .route-divider { width: 1px; height: 16px; background: #bae6fd; flex-shrink: 0; }
 .route-time { font-weight: 800; font-size: 13px; color: #0c4a6e; }
 .route-fare { color: #475569; font-size: 12px; }
+.route-dist { color: #475569; font-size: 12px; }
 .route-legend { margin-left: auto; color: #64748b; font-size: 11px; }
 .route-error { color: #dc2626; font-size: 12px; }
 .route-summary { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -1766,7 +1797,9 @@
 .sidebar-route-panel {
   padding: 12px 16px;
   background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
-  border-bottom: 1px solid #bae6fd;
+  border: 1px solid #bae6fd;
+  border-radius: 10px;
+  margin-top: 8px;
   font-size: 12px;
   flex-shrink: 0;
 }
