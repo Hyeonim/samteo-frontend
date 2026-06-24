@@ -5,11 +5,10 @@ import LoadingScreen from '../components/common/LoadingScreen'
 import './ExplorePages.css'
 
 const RECOMMEND_TABS = [
-  { id: 'all', label: '전체 추천' },
-  { id: 'popular', label: '인기' },
-  { id: 'closing', label: '마감 임박' },
-  { id: 'commute', label: '출퇴근 편한' },
-  { id: 'salary', label: '수입 좋은' },
+  { id: 'all',        label: '전체 추천' },
+  { id: 'closing',    label: '마감 임박' },
+  { id: 'bookmarked', label: '많이 담는' },
+  { id: 'reviewed',   label: '후기 있는' },
 ]
 
 const MOBILE_INITIAL = 5
@@ -140,7 +139,8 @@ function normalizeJob(job, index) {
   const salary = Number(job.monthlySalary ?? job.salary ?? hourlyWage * 209)
   const commute = Number(job.commuteMinutes ?? 20 + index * 4)
   const tags = (job.tags ?? []).map(translateTag)
-  const popularity = Number(job.popularity ?? job.viewCount ?? 92 - index * 7)
+  const bookmarkCount = Number(job.bookmarkCount ?? 0)
+  const reviewCount = Number(job.reviewCount ?? 0)
   const daysLeft = Number(job.daysLeft ?? (tags.includes('마감 임박') ? 1 : 3 + index))
   const regionId = job.regionId ?? 'junggu'
   const normalized = {
@@ -157,7 +157,8 @@ function normalizeJob(job, index) {
     commute,
     commuteMinutes: commute,
     tags,
-    popularity,
+    bookmarkCount,
+    reviewCount,
     daysLeft,
     priceLabel: salary ? `${salary.toLocaleString()}원` : '-',
     unit: job.unit === '/month' ? '/월' : (job.unit ?? '/월'),
@@ -172,17 +173,16 @@ function normalizeJob(job, index) {
 
 function buildReason(job) {
   if (job.tags.includes('숙소 연계')) return '숙소까지 함께 잡기 좋아 체류 플래너에 잘 맞아요.'
+  if (job.reviewCount > 0) return `실제 근무 후기 ${job.reviewCount}건이 등록된 검증된 공고예요.`
+  if (job.bookmarkCount > 0) return `${job.bookmarkCount}명이 플래너에 담은 인기 공고예요.`
   if (job.daysLeft <= 2) return '마감이 가까워 지금 확인하면 좋은 공고예요.'
-  if (job.commute <= 20) return '출퇴근 시간이 짧아 생활 리듬을 만들기 쉬워요.'
-  if (job.salary >= 2400000) return '월 예상 수입이 높아 예산 여유를 만들기 좋아요.'
   return '근무 조건과 지역 접근성이 균형 잡힌 추천 공고예요.'
 }
 
 function sectionJobs(jobs, section) {
-  if (section === 'popular') return [...jobs].sort((a, b) => b.popularity - a.popularity).slice(0, 3)
-  if (section === 'closing') return [...jobs].sort((a, b) => a.daysLeft - b.daysLeft).slice(0, 3)
-  if (section === 'commute') return [...jobs].sort((a, b) => a.commute - b.commute).slice(0, 3)
-  if (section === 'salary') return [...jobs].sort((a, b) => b.salary - a.salary).slice(0, 3)
+  if (section === 'closing')    return [...jobs].sort((a, b) => a.daysLeft - b.daysLeft).slice(0, 3)
+  if (section === 'bookmarked') return [...jobs].sort((a, b) => b.bookmarkCount - a.bookmarkCount).slice(0, 3)
+  if (section === 'reviewed')   return [...jobs].filter((j) => j.reviewCount > 0).sort((a, b) => b.reviewCount - a.reviewCount).slice(0, 3)
   return jobs
 }
 
@@ -210,8 +210,11 @@ export default function JobsPage() {
   const [totalCount, setTotalCount] = useState(0)
   const [detailJob, setDetailJob] = useState(null)
 
+  const sortParam = activeTab === 'bookmarked' ? 'bookmark' : activeTab === 'reviewed' ? 'review' : 'default'
+
   useEffect(() => {
-    api.get(`/api/planner/jobs/page?page=${page}&size=${PAGE_SIZE}`)
+    setLoading(true)
+    api.get(`/api/planner/jobs/page?page=${page}&size=${PAGE_SIZE}&sort=${sortParam}`)
       .then((res) => {
         const data = unwrap(res)
         setJobs((data.items ?? []).map(normalizeJob))
@@ -220,7 +223,7 @@ export default function JobsPage() {
       })
       .catch(() => setJobs([]))
       .finally(() => setLoading(false))
-  }, [page])
+  }, [page, sortParam])
 
   // 탭 바뀌면 "더 보기" 리셋
   useEffect(() => { setShowAll(false) }, [activeTab, query, type])
@@ -244,7 +247,7 @@ export default function JobsPage() {
 
   const hasMore = false
 
-  const popularJobs = useMemo(() => sectionJobs(jobs, 'popular'), [jobs])
+  const bookmarkedJobs = useMemo(() => sectionJobs(jobs, 'bookmarked'), [jobs])
   const closingJobs = useMemo(() => sectionJobs(jobs, 'closing'), [jobs])
 
   function startAccommodationMatching(job) {
@@ -268,7 +271,7 @@ export default function JobsPage() {
             <p className="directory-kicker">WORK RECOMMEND</p>
             <h1 className="directory-title">추천 일자리</h1>
             <p className="directory-desc">
-              인기 공고, 마감 임박 공고, 출퇴근이 편한 일자리를 한 화면에서 비교해 보세요.
+              마감 임박, 많이 담는, 후기 있는 일자리를 한 화면에서 비교해 보세요.
             </p>
           </div>
           <div className="directory-actions">
@@ -279,9 +282,11 @@ export default function JobsPage() {
         {!loading && jobs.length > 0 && (
           <section className="job-highlight-grid">
             <div className="job-highlight">
-              <span className="job-highlight__label">인기 급상승</span>
-              <strong>{popularJobs[0]?.name}</strong>
-              <p>{popularJobs[0]?.recommendReason}</p>
+              <span className="job-highlight__label">많이 담는 공고</span>
+              <strong>{bookmarkedJobs[0]?.name ?? closingJobs[0]?.name}</strong>
+              <p>{bookmarkedJobs[0]?.bookmarkCount > 0
+                ? `${bookmarkedJobs[0].bookmarkCount}명이 플래너에 담은 공고예요.`
+                : '플래너에 담아 숙소와 함께 계획해 보세요.'}</p>
             </div>
             <div className="job-highlight urgent">
               <span className="job-highlight__label">마감 임박</span>
@@ -342,7 +347,11 @@ export default function JobsPage() {
         {loading ? (
           <LoadingScreen message="추천 일자리를 불러오는 중입니다" description="지역과 조건에 맞는 공고를 준비하고 있습니다." />
         ) : filtered.length === 0 ? (
-          <div className="directory-empty">조건에 맞는 추천 일자리가 없습니다.</div>
+          <div className="directory-empty">
+            {activeTab === 'reviewed'
+              ? '아직 후기가 등록된 일자리가 없습니다. 일자리를 경험한 후 커뮤니티에 후기를 남겨 보세요.'
+              : '조건에 맞는 추천 일자리가 없습니다.'}
+          </div>
         ) : viewMode === 'card' ? (
           <>
             <section className="job-recommend-grid">
@@ -359,7 +368,8 @@ export default function JobsPage() {
                   <div className="job-shop-body">
                     <div className="job-shop-title-row">
                       <h2>{job.name}</h2>
-                      <span>{job.popularity}</span>
+                      {job.bookmarkCount > 0 && <span title="플래너 담기 수">🗂️ {job.bookmarkCount}</span>}
+                      {job.reviewCount > 0 && <span title="후기 수">💬 {job.reviewCount}</span>}
                     </div>
                     <p className="job-shop-reason">{job.recommendReason}</p>
                     <div className="job-shop-meta">
@@ -391,8 +401,8 @@ export default function JobsPage() {
               {displayed.map((job) => (
                 <article className="job-recommend-card" key={job.id}>
                   <div className="job-rank">
-                    <span>{job.popularity}</span>
-                    <small>추천</small>
+                    <span>{job.bookmarkCount > 0 ? job.bookmarkCount : job.reviewCount > 0 ? job.reviewCount : '—'}</span>
+                    <small>{job.reviewCount > 0 ? '후기' : job.bookmarkCount > 0 ? '담기' : '추천'}</small>
                   </div>
                   <div className="job-recommend-main">
                     <div className="directory-card-top">
