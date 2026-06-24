@@ -1216,6 +1216,7 @@ export default function MyPlannerPage() {
                       >
                         <span style={{ background: event.color ?? '#6b9ee8' }} />
                         <strong>{event.title}</strong>
+                        <small className="modal-event-type">{event.typeLabel ?? getEventTypeMeta(event.type).label}</small>
                         <em>{event.start} - {event.end}</em>
                       </button>
                     ))

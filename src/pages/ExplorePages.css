@@ -1455,7 +1455,7 @@
 
 .modal-event-item {
   display: grid;
-  grid-template-columns: 10px 1fr auto;
+  grid-template-columns: 10px minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 10px;
   width: 100%;
@@ -2724,6 +2724,16 @@
     animation: none;
     transition: none;
   }
+}
+
+.modal-event-type {
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #475569;
+  padding: 3px 7px;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .editor-validation-message,
