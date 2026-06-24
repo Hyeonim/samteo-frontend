@@ -113,6 +113,28 @@ function formatDateKey(value) {
   return `${month}월 ${day}일`
 }
 
+function scheduleDayFromDate(date) {
+  return date.getDay() === 0 ? 6 : date.getDay() - 1
+}
+
+function getCurrentWeekDates(weekOffset = 0) {
+  const today = new Date()
+  const sunday = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate() - today.getDay() + weekOffset * 7
+  )
+  return CALENDAR_DAYS.map((day, index) => {
+    const date = new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate() + index)
+    return {
+      ...day,
+      date,
+      dateKey: toDateKey(date),
+      dateLabel: `${date.getMonth() + 1}/${date.getDate()}`,
+    }
+  })
+}
+
 function dayFromDateKey(value, fallback = 0) {
   const [year, month, day] = String(value ?? '').split('-').map(Number)
   if (!year || !month || !day) return fallback
@@ -206,8 +228,9 @@ export default function MyPlannerPage() {
   const [financeOpen, setFinanceOpen] = useState(false)
   const [adjustmentDraft, setAdjustmentDraft] = useState({ kind: 'income', label: '', amount: '' })
   const [loading, setLoading] = useState(true)
-  const [viewMode, setViewMode] = useState('week')
-  const [selectedDay, setSelectedDay] = useState(0)
+  const [viewMode, setViewMode] = useState('month')
+  const [selectedDay, setSelectedDay] = useState(() => scheduleDayFromDate(new Date()))
+  const [weekOffset, setWeekOffset] = useState(0)
   const activePlanner = useMemo(
     () => planners.find((planner) => planner.id === activeId) ?? null,
     [planners, activeId]
@@ -258,9 +281,17 @@ export default function MyPlannerPage() {
   }, [])
 
   const schedule = useMemo(() => getSchedule(activePlanner), [activePlanner])
-  const recurringSchedule = useMemo(() => schedule.filter((event) => !event.dateKey), [schedule])
-  const dayEvents = recurringSchedule.filter((event) => event.day === selectedDay)
+  const weekDates = useMemo(() => getCurrentWeekDates(weekOffset), [weekOffset])
+  const selectedWeekDate = weekDates.find((day) => day.value === selectedDay) ?? weekDates[0]
+  const dayEvents = schedule.filter((event) => (
+    event.dateKey ? event.dateKey === selectedWeekDate.dateKey : event.day === selectedDay
+  ))
   const month = useMemo(() => getMonthDays(), [])
+  const schedulePeriodLabel = viewMode === 'day'
+    ? `${selectedWeekDate.date.getFullYear()}년 ${selectedWeekDate.date.getMonth() + 1}월 ${selectedWeekDate.date.getDate()}일 (${selectedWeekDate.label})`
+    : viewMode === 'week'
+      ? `${weekDates[0].date.getFullYear()}년 ${weekDates[0].date.getMonth() + 1}월 ${weekDates[0].date.getDate()}일 – ${weekDates[6].date.getMonth() + 1}월 ${weekDates[6].date.getDate()}일`
+      : month.label
   const eventTypeOptions = useMemo(() => (
     [...eventTypes, CUSTOM_OPTION]
   ), [eventTypes])
@@ -393,6 +424,7 @@ export default function MyPlannerPage() {
     setEventTypes(planner.eventTypes ?? [...DEFAULT_EVENT_TYPES, ...(planner.customEventTypes ?? [])])
     setEditingId(null)
     setFinanceOpen(false)
+    setWeekOffset(0)
     setAdjustmentDraft({ kind: 'income', label: '', amount: '' })
   }
 
@@ -835,8 +867,17 @@ export default function MyPlannerPage() {
                     <section className="scheduler-main">
                       <div className="scheduler-toolbar">
                         <div>
-                          <h2>시간표</h2>
-                          <p>{VIEW_LABELS[viewMode]} 보기 · 근무 일정은 자동으로 채워지고 빈 시간은 직접 추가할 수 있습니다.</p>
+                           <h2>시간표</h2>
+                           {viewMode === 'month' ? (
+                             <strong className="scheduler-period-label">{schedulePeriodLabel}</strong>
+                           ) : (
+                             <div className="scheduler-period-nav" aria-label="표시 기간 이동">
+                               <button type="button" onClick={() => setWeekOffset((current) => current - 1)} aria-label="이전 주">‹</button>
+                               <strong className="scheduler-period-label">{schedulePeriodLabel}</strong>
+                               <button type="button" onClick={() => setWeekOffset((current) => current + 1)} aria-label="다음 주">›</button>
+                             </div>
+                           )}
+                           <p>{VIEW_LABELS[viewMode]} 보기 · 근무 일정은 자동으로 채워지고 빈 시간은 직접 추가할 수 있습니다.</p>
                         </div>
                         <div className="scheduler-tabs">
                           {Object.entries(VIEW_LABELS).map(([value, label]) => (
@@ -854,13 +895,14 @@ export default function MyPlannerPage() {
                       {viewMode === 'day' && (
                         <div className="day-view">
                           <div className="day-picker">
-                            {CALENDAR_DAYS.map((day) => (
+                            {weekDates.map((day) => (
                               <button
                                 key={day.label}
                                 className={`${selectedDay === day.value ? 'active' : ''}${day.weekend ? ` ${day.weekend}` : ''}`}
                                 onClick={() => setSelectedDay(day.value)}
                               >
-                                {day.label}
+                                <span>{day.label}</span>
+                                <small>{day.dateLabel}</small>
                               </button>
                             ))}
                           </div>
@@ -880,14 +922,15 @@ export default function MyPlannerPage() {
                       {viewMode === 'week' && (
                         <div className="week-view">
                           <div className="week-head">
-                            <span />
-                            {CALENDAR_DAYS.map((day) => (
+                            <span className="week-head-spacer" />
+                            {weekDates.map((day) => (
                               <button
                                 key={day.label}
                                 className={day.weekend ?? ''}
                                 onClick={() => { setSelectedDay(day.value); startCreate(day.value) }}
                               >
-                                {day.label}
+                                <span>{day.label}</span>
+                                <small>{day.dateLabel}</small>
                               </button>
                             ))}
                           </div>
@@ -895,13 +938,15 @@ export default function MyPlannerPage() {
                             <div className="time-rail">
                               {HOURS.map((hour) => <span key={hour}>{hour}</span>)}
                             </div>
-                            {CALENDAR_DAYS.map((day) => (
+                            {weekDates.map((day) => (
                               <div
                                 className={`day-column ${day.weekend ?? ''}`}
                                 key={day.label}
                                 onClick={(event) => startCreateAtSlot(event, day.value)}
                               >
-                                {recurringSchedule.filter((event) => event.day === day.value).map((event) => (
+                                {schedule.filter((event) => (
+                                  event.dateKey ? event.dateKey === day.dateKey : event.day === day.value
+                                )).map((event) => (
                                   <ScheduleBlock key={event.id} event={event} compact onClick={startEdit} />
                                 ))}
                               </div>

@@ -741,6 +741,47 @@
   font-weight: 900;
 }
 
+.scheduler-period-label {
+  display: block;
+  margin-top: 4px;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.scheduler-period-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.scheduler-period-nav .scheduler-period-label {
+  min-width: 190px;
+  margin-top: 0;
+  text-align: center;
+}
+
+.scheduler-period-nav button {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: white;
+  color: #2563eb;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.scheduler-period-nav button:hover {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
 .scheduler-toolbar p {
   margin: 5px 0 0;
   color: #64748b;
@@ -793,7 +834,7 @@
   overflow: hidden;
 }
 
-.week-head span,
+.week-head > span,
 .week-head button {
   min-height: 38px;
   border: none;
@@ -804,6 +845,9 @@
 }
 
 .week-head button {
+  display: grid;
+  place-content: center;
+  gap: 2px;
   cursor: pointer;
 }
 
@@ -2754,6 +2798,22 @@
   font-size: 11px;
   font-weight: 800;
   cursor: pointer;
+}
+
+.day-picker button {
+  display: inline-flex;
+  min-width: 48px;
+  align-items: center;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.day-picker button small,
+.week-head button small {
+  display: block;
+  color: #94a3b8;
+  font-size: 9px;
+  font-weight: 700;
 }
 
 @keyframes event-toast-in {
