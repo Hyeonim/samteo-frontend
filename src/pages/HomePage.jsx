@@ -117,9 +117,9 @@ function HomePage() {
       <section className="data-attr">
         <div className="data-attr__inner">
           <div className="data-attr__top">
-            <span className="data-attr__label">관광 데이터 활용</span>
+            <span className="data-attr__label">한국관광콘텐츠랩 활용</span>
             <p className="data-attr__desc">
-              삼터는 한국관광공사 TourAPI를 활용하여 전국의 실시간 관광 정보를 제공합니다.
+              삼터는 한국관광콘텐츠랩 API를 활용하여 전국의 실시간 관광 정보를 제공합니다.
             </p>
           </div>
           <ul className="data-attr__chips">
@@ -129,7 +129,7 @@ function HomePage() {
             <li className="data-attr__chip">📋 시설 운영 정보</li>
           </ul>
           <p className="data-attr__source">
-            출처: 한국관광공사 Tour API · 공공데이터포털(data.go.kr)
+            출처: 한국관광콘텐츠랩 API
           </p>
         </div>
       </section>
