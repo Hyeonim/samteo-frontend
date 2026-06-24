@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../api'
+import { myPlannerApi } from '../api/myPlannerApi'
 import LoadingScreen from '../components/common/LoadingScreen'
 import { getStoredPlanners, saveStoredPlanner } from '../utils/plannerStorage'
 import { createWorkScheduleId } from '../utils/plannerSchedule'
+import { findScheduleConflict, scheduleConflictMessage } from '../utils/scheduleConflicts'
 import './ExplorePages.css'
 
 const CATEGORIES = [
@@ -107,6 +109,24 @@ function sanitizeFestival(festival) {
   return isDisplayableRegion(festival.location)
     ? festival
     : { ...festival, location: null }
+}
+
+function normalizedContentTitle(value) {
+  return String(value ?? '').trim().replace(/\s+/g, ' ').toLowerCase()
+}
+
+function contentStorageKey(content) {
+  if (content?.id != null) return `${content.contentTypeId ?? 'event'}:${content.id}`
+  return `${content?.contentTypeId ?? 'event'}:${normalizedContentTitle(content?.title)}:${content?.location ?? ''}`
+}
+
+function plannerContainsContent(planner, content) {
+  const targetKey = contentStorageKey(content)
+  const targetTitle = normalizedContentTitle(content?.title)
+  return (planner?.schedule ?? []).some((event) => (
+    event.sourceContentKey === targetKey
+    || (event.type !== 'work' && normalizedContentTitle(event.title) === targetTitle)
+  ))
 }
 
 function EventVisual({ imageUrl, title, category = '행사' }) {
@@ -256,7 +276,7 @@ export default function EventsPage() {
   const [hasNextPage, setHasNextPage] = useState(false)
   const [lastPage, setLastPage] = useState(null)
   const [planners, setPlanners] = useState(() => initialPlanners)
-  const [selectedPlannerId, setSelectedPlannerId] = useState(location.state?.plannerId ?? initialPlanners[0]?.id ?? '')
+  const [selectedPlannerId, setSelectedPlannerId] = useState(String(location.state?.plannerId ?? initialPlanners[0]?.id ?? ''))
   const [regionFilter, setRegionFilter] = useState('all')
   const [selectedRegions, setSelectedRegions] = useState([])
   const [regionMenuOpen, setRegionMenuOpen] = useState(false)
@@ -267,7 +287,36 @@ export default function EventsPage() {
   const [mode, setMode] = useState('single')
   const [startTime, setStartTime] = useState('18:00')
   const [endTime, setEndTime] = useState('20:00')
-  const [notice, setNotice] = useState('')
+  const [toast, setToast] = useState('')
+  const [saving, setSaving] = useState(false)
+  const toastTimerRef = useRef(null)
+
+  useEffect(() => () => {
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current)
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    myPlannerApi.getAll()
+      .then((response) => {
+        if (cancelled) return
+        const serverPlanners = response?.data ?? []
+        if (!Array.isArray(serverPlanners) || serverPlanners.length === 0) return
+        setPlanners(serverPlanners)
+        setSelectedPlannerId((current) => {
+          const selected = serverPlanners.find((planner) => String(planner.id) === String(current))
+          return String(selected?.id ?? serverPlanners[0].id)
+        })
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+
+  const showToast = (message) => {
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current)
+    setToast(message)
+    toastTimerRef.current = window.setTimeout(() => setToast(''), 2800)
+  }
 
   useEffect(() => {
     setLoading(true)
@@ -305,7 +354,7 @@ export default function EventsPage() {
   const activeCategoryLabel = CATEGORY_CONFIG[category].label
 
   const selectedPlanner = useMemo(
-    () => planners.find((planner) => planner.id === selectedPlannerId) ?? null,
+    () => planners.find((planner) => String(planner.id) === String(selectedPlannerId)) ?? null,
     [planners, selectedPlannerId]
   )
 
@@ -316,13 +365,18 @@ export default function EventsPage() {
   ), [activeContents])
 
   const visibleContents = useMemo(() => {
-    if (regionFilter === 'all') {
-      if (selectedRegions.length === 0) return activeContents
-      return activeContents.filter((item) => selectedRegions.some((region) => matchesRegion(item, region)))
-    }
-    const region = regionFilter === 'planner' ? recommendedRegion : regionFilter
-    return activeContents.filter((item) => matchesRegion(item, region))
-  }, [activeContents, regionFilter, recommendedRegion, selectedRegions])
+    const regionMatched = regionFilter === 'all'
+      ? (selectedRegions.length === 0
+          ? activeContents
+          : activeContents.filter((item) => selectedRegions.some((region) => matchesRegion(item, region))))
+      : activeContents.filter((item) => matchesRegion(
+          item,
+          regionFilter === 'planner' ? recommendedRegion : regionFilter
+        ))
+
+    if (!selectedPlanner) return regionMatched
+    return regionMatched.filter((content) => !plannerContainsContent(selectedPlanner, content))
+  }, [activeContents, regionFilter, recommendedRegion, selectedPlanner, selectedRegions])
 
   const activeRegionLabel = regionFilter === 'all'
     ? (selectedRegions.length > 0 ? `${selectedRegions.length}개 지역` : '전체 지역')
@@ -338,12 +392,31 @@ export default function EventsPage() {
     selectedFestival ? dateRange(selectedFestival.startDate, selectedFestival.endDate) : []
   ), [selectedFestival])
 
+  const addDisabledReason = useMemo(() => {
+    if (!selectedPlanner) return '이벤트를 담을 플래너를 먼저 선택해 주세요.'
+    if (!selectedFestival) return ''
+    const dates = mode === 'all' ? festivalDates : dateRange(selectedDate, selectedDate)
+    if (dates.length === 0) return '플래너에 담을 날짜를 선택해 주세요.'
+    if (!startTime || !endTime || endTime <= startTime) return '종료 시간은 시작 시간보다 늦어야 합니다.'
+
+    for (const date of dates) {
+      const candidate = {
+        dateKey: toDateKey(date),
+        day: scheduleDayFromDate(date),
+        start: startTime,
+        end: endTime,
+      }
+      const conflict = findScheduleConflict(selectedPlanner.schedule, candidate)
+      if (conflict) return scheduleConflictMessage(conflict, candidate)
+    }
+    return ''
+  }, [endTime, festivalDates, mode, selectedDate, selectedFestival, selectedPlanner, startTime])
+
   const openAddModal = (festival) => {
     const dates = dateRange(festival.startDate, festival.endDate)
     setSelectedFestival(festival)
     setSelectedDate(dates[0] ? toDateKey(dates[0]) : toDateKey(new Date()))
     setMode('single')
-    setNotice('')
   }
 
   const openDetailModal = async (content) => {
@@ -378,8 +451,14 @@ export default function EventsPage() {
     setSelectedRegions((prev) => prev.filter((item) => item !== region))
   }
 
-  const addToPlanner = () => {
+  const addToPlanner = async () => {
     if (!selectedPlanner || !selectedFestival) return
+    if (addDisabledReason) return
+    if (plannerContainsContent(selectedPlanner, selectedFestival)) {
+      setSelectedFestival(null)
+      showToast('이미 선택한 플래너에 담긴 이벤트입니다.')
+      return
+    }
     const dates = mode === 'all' ? festivalDates : dateRange(selectedDate, selectedDate)
     if (dates.length === 0) return
 
@@ -398,16 +477,32 @@ export default function EventsPage() {
       end: endTime,
       color: '#8b5cf6',
       memo: `${selectedFestival.location ?? ''} ${selectedFestival.address ?? ''}`.trim(),
+      sourceContentKey: contentStorageKey(selectedFestival),
+      sourceContentId: selectedFestival.id ?? null,
+      sourceContentTypeId: selectedFestival.contentTypeId ?? null,
     }))
 
-    const saved = saveStoredPlanner({
+    const plannerToSave = {
       ...selectedPlanner,
       schedule: mergeSchedule(selectedPlanner, events),
-    })
-    const next = getStoredPlanners()
-    setPlanners(next)
-    setSelectedPlannerId(saved.id)
-    setNotice('플래너에 이벤트를 담았습니다.')
+    }
+
+    setSaving(true)
+    try {
+      const response = await myPlannerApi.update(selectedPlanner.id, plannerToSave)
+      const saved = response?.data ?? plannerToSave
+      saveStoredPlanner(saved)
+      setPlanners((prev) => prev.map((planner) => (
+        String(planner.id) === String(saved.id) ? saved : planner
+      )))
+      setSelectedPlannerId(String(saved.id))
+      setSelectedFestival(null)
+      showToast('플래너에 성공적으로 담겼습니다!')
+    } catch {
+      showToast('플래너에 담지 못했습니다. 잠시 후 다시 시도해 주세요.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const detailCommon = detailData.common ?? {}
@@ -454,16 +549,6 @@ export default function EventsPage() {
                   ? `${selectedRegions.join(', ')} 지역의 이벤트를 모아 보여드려요.`
                   : '보고 싶은 지역을 담아 여러 지역의 이벤트를 한 번에 비교할 수 있습니다.'}
             </p>
-          </div>
-          <div className="event-hero-stats">
-            <div>
-              <span>표시 중</span>
-              <strong>{loading ? '-' : `${visibleContents.length}건`}</strong>
-            </div>
-            <div>
-              <span>수집 범위</span>
-              <strong>{activeCategoryLabel} 전체</strong>
-            </div>
           </div>
         </section>
 
@@ -696,7 +781,7 @@ export default function EventsPage() {
               <label>
                 플래너
                 <select value={selectedPlannerId} onChange={(event) => setSelectedPlannerId(event.target.value)}>
-                  {planners.map((planner) => <option key={planner.id} value={planner.id}>{planner.title}</option>)}
+                  {planners.map((planner) => <option key={planner.id} value={String(planner.id)}>{planner.title}</option>)}
                 </select>
               </label>
 
@@ -737,13 +822,27 @@ export default function EventsPage() {
                 </label>
               </div>
 
-              {notice && <div className="event-notice">{notice}</div>}
+              {addDisabledReason && (
+                <div className="event-add-disabled-reason" role="alert">
+                  <strong>담을 수 없어요</strong>
+                  <span>{addDisabledReason}</span>
+                </div>
+              )}
 
               <div className="directory-actions editor-actions">
-                <button className="directory-btn primary" disabled={!selectedPlanner} onClick={addToPlanner}>담기</button>
+                <button className="directory-btn primary" disabled={Boolean(addDisabledReason) || saving} onClick={addToPlanner}>
+                  {saving ? '담는 중...' : '담기'}
+                </button>
                 <button className="directory-btn" onClick={() => setSelectedFestival(null)}>닫기</button>
               </div>
             </section>
+          </div>
+        )}
+        {toast && (
+          <div className="event-success-toast" role="status" aria-live="polite">
+            <span>✓</span>
+            <strong>{toast}</strong>
+            <button type="button" onClick={() => setToast('')} aria-label="알림 닫기">확인</button>
           </div>
         )}
       </div>

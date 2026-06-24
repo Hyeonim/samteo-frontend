@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { myPlannerApi } from '../api/myPlannerApi'
 import { createJobSchedule } from '../utils/plannerSchedule'
+import { findScheduleConflict, scheduleConflictMessage } from '../utils/scheduleConflicts'
 import './ExplorePages.css'
 
 const CALENDAR_DAYS = [
@@ -267,6 +268,20 @@ export default function MyPlannerPage() {
     () => eventTypes.find((type) => type.value === form.type) ?? null,
     [eventTypes, form.type]
   )
+  const editorDisabledReason = useMemo(() => {
+    if (form.locked) return '자동 생성된 근무 일정은 여기에서 수정할 수 없습니다.'
+    if (!form.title.trim()) return '일정 제목을 입력해 주세요.'
+    if (form.repeatMode === 'date' && !form.dateKey) return '일정을 등록할 날짜를 선택해 주세요.'
+    if (!form.start || !form.end || form.end <= form.start) return '종료 시간은 시작 시간보다 늦어야 합니다.'
+
+    const candidate = {
+      ...form,
+      day: Number(form.day),
+      dateKey: form.repeatMode === 'date' ? form.dateKey : null,
+    }
+    const conflict = findScheduleConflict(schedule, candidate, editingId)
+    return scheduleConflictMessage(conflict, candidate)
+  }, [editingId, form, schedule])
 
   const getDefaultDateKey = (day = selectedDay) => (
     month.cells.find((cell) => cell?.day === Number(day))?.dateKey ?? toDateKey(new Date())
@@ -506,7 +521,7 @@ export default function MyPlannerPage() {
   }
 
   const saveEvent = () => {
-    if (!activePlanner || !form.title.trim()) return
+    if (!activePlanner || editorDisabledReason) return
     const start = toMinutes(form.start, 0)
     const end = toMinutes(form.end, start + 60)
     const matchingWorkColor = schedule.find((event) => (
@@ -1113,9 +1128,9 @@ export default function MyPlannerPage() {
                         메모
                         <textarea value={form.memo} onChange={(event) => setForm((prev) => ({ ...prev, memo: event.target.value }))} disabled={form.locked} />
                       </label>
-                      {form.locked && <p className="editor-hint">자동 생성된 근무 일정입니다. 실제 근무시간 수정 기능은 이후 일자리 상세 편집으로 확장할 수 있습니다.</p>}
+                      {editorDisabledReason && <p className="editor-validation-message">{editorDisabledReason}</p>}
                       <div className="directory-actions editor-actions">
-                        <button className="directory-btn primary" onClick={saveEvent} disabled={form.locked}>일정 저장</button>
+                        <button className="directory-btn primary" onClick={saveEvent} disabled={Boolean(editorDisabledReason)}>일정 저장</button>
                         <button className="directory-btn" onClick={() => startCreate(Number(form.day))}>새 일정</button>
                         <button className="directory-btn danger" onClick={deleteEvent} disabled={!editingId || form.locked}>삭제</button>
                       </div>
