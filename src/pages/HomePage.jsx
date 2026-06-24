@@ -112,6 +112,27 @@ function HomePage() {
           </button>
         </section>
       )}
+
+      {/* Data Attribution */}
+      <section className="data-attr">
+        <div className="data-attr__inner">
+          <div className="data-attr__top">
+            <span className="data-attr__label">관광 데이터 활용</span>
+            <p className="data-attr__desc">
+              삼터는 한국관광공사 TourAPI를 활용하여 전국의 실시간 관광 정보를 제공합니다.
+            </p>
+          </div>
+          <ul className="data-attr__chips">
+            <li className="data-attr__chip">🎪 지역 축제 · 행사</li>
+            <li className="data-attr__chip">🏔️ 관광 명소</li>
+            <li className="data-attr__chip">🍽️ 지역 음식점</li>
+            <li className="data-attr__chip">📋 시설 운영 정보</li>
+          </ul>
+          <p className="data-attr__source">
+            출처: 한국관광공사 Tour API · 공공데이터포털(data.go.kr)
+          </p>
+        </div>
+      </section>
     </div>
   )
 }

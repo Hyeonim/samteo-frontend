@@ -236,6 +236,68 @@
   box-shadow: 0 6px 20px rgba(0,0,0,0.2);
 }
 
+/* ── Data Attribution ── */
+.data-attr {
+  background: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+  padding: 2.5rem 2rem;
+  text-align: center;
+}
+
+.data-attr__inner {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.data-attr__top {
+  margin-bottom: 1.25rem;
+}
+
+.data-attr__label {
+  display: inline-block;
+  background: #ede9fe;
+  color: #6d28d9;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.data-attr__desc {
+  font-size: 0.9rem;
+  color: #374151;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.data-attr__chips {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.data-attr__chip {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  padding: 0.3rem 0.875rem;
+  font-size: 0.82rem;
+  color: #4b5563;
+  font-weight: 500;
+}
+
+.data-attr__source {
+  font-size: 0.76rem;
+  color: #9ca3af;
+  margin: 0;
+}
+
 /* ── Mobile Responsive ── */
 @media (max-width: 640px) {
   .hero {
@@ -262,6 +324,19 @@
 
   .cta-banner__title {
     font-size: 1.4rem;
+  }
+
+  .data-attr {
+    padding: 2rem 1.25rem;
+  }
+
+  .data-attr__chips {
+    gap: 0.375rem;
+  }
+
+  .data-attr__chip {
+    font-size: 0.78rem;
+    padding: 0.25rem 0.7rem;
   }
 }
 
