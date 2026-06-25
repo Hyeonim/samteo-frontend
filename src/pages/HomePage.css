@@ -138,6 +138,22 @@
   transform: translateY(-2px);
 }
 
+.btn-guide {
+  border-color: #dbeafe;
+  color: #2563eb;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 2px 10px rgba(37, 99, 235, 0.08);
+  padding: 0.8rem 1rem;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  box-shadow: none;
+}
+
+.btn-guide:hover {
+  border-color: #2563eb;
+  color: #1d4ed8;
+}
+
 /* ── Features ── */
 .features {
   padding: 5rem 2rem;

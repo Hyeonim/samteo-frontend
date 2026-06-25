@@ -82,6 +82,12 @@ function HomePage() {
     setShowOnboardingGuide(false)
   }
 
+  function reopenOnboardingGuide() {
+    localStorage.removeItem(onboardingStorageKey)
+    setShowTypeModal(false)
+    setShowOnboardingGuide(true)
+  }
+
   return (
     <div className="home">
       {showOnboardingGuide && !showTypeModal && (
@@ -116,6 +122,9 @@ function HomePage() {
                 <button className="btn-primary" onClick={() => setShowTypeModal(true)}>
                   내 플래너 시작하기
                 </button>
+                <button className="btn-secondary btn-guide" onClick={reopenOnboardingGuide}>
+                  가이드
+                </button>
               </>
             ) : (
               <>
@@ -124,6 +133,9 @@ function HomePage() {
                 </button>
                 <button className="btn-secondary" onClick={() => navigate('/register')}>
                   회원가입
+                </button>
+                <button className="btn-secondary btn-guide" onClick={reopenOnboardingGuide}>
+                  가이드
                 </button>
               </>
             )}
