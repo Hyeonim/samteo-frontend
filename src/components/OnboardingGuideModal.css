@@ -88,8 +88,14 @@
 .ogm-shot-wrap {
   position: relative;
   width: min(760px, 100%);
-  aspect-ratio: 1260 / 970;
+  aspect-ratio: var(--ogm-shot-ratio);
   margin: 0 auto;
+  overflow: visible;
+}
+
+.ogm-shot-frame {
+  position: absolute;
+  inset: 0;
   overflow: hidden;
   border: 8px solid #ffffff;
   border-radius: 8px;
@@ -125,247 +131,150 @@
   z-index: 5;
   display: grid;
   gap: 2px;
-  max-width: 172px;
-  border: 2px solid #111827;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.95);
-  color: #111827;
-  padding: 8px 10px;
-  box-shadow: 4px 5px 0 rgba(17, 24, 39, 0.16);
+  max-width: 184px;
+  border: 0;
+  border-radius: 13px 18px 12px 16px;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)),
+    color-mix(in srgb, var(--ogm-accent), white 84%);
+  color: #172033;
+  padding: 10px 12px;
+  box-shadow:
+    0 8px 18px rgba(15, 23, 42, 0.12),
+    2px 3px 0 color-mix(in srgb, var(--ogm-accent), white 56%);
   transform: rotate(var(--note-rotate, -2deg));
 }
 
-.ogm-note strong {
-  font-size: 14px;
-  font-weight: 900;
-  line-height: 1.15;
-}
-
-.ogm-note span {
-  color: #4b5563;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.25;
-}
-
-.ogm-sketch-arrow {
+.ogm-note::before {
+  content: '';
   position: absolute;
-  width: 86px;
-  height: 52px;
+  inset: 4px;
+  border: 3px solid color-mix(in srgb, var(--ogm-accent), #111827 34%);
+  border-radius: 16px 11px 15px 12px;
+  opacity: 0.82;
   pointer-events: none;
 }
 
-.ogm-sketch-arrow::before {
+.ogm-note::after {
   content: '';
   position: absolute;
-  inset: 8px 9px 8px 0;
-  border-top: 4px solid var(--ogm-accent);
+  inset: 9px 7px 7px 10px;
+  border-top: 2px solid rgba(255, 255, 255, 0.72);
   border-radius: 50%;
-  transform: rotate(var(--arrow-rotate, 0deg));
+  transform: rotate(-2deg);
+  pointer-events: none;
 }
 
-.ogm-sketch-arrow::after {
-  content: '';
+.ogm-note strong {
+  position: relative;
+  z-index: 1;
+  color: #111827;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.15;
+  text-shadow:
+    0.5px 0 color-mix(in srgb, var(--ogm-accent), #111827 35%),
+    -0.4px 0 rgba(17, 24, 39, 0.22);
+}
+
+.ogm-note span {
+  position: relative;
+  z-index: 1;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.25;
+  text-shadow: 0.4px 0 rgba(55, 65, 81, 0.28);
+}
+
+.ogm-arrow-layer {
   position: absolute;
-  width: 14px;
-  height: 14px;
-  border-right: 4px solid var(--ogm-accent);
-  border-bottom: 4px solid var(--ogm-accent);
-  transform: rotate(var(--arrow-head, -45deg));
+  inset: 0;
+  z-index: 4;
+  overflow: visible;
+  pointer-events: none;
+  color: var(--ogm-accent);
 }
 
-.ogm-sketch-arrow--down {
-  left: 18px;
-  top: 100%;
-  --arrow-rotate: 20deg;
-  --arrow-head: 42deg;
+.ogm-arrow-layer marker path {
+  fill: currentColor;
 }
 
-.ogm-sketch-arrow--down::after {
-  right: 2px;
-  bottom: 1px;
-}
-
-.ogm-sketch-arrow--up {
-  left: 18px;
-  bottom: 100%;
-  --arrow-rotate: -20deg;
-  --arrow-head: -138deg;
-}
-
-.ogm-sketch-arrow--up::after {
-  right: 2px;
-  top: 2px;
-}
-
-.ogm-sketch-arrow--left {
-  right: 94%;
-  top: 16px;
-  --arrow-rotate: 184deg;
-  --arrow-head: 135deg;
-}
-
-.ogm-sketch-arrow--left::after {
-  left: 0;
-  bottom: 9px;
-}
-
-.ogm-sketch-arrow--right {
-  left: 94%;
-  top: 15px;
-  --arrow-rotate: 4deg;
-  --arrow-head: -45deg;
-}
-
-.ogm-sketch-arrow--right::after {
-  right: 0;
-  bottom: 9px;
-}
-
-.ogm-note--type-short {
-  left: 18%;
-  top: 50%;
+.ogm-sketch-path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.7));
+  vector-effect: non-scaling-stroke;
 }
 
 .ogm-note--type-long {
-  right: 18%;
-  top: 50%;
   --note-rotate: 2deg;
 }
 
-.ogm-note--planner-step {
-  left: 13%;
-  top: 9%;
-}
-
 .ogm-note--planner-search {
-  left: 8%;
-  top: 31%;
   --note-rotate: 1deg;
 }
 
 .ogm-note--planner-next {
-  right: 2%;
-  top: 19%;
   --note-rotate: 2deg;
 }
 
 .ogm-note--planner-jobs-mode {
-  left: 10%;
-  top: 29%;
   --note-rotate: 2deg;
 }
 
-.ogm-note--planner-jobs-card {
-  left: 34%;
-  bottom: 10%;
-}
-
 .ogm-note--planner-jobs-next {
-  right: 2%;
-  top: 19%;
   --note-rotate: -1deg;
 }
 
 .ogm-note--accommodation-route {
-  left: 15%;
-  top: 38%;
   --note-rotate: 2deg;
 }
 
-.ogm-note--accommodation-list {
-  left: 10%;
-  bottom: 13%;
-}
-
 .ogm-note--accommodation-map {
-  right: 12%;
-  bottom: 22%;
   --note-rotate: -1deg;
 }
 
-.ogm-note--budget-summary {
-  left: 19%;
-  bottom: 12%;
-}
-
 .ogm-note--budget-chart {
-  right: 26%;
-  top: 50%;
   --note-rotate: 2deg;
 }
 
 .ogm-note--budget-next {
-  right: 2%;
-  top: 19%;
   --note-rotate: -1deg;
 }
 
-.ogm-note--save-preview {
-  left: 15%;
-  top: 34%;
-}
-
 .ogm-note--save-calendar {
-  left: 18%;
-  bottom: 14%;
   --note-rotate: 2deg;
 }
 
 .ogm-note--save-button {
-  right: 2%;
-  top: 19%;
   --note-rotate: -1deg;
 }
 
 .ogm-note--planner-overview-list {
-  left: 7%;
-  top: 26%;
   --note-rotate: 2deg;
 }
 
-.ogm-note--planner-overview-budget {
-  right: 19%;
-  top: 29%;
-}
-
 .ogm-note--planner-overview-calendar {
-  left: 44%;
-  bottom: 18%;
   --note-rotate: -1deg;
 }
 
 .ogm-note--planner-day-cell {
-  left: 59%;
-  bottom: 26%;
   --note-rotate: 2deg;
 }
 
-.ogm-note--planner-day-modal {
-  right: 25%;
-  top: 34%;
-}
-
 .ogm-note--planner-day-add {
-  right: 25%;
-  top: 52%;
   --note-rotate: -1deg;
 }
 
-.ogm-note--planner-edit-calendar {
-  left: 39%;
-  bottom: 23%;
-}
-
 .ogm-note--planner-edit-panel {
-  right: 2%;
-  top: 25%;
   --note-rotate: -1deg;
 }
 
 .ogm-note--planner-edit-color {
-  right: 10%;
-  bottom: 14%;
   --note-rotate: 2deg;
 }
 
@@ -517,9 +426,8 @@
     font-size: 11px;
   }
 
-  .ogm-sketch-arrow {
-    width: 58px;
-    height: 38px;
+  .ogm-sketch-path {
+    stroke-width: 1.25;
   }
 
   .ogm-footer {
@@ -555,7 +463,7 @@
     transform: none;
   }
 
-  .ogm-sketch-arrow {
+  .ogm-arrow-layer {
     display: none;
   }
 

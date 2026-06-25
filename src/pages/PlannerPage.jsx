@@ -6,6 +6,7 @@ import Step2Jobs from '../components/wizard/Step2Jobs'
 import Step3Accommodation from '../components/wizard/Step3Accommodation'
 import Step4Budget from '../components/wizard/Step4Budget'
 import Step5Planner from '../components/wizard/Step5Planner'
+import OnboardingGuideModal from '../components/OnboardingGuideModal'
 import { myPlannerApi } from '../api/myPlannerApi'
 import { createJobSchedule, createPlannerId } from '../utils/plannerSchedule'
 import './PlannerPage.css'
@@ -13,6 +14,13 @@ import './PlannerPage.css'
 const TOTAL = 5
 const FIXED_EXPENSES = 380000
 const MAX_COMPARISON_JOBS = 3
+const STEP_GUIDE_INDEX = {
+  1: 1,
+  2: 2,
+  3: 3,
+  4: 4,
+  5: 5,
+}
 
 const DEFAULT_HOTEL = {
   id: null,
@@ -95,6 +103,8 @@ export default function PlannerPage() {
   const [selectedHotelsByJobId, setSelectedHotelsByJobId] = useState({})
   const [draftPlannerId] = useState(() => createPlannerId())
   const [saving, setSaving] = useState(false)
+  const [showStepGuide, setShowStepGuide] = useState(Boolean(location.state?.showGuide))
+  const [guideInitialIndex, setGuideInitialIndex] = useState(STEP_GUIDE_INDEX[currentStep] ?? 1)
 
   function selectCity(cityId, cityName) {
     setSelectedCity(cityId)
@@ -174,6 +184,11 @@ export default function PlannerPage() {
     if (next < 1 || next > TOTAL) return
     setCurrentStep(next)
     window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function openStepGuide() {
+    setGuideInitialIndex(STEP_GUIDE_INDEX[currentStep] ?? 1)
+    setShowStepGuide(true)
   }
 
   const buildPlannerDraft = useCallback((createdAt = new Date().toISOString()) => {
@@ -293,7 +308,19 @@ export default function PlannerPage() {
 
   return (
     <div className="planner-wizard">
+      {showStepGuide && (
+        <OnboardingGuideModal
+          initialIndex={guideInitialIndex}
+          onClose={() => setShowStepGuide(false)}
+        />
+      )}
       <div className="wizard-inner">
+        <div className="wizard-guide-bar">
+          <button className="wizard-guide-button" type="button" onClick={openStepGuide}>
+            <span aria-hidden="true">📘</span>
+            가이드
+          </button>
+        </div>
         <StepIndicator currentStep={currentStep} total={TOTAL} />
         <div className="wizard-nav">
           <button

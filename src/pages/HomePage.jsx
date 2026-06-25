@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import OnboardingGuideModal from '../components/OnboardingGuideModal'
@@ -52,17 +52,7 @@ function HomePage() {
     const userKey = user?.id ?? user?.email ?? user?.name ?? 'guest'
     return `${ONBOARDING_STORAGE_PREFIX}:${userKey}`
   }, [user])
-  const [showOnboardingGuide, setShowOnboardingGuide] = useState(() => (
-    shouldShowOnboardingGuide(onboardingStorageKey)
-  ))
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setShowOnboardingGuide(shouldShowOnboardingGuide(onboardingStorageKey))
-    }, 0)
-
-    return () => window.clearTimeout(timer)
-  }, [onboardingStorageKey])
+  const [showOnboardingGuide, setShowOnboardingGuide] = useState(false)
 
   function handlePlannerTypeSelect(type) {
     setShowTypeModal(false)
@@ -75,24 +65,35 @@ function HomePage() {
       JSON.stringify({ hiddenUntil: Date.now() + ONBOARDING_HIDE_DAY_MS })
     )
     setShowOnboardingGuide(false)
+    setShowTypeModal(true)
   }
 
   function hideOnboardingForever() {
     localStorage.setItem(onboardingStorageKey, JSON.stringify({ hideForever: true }))
     setShowOnboardingGuide(false)
+    setShowTypeModal(true)
   }
 
-  function reopenOnboardingGuide() {
-    localStorage.removeItem(onboardingStorageKey)
-    setShowTypeModal(false)
-    setShowOnboardingGuide(true)
+  function openPlannerStartFlow() {
+    if (shouldShowOnboardingGuide(onboardingStorageKey)) {
+      setShowTypeModal(false)
+      setShowOnboardingGuide(true)
+      return
+    }
+
+    setShowTypeModal(true)
+  }
+
+  function closeOnboardingGuide() {
+    setShowOnboardingGuide(false)
+    setShowTypeModal(true)
   }
 
   return (
     <div className="home">
       {showOnboardingGuide && !showTypeModal && (
         <OnboardingGuideModal
-          onClose={() => setShowOnboardingGuide(false)}
+          onClose={closeOnboardingGuide}
           onHideForDay={hideOnboardingForDay}
           onHideForever={hideOnboardingForever}
         />
@@ -119,11 +120,8 @@ function HomePage() {
             {isLoggedIn ? (
               <>
                 <span className="hero__welcome">{user.name}님, 환영해요!</span>
-                <button className="btn-primary" onClick={() => setShowTypeModal(true)}>
+                <button className="btn-primary" onClick={openPlannerStartFlow}>
                   내 플래너 시작하기
-                </button>
-                <button className="btn-secondary btn-guide" onClick={reopenOnboardingGuide}>
-                  가이드
                 </button>
               </>
             ) : (
@@ -133,9 +131,6 @@ function HomePage() {
                 </button>
                 <button className="btn-secondary" onClick={() => navigate('/register')}>
                   회원가입
-                </button>
-                <button className="btn-secondary btn-guide" onClick={reopenOnboardingGuide}>
-                  가이드
                 </button>
               </>
             )}
