@@ -2,9 +2,6 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { api } from '../../api'
 import CandidatePairChip from './CandidatePairChip'
 
-const ODSAY_KEY = import.meta.env.VITE_ODSAY_API_KEY ?? ''
-const ODSAY_BASE = 'https://api.odsay.com/v1/api'
-
 const DEFAULT_MAP_POINT = { lat: 35.8714, lng: 128.6014 }
 
 const META_REGION_CENTERS = {
@@ -53,31 +50,19 @@ function resolveJobPoint(job) {
   return META_REGION_CENTERS[regionId] ?? null
 }
 
-// ODsay를 브라우저에서 직접 호출 (브라우저 Origin 헤더로 URI 인증 통과)
 async function fetchTransitRoute(accommodation, job) {
-  const params = new URLSearchParams({
-    SX: accommodation.lng,
-    SY: accommodation.lat,
-    EX: job.lng ?? job.longitude,
-    EY: job.lat ?? job.latitude,
-    OPT: 0,
-    SearchType: 0,
-    SearchPathType: 0,
-    lang: 0,
-    output: 'json',
-    apiKey: ODSAY_KEY,
+  return api.post('/api/planner/transit-routes', {
+    startLatitude: accommodation.lat,
+    startLongitude: accommodation.lng,
+    endLatitude: job.lat ?? job.latitude,
+    endLongitude: job.lng ?? job.longitude,
   })
-  const res = await fetch(`${ODSAY_BASE}/searchPubTransPathT?${params}`)
-  if (!res.ok) throw new Error(`ODsay HTTP ${res.status}`)
-  return res.json()
 }
 
 async function fetchLane(mapObj) {
-  const params = new URLSearchParams({ mapObject: mapObj, output: 'json', apiKey: ODSAY_KEY })
-  const res = await fetch(`${ODSAY_BASE}/loadLane?${params}`)
-  if (!res.ok) throw new Error(`ODsay loadLane HTTP ${res.status}`)
-  return res.json()
+  return api.get(`/api/planner/load-lane?mapObject=${encodeURIComponent(mapObj)}`)
 }
+
 
 
 export default function Step3Accommodation({
@@ -397,13 +382,9 @@ export default function Step3Accommodation({
     const walkInfo = walkable ? { walk: true, distKm, walkTimeMin } : null
     setRouteInfoByMode({ transit: null, walk: walkInfo })
 
-    // 도보 polyline (직선)
+    // 도보: 지도 표시 없이 시간 정보만 저장
     if (walkable) {
-      const walkCoords = [
-        { x: hotelPoint.lng, y: hotelPoint.lat },
-        { x: activeJobPoint.lng, y: activeJobPoint.lat },
-      ]
-      drawPolylineForMode(walkCoords, '#94A3B8', true, 'walk')
+      setRouteInfoByMode((prev) => ({ ...prev, walk: { walk: true, distKm, walkTimeMin } }))
     }
 
     // 대중교통 조회
@@ -415,37 +396,30 @@ export default function Step3Accommodation({
         )
         if (cancelled) return
 
-        // ODsay 직접 호출 → routeRes가 바로 ODsay 응답
-        const odsay = routeRes
-        const errNode = odsay.error
-        const errObj = Array.isArray(errNode) ? errNode[0] : (errNode && typeof errNode === 'object' ? errNode : null)
-        if (errObj) {
-          const msg = errObj.message ?? String(errObj.code ?? '알 수 없는 오류')
-          setRouteInfoByMode((prev) => ({ ...prev, transit: { error: `경로 조회 실패: ${msg}` } }))
-          return
-        }
-        if (errNode && errNode !== false) {
-          setRouteInfoByMode((prev) => ({ ...prev, transit: { error: '경로 조회 실패' } }))
-          return
-        }
-
-        if (!odsay.result?.path?.length) {
+        // 백엔드 ApiResponse 언래핑
+        const transit = routeRes.data
+        if (!transit.raw || !transit.raw.result?.path?.length) {
           setRouteInfoByMode((prev) => ({
             ...prev,
-            transit: { error: '대중교통 경로를 찾을 수 없습니다' },
+            transit: { error: '이 구간의 대중교통 경로가 없습니다' },
           }))
+          // 도보 가능하면 자동 전환
+          if (walkable) {
+            handleTransportModeChange('walk')
+          }
           return
         }
 
+        const odsay = transit.raw
         const best = odsay.result.path[0]
         const { totalTime, payment, busTransitCount, subwayTransitCount } = best.info
 
         // loadLane으로 실제 경로 폴리라인 그리기 (best.info.mapObj 사용)
         if (best.info?.mapObj) {
           try {
-            const laneData = await fetchLane(best.info.mapObj)
+            const laneRes = await fetchLane(best.info.mapObj)
             if (cancelled) return
-            const lanes = laneData.result?.lane ?? []
+            const lanes = laneRes.data?.result?.lane ?? []
             for (const lane of lanes) {
               const color = lane.class === 1 ? '#3B82F6' : '#10B981'
               const coords = lane.section?.flatMap((s) => s.graphPos ?? []) ?? []
