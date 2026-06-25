@@ -317,8 +317,7 @@ export default function PlannerPage() {
       <div className="wizard-inner">
         <div className="wizard-guide-bar">
           <button className="wizard-guide-button" type="button" onClick={openStepGuide}>
-            <span aria-hidden="true">📘</span>
-            가이드
+            <span aria-hidden="true">🔎</span><span>가이드</span>
           </button>
         </div>
         <StepIndicator currentStep={currentStep} total={TOTAL} />

@@ -20,7 +20,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 0;
   border: 1px solid #dbeafe;
   border-radius: 10px;
   background: #ffffff;
