@@ -147,7 +147,13 @@
 }
 .region-card:hover { transform: translateY(-5px); box-shadow: 0 10px 32px rgba(0,0,0,0.16); }
 .region-card.selected { border-color: #3B82F6; box-shadow: 0 0 0 4px #BFDBFE; }
-.rg-bg { position: absolute; inset: 0; transition: transform 0.4s; }
+.rg-bg {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-size: cover;
+  transition: transform 0.4s;
+}
 .region-card:hover .rg-bg { transform: scale(1.06); }
 .rg-overlay {
   position: absolute;

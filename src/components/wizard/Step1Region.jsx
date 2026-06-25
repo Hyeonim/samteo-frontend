@@ -10,6 +10,64 @@ const CARD_BACKGROUNDS = [
   'linear-gradient(160deg, #1a3320, #2d6040)',
 ]
 
+const REGION_IMAGES = {
+  서울: '/regions/seoul.png',
+  서울특별시: '/regions/seoul.png',
+  인천: '/regions/incheon.png',
+  인천광역시: '/regions/incheon.png',
+  대전: '/regions/daejeon.png',
+  대전광역시: '/regions/daejeon.png',
+  대구: '/regions/daegu.png',
+  대구광역시: '/regions/daegu.png',
+  광주: '/regions/gwangju.png',
+  광주광역시: '/regions/gwangju.png',
+  부산: '/regions/busan.png',
+  부산광역시: '/regions/busan.png',
+  울산: '/regions/ulsan.png',
+  울산광역시: '/regions/ulsan.png',
+  세종: '/regions/sejong.png',
+  세종특별자치시: '/regions/sejong.png',
+  경기: '/regions/gyeonggi-map.png',
+  경기도: '/regions/gyeonggi-map.png',
+  강원: '/regions/gangwon-map.png',
+  강원도: '/regions/gangwon-map.png',
+  강원특별자치도: '/regions/gangwon-map.png',
+  충북: '/regions/chungbuk-map.png',
+  충청북도: '/regions/chungbuk-map.png',
+  충남: '/regions/chungnam-map.png',
+  충청남도: '/regions/chungnam-map.png',
+  경북: '/regions/gyeongbuk-map.png',
+  경상북도: '/regions/gyeongbuk-map.png',
+  경남: '/regions/gyeongnam-map.png',
+  경상남도: '/regions/gyeongnam-map.png',
+  전북: '/regions/jeonbuk-map.png',
+  전라북도: '/regions/jeonbuk-map.png',
+  전북특별자치도: '/regions/jeonbuk-map.png',
+  전남: '/regions/jeonnam-map.png',
+  전라남도: '/regions/jeonnam-map.png',
+  제주: '/regions/jeju-map.png',
+  제주도: '/regions/jeju-map.png',
+  제주특별자치도: '/regions/jeju-map.png',
+}
+
+function normalizeRegionName(name) {
+  return String(name ?? '').replace(/\s/g, '')
+}
+
+function getRegionImage(name) {
+  const normalizedName = normalizeRegionName(name)
+  return REGION_IMAGES[normalizedName] ?? null
+}
+
+function getRegionCardStyle(region, index) {
+  const image = getRegionImage(region.name)
+  if (image) {
+    return { backgroundImage: `url("${image}")` }
+  }
+
+  return { background: CARD_BACKGROUNDS[index % CARD_BACKGROUNDS.length] }
+}
+
 function unwrap(res) {
   return res.data ?? res.result ?? res
 }
@@ -73,7 +131,7 @@ export default function Step1Region({ selectedRegion, onSelect }) {
               className={`region-card${selectedRegion === region.id ? ' selected' : ''}`}
               onClick={() => onSelect(region.id, region.name)}
             >
-              <div className="rg-bg" style={{ background: CARD_BACKGROUNDS[index % CARD_BACKGROUNDS.length] }} />
+              <div className="rg-bg" style={getRegionCardStyle(region, index)} />
               <div className="rg-overlay" />
               <div className="rg-badge rg-badge-blue">지역 선택</div>
               <div className="rg-info">
