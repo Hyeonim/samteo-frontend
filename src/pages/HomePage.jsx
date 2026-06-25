@@ -1,8 +1,23 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import OnboardingGuideModal from '../components/OnboardingGuideModal'
 import PlannerTypeModal from '../components/PlannerTypeModal'
 import './HomePage.css'
+
+const ONBOARDING_HIDE_DAY_MS = 24 * 60 * 60 * 1000
+const ONBOARDING_STORAGE_PREFIX = 'samteo:onboarding-guide'
+
+function shouldShowOnboardingGuide(storageKey) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(storageKey) ?? '{}')
+    const hiddenUntil = Number(saved.hiddenUntil ?? 0)
+
+    return !saved.hideForever && hiddenUntil <= Date.now()
+  } catch {
+    return true
+  }
+}
 
 const FEATURES = [
   {
@@ -33,13 +48,49 @@ function HomePage() {
   const { isLoggedIn, user } = useAuth()
   const [showTypeModal, setShowTypeModal] = useState(false)
 
+  const onboardingStorageKey = useMemo(() => {
+    const userKey = user?.id ?? user?.email ?? user?.name ?? 'guest'
+    return `${ONBOARDING_STORAGE_PREFIX}:${userKey}`
+  }, [user])
+  const [showOnboardingGuide, setShowOnboardingGuide] = useState(() => (
+    shouldShowOnboardingGuide(onboardingStorageKey)
+  ))
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setShowOnboardingGuide(shouldShowOnboardingGuide(onboardingStorageKey))
+    }, 0)
+
+    return () => window.clearTimeout(timer)
+  }, [onboardingStorageKey])
+
   function handlePlannerTypeSelect(type) {
     setShowTypeModal(false)
     navigate('/planner', { state: { plannerType: type } })
   }
 
+  function hideOnboardingForDay() {
+    localStorage.setItem(
+      onboardingStorageKey,
+      JSON.stringify({ hiddenUntil: Date.now() + ONBOARDING_HIDE_DAY_MS })
+    )
+    setShowOnboardingGuide(false)
+  }
+
+  function hideOnboardingForever() {
+    localStorage.setItem(onboardingStorageKey, JSON.stringify({ hideForever: true }))
+    setShowOnboardingGuide(false)
+  }
+
   return (
     <div className="home">
+      {showOnboardingGuide && !showTypeModal && (
+        <OnboardingGuideModal
+          onClose={() => setShowOnboardingGuide(false)}
+          onHideForDay={hideOnboardingForDay}
+          onHideForever={hideOnboardingForever}
+        />
+      )}
       {showTypeModal && (
         <PlannerTypeModal
           onSelect={handlePlannerTypeSelect}
