@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { communityApi } from '../api/communityApi'
 import { useAuth } from '../context/AuthContext'
 import './ExplorePages.css'
 
@@ -19,6 +20,7 @@ const TEXT = {
   close: '\uB2EB\uAE30',
   cancel: '\uCDE8\uC18C',
   required: '\uC774\uBBF8\uC9C0\uB098 \uAE00 \uC911 \uD558\uB098\uB294 \uC785\uB825\uD574\uC57C \uAC8C\uC2DC\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.',
+  submitFailed: '\uAC8C\uC2DC\uAE00\uC744 \uC800\uC7A5\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uB85C\uADF8\uC778 \uC0C1\uD0DC\uC640 \uB124\uD2B8\uC6CC\uD06C\uB97C \uD655\uC778\uD574\uC8FC\uC138\uC694.',
   count: '\uC7A5',
 }
 
@@ -42,6 +44,15 @@ function renderComposerPreview(text) {
   })
 }
 
+function ChevronIcon({ direction }) {
+  const points = direction === 'prev' ? '15 18 9 12 15 6' : '9 18 15 12 9 6'
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <polyline points={points} />
+    </svg>
+  )
+}
+
 export default function CommunityCreatePage() {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -49,14 +60,20 @@ export default function CommunityCreatePage() {
   const [caption, setCaption] = useState('')
   const [images, setImages] = useState([])
   const [activeImageIndex, setActiveImageIndex] = useState(0)
+  const [previewImageIndex, setPreviewImageIndex] = useState(0)
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [error, setError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleImageChange = async (event) => {
     const files = Array.from(event.target.files || [])
     if (files.length === 0) return
 
-    const previews = await Promise.all(files.map(readFileAsDataUrl))
+    const previews = await Promise.all(files.map(async (file) => ({
+      id: `${file.name}-${file.lastModified}-${crypto.randomUUID()}`,
+      file,
+      preview: await readFileAsDataUrl(file),
+    })))
     setImages((prev) => {
       const next = [...prev, ...previews]
       setActiveImageIndex(prev.length)
@@ -82,7 +99,20 @@ export default function CommunityCreatePage() {
     setActiveImageIndex((index) => Math.min(images.length - 1, index + 1))
   }
 
-  const submit = (event) => {
+  const openPreview = () => {
+    setPreviewImageIndex(Math.min(activeImageIndex, Math.max(images.length - 1, 0)))
+    setIsPreviewOpen(true)
+  }
+
+  const showPrevPreviewImage = () => {
+    setPreviewImageIndex((index) => Math.max(0, index - 1))
+  }
+
+  const showNextPreviewImage = () => {
+    setPreviewImageIndex((index) => Math.min(images.length - 1, index + 1))
+  }
+
+  const submit = async (event) => {
     event.preventDefault()
 
     if (!caption.trim() && images.length === 0) {
@@ -90,21 +120,19 @@ export default function CommunityCreatePage() {
       return
     }
 
-    navigate('/community', {
-      state: {
-        newPost: {
-          id: Date.now(),
-          author: authorName,
-          elapsed: '\uBC29\uAE08',
-          caption: caption.trim(),
-          images,
-          imageCountText: images.length > 0 ? `${images.length}${TEXT.count}` : '\uC774\uBBF8\uC9C0 \uC5C6\uC74C',
-          likes: 0,
-          comments: 0,
-          saves: 0,
-        },
-      },
-    })
+    try {
+      setIsSubmitting(true)
+      setError('')
+      await communityApi.createPost({
+        content: caption.trim(),
+        images: images.map((image) => image.file),
+      })
+      navigate('/community')
+    } catch {
+      setError(TEXT.submitFailed)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -121,7 +149,7 @@ export default function CommunityCreatePage() {
               <input type="file" accept="image/*" multiple onChange={handleImageChange} />
               {images.length > 0 ? (
                 <>
-                  <img src={images[activeImageIndex]} alt="" />
+                  <img src={images[activeImageIndex]?.preview} alt="" />
                   <button
                     className="community-image-remove"
                     type="button"
@@ -174,7 +202,7 @@ export default function CommunityCreatePage() {
                       className={activeImageIndex === index ? 'active' : ''}
                       onClick={() => setActiveImageIndex(index)}
                       aria-label={`${index + 1}`}
-                      key={`${image.slice(0, 24)}-${index}`}
+                      key={image.id}
                     />
                   ))}
                 </div>
@@ -197,8 +225,8 @@ export default function CommunityCreatePage() {
           <div className="community-create-actions">
             <span>{caption.length}/600</span>
             <div>
-              <button className="secondary" type="button" onClick={() => setIsPreviewOpen(true)}>{TEXT.preview}</button>
-              <button type="submit">{TEXT.submit}</button>
+              <button className="secondary" type="button" onClick={openPreview}>{TEXT.preview}</button>
+              <button type="submit" disabled={isSubmitting}>{TEXT.submit}</button>
             </div>
           </div>
         </form>
@@ -227,9 +255,44 @@ export default function CommunityCreatePage() {
               {images.length > 0 && (
                 <div
                   className="community-photo has-image"
-                  style={{ backgroundImage: `url(${images[0]})` }}
+                  style={{ backgroundImage: `url(${images[previewImageIndex]?.preview})` }}
                 >
-                  {images.length > 1 && <span>{images.length}</span>}
+                  {images.length > 1 && (
+                    <>
+                      <button
+                        className="community-photo-nav prev"
+                        type="button"
+                        onClick={showPrevPreviewImage}
+                        aria-label={TEXT.prevImage}
+                        disabled={previewImageIndex === 0}
+                      >
+                        <ChevronIcon direction="prev" />
+                      </button>
+                      <button
+                        className="community-photo-nav next"
+                        type="button"
+                        onClick={showNextPreviewImage}
+                        aria-label={TEXT.nextImage}
+                        disabled={previewImageIndex === images.length - 1}
+                      >
+                        <ChevronIcon direction="next" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {images.length > 1 && (
+                <div className="community-feed-dots" aria-label="uploaded images">
+                  {images.map((image, index) => (
+                    <button
+                      type="button"
+                      className={previewImageIndex === index ? 'active' : ''}
+                      onClick={() => setPreviewImageIndex(index)}
+                      aria-label={`${index + 1}`}
+                      key={image.id}
+                    />
+                  ))}
                 </div>
               )}
 

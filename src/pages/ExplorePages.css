@@ -3519,6 +3519,93 @@
   text-shadow: 0 2px 14px rgba(15, 23, 42, 0.28);
 }
 
+.community-photo-nav {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  transform: translateY(-50%);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 50%;
+  background: rgba(241, 245, 249, 0.78);
+  color: #0f172a;
+  line-height: 1;
+  opacity: 0;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.14);
+  backdrop-filter: blur(10px);
+  transition: opacity 0.18s ease, background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.community-photo-nav svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.community-photo-nav.prev svg {
+  transform: translateX(-1px);
+}
+
+.community-photo-nav.next svg {
+  transform: translateX(1px);
+}
+
+.community-photo-nav.prev {
+  left: 14px;
+}
+
+.community-photo-nav.next {
+  right: 14px;
+}
+
+.community-photo:hover .community-photo-nav,
+.community-photo:focus-within .community-photo-nav {
+  opacity: 1;
+}
+
+.community-photo-nav:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.18);
+  transform: translateY(-50%) scale(1.04);
+}
+
+.community-photo-nav:disabled {
+  opacity: 0 !important;
+  cursor: default;
+}
+
+.community-feed-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 14px 2px;
+}
+
+.community-feed-dots button {
+  width: 7px;
+  height: 7px;
+  border: 0;
+  border-radius: 999px;
+  background: #cbd5e1;
+  padding: 0;
+  cursor: pointer;
+  transition: width 0.18s ease, background 0.18s ease;
+}
+
+.community-feed-dots button.active {
+  width: 18px;
+  background: #2563eb;
+}
+
 .community-card-actions {
   display: flex;
   align-items: center;
@@ -3581,20 +3668,6 @@
 .community-inline-tag {
   color: #2563eb;
   font-weight: 900;
-}
-
-.community-image-strip {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
-  padding: 8px 14px 0;
-}
-
-.community-image-strip img {
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  border-radius: 6px;
-  object-fit: cover;
 }
 
 .community-load {
@@ -3665,7 +3738,7 @@
   border-radius: 8px;
   background: linear-gradient(135deg, #7c3aed, #2563eb);
   color: #fff;
-  padding: 13px 18px;
+  padding: 12px 20px;
   font-size: 14px;
   font-weight: 900;
   cursor: pointer;
