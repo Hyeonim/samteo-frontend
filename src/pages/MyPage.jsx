@@ -174,6 +174,7 @@ export default function MyPage() {
   const navigate = useNavigate()
   const { user, isLoggedIn, updateUser } = useAuth()
   const [profile, setProfile] = useState({ email: '', name: '', provider: '' })
+  const [profileStats, setProfileStats] = useState({ postCount: 0, followerCount: 0, followingCount: 0 })
   const [posts, setPosts] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [message, setMessage] = useState('')
@@ -182,10 +183,12 @@ export default function MyPage() {
   const initial = useMemo(() => (profile.name || user?.name || '회').slice(0, 1), [profile.name, user?.name])
   const providerView = useMemo(() => getProviderView(profile.provider), [profile.provider])
   const stats = useMemo(() => {
-    const likeCount = posts.reduce((sum, post) => sum + post.likeCount, 0)
-    const commentCount = posts.reduce((sum, post) => sum + post.commentCount, 0)
-    return { postCount: posts.length, likeCount, commentCount }
-  }, [posts])
+    return {
+      postCount: profileStats.postCount || posts.length,
+      followerCount: profileStats.followerCount || 0,
+      followingCount: profileStats.followingCount || 0,
+    }
+  }, [posts.length, profileStats])
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -197,14 +200,20 @@ export default function MyPage() {
       try {
         setIsLoading(true)
         setError('')
-        const [me, postPage] = await Promise.all([
-          userApi.getMe(),
+        const me = await userApi.getMe()
+        const [profileDetail, postPage] = await Promise.all([
+          userApi.getProfile(me.userId),
           communityApi.getMyPosts({ page: 0, size: 30 }),
         ])
         setProfile({
           email: me.email || '',
           name: me.name || '',
           provider: me.provider || '',
+        })
+        setProfileStats({
+          postCount: profileDetail.postCount || 0,
+          followerCount: profileDetail.followerCount || 0,
+          followingCount: profileDetail.followingCount || 0,
         })
         updateUser(me)
         setPosts((postPage.posts || []).map(normalizePost))
@@ -259,8 +268,8 @@ export default function MyPage() {
                 <p>{profile.email}</p>
                 <div className="mypage-stats" aria-label="community stats">
                   <div><strong>{stats.postCount}</strong><span>게시글</span></div>
-                  <div><strong>{stats.likeCount}</strong><span>좋아요</span></div>
-                  <div><strong>{stats.commentCount}</strong><span>댓글</span></div>
+                  <div><strong>{stats.followingCount}</strong><span>팔로우</span></div>
+                  <div><strong>{stats.followerCount}</strong><span>팔로워</span></div>
                 </div>
                 <div className="mypage-provider-line">
                   <span>{TEXT.provider}</span>

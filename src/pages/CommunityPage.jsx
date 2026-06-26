@@ -65,6 +65,7 @@ function mapCommunityPost(post) {
 
   return {
     id: post.id,
+    authorId: post.authorId,
     author: post.authorName || '\uD68C\uC6D0',
     elapsed: formatElapsed(post.createdAt),
     caption: post.content || '',
@@ -123,6 +124,7 @@ function CommentIcon() {
 }
 
 function FeedCard({ post, compact, onPostUpdated, onCommentCreated }) {
+  const navigate = useNavigate()
   const hasImages = post.images.length > 0
   const [activeImageIndex, setActiveImageIndex] = useState(0)
   const [commentsOpen, setCommentsOpen] = useState(false)
@@ -206,10 +208,17 @@ function FeedCard({ post, compact, onPostUpdated, onCommentCreated }) {
   return (
     <article className={`community-feed-card${compact ? ' compact' : ''}`}>
       <header className="community-card-head">
-        <div className="community-avatar">{post.author.slice(0, 1).toUpperCase()}</div>
+        <button
+          className="community-author-profile"
+          type="button"
+          onClick={() => navigate(`/users/${post.authorId}`)}
+          aria-label={`${post.author} 프로필 보기`}
+        >
+          <span className="community-avatar">{post.author.slice(0, 1).toUpperCase()}</span>
+        </button>
         <div>
           <div className="community-author-row">
-            <strong>{post.author}</strong>
+            <button type="button" onClick={() => navigate(`/users/${post.authorId}`)}>{post.author}</button>
             <span>{post.elapsed}</span>
           </div>
           <p>{post.imageCountText}</p>

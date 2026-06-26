@@ -3429,6 +3429,23 @@
   font-weight: 900;
 }
 
+.community-card-head .community-author-profile {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.community-card-head .community-author-profile:hover .community-avatar,
+.community-card-head .community-author-profile:focus-visible .community-avatar {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
+}
+
 .community-author-row {
   display: flex;
   min-width: 0;
@@ -3445,6 +3462,26 @@
   white-space: nowrap;
 }
 
+.community-author-row button {
+  min-width: 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: #0f172a;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 900;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.community-author-row button:hover,
+.community-author-row button:focus-visible {
+  color: #2563eb;
+}
+
 .community-author-row span {
   color: #64748b;
   font-size: 12px;
@@ -3459,7 +3496,7 @@
   font-weight: 700;
 }
 
-.community-card-head button {
+.community-card-head > button:last-child {
   border: 0;
   background: transparent;
   color: #0f172a;

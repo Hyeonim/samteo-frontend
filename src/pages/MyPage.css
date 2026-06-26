@@ -159,6 +159,18 @@
   box-shadow: 0 10px 22px rgba(37, 99, 235, 0.18);
 }
 
+.mypage-profile-title-row button.secondary {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  box-shadow: none;
+}
+
+.mypage-profile-title-row button:disabled {
+  opacity: 0.62;
+  cursor: default;
+}
+
 .mypage-profile-main > p {
   overflow: hidden;
   margin: 0;
