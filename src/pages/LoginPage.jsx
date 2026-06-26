@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { api } from '../api'
 import './LoginPage.css'
 
-const KAKAO_REST_API_KEY = import.meta.env.VITE_KAKAO_REST_API_KEY
+const KAKAO_CLIENT_ID = import.meta.env.VITE_KAKAO_CLIENT_ID
 const KAKAO_REDIRECT_URI = import.meta.env.VITE_KAKAO_REDIRECT_URI || 'http://localhost:8080/login/oauth2/code/kakao'
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 const GOOGLE_REDIRECT_URI = import.meta.env.VITE_GOOGLE_REDIRECT_URI || 'http://localhost:8080/login/oauth2/code/google'
@@ -19,14 +19,14 @@ function LoginPage() {
   const [loading, setLoading] = useState(false)
 
   const handleKakaoLogin = () => {
-    if (!KAKAO_REST_API_KEY) {
-      setError('카카오 로그인 설정이 비어 있습니다. 프론트엔드의 .env.local 파일에 VITE_KAKAO_REST_API_KEY를 설정해 주세요.')
+    if (!KAKAO_CLIENT_ID) {
+      setError('카카오 로그인 설정이 비어 있습니다. 프론트엔드의 .env.local 파일에 VITE_KAKAO_CLIENT_ID를 설정해 주세요.')
       return
     }
 
     const kakaoAuthUrl =
       `https://kauth.kakao.com/oauth/authorize` +
-      `?client_id=${KAKAO_REST_API_KEY}` +
+      `?client_id=${KAKAO_CLIENT_ID}` +
       `&redirect_uri=${encodeURIComponent(KAKAO_REDIRECT_URI)}` +
       `&response_type=code`
     window.location.href = kakaoAuthUrl

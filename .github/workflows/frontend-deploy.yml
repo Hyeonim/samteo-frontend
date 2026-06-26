@@ -17,7 +17,7 @@ jobs:
     - name: Vite 환경 변수 파일(.env) 생성
       run: |
         echo "VITE_API_URL=https://www.samteo.org" > .env
-        echo "VITE_KAKAO_REST_API_KEY=${{ secrets.KAKAO_REST_API_KEY }}" >> .env
+        echo "VITE_KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }}" >> .env
         echo "VITE_KAKAO_MAP_KEY=${{ secrets.KAKAO_MAP_KEY }}" >> .env
         echo "VITE_KAKAO_REDIRECT_URI=https://www.samteo.org/login/oauth2/code/kakao" >> .env
         echo "VITE_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env
