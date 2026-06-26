@@ -95,6 +95,7 @@
   font-weight: 700;
   color: white;
   cursor: pointer;
+  white-space: nowrap;
   transition: opacity 0.15s, transform 0.1s;
 }
 
@@ -107,6 +108,120 @@
   font-size: 0.875rem;
   font-weight: 600;
   color: #374151;
+}
+
+.nav-profile {
+  position: relative;
+}
+
+.nav-profile-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 999px;
+  background: #fff;
+  color: #374151;
+  padding: 0.32rem 0.75rem 0.32rem 0.38rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, color 0.15s;
+}
+
+.nav-profile-trigger:hover,
+.nav-profile-trigger[aria-expanded="true"] {
+  border-color: #7c3aed;
+  color: #5b21b6;
+  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.12);
+}
+
+.nav-profile-avatar {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+.nav-profile-name {
+  max-width: 92px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-profile-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 120;
+  min-width: 220px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.16);
+}
+
+.nav-profile-summary {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 0.7rem;
+  align-items: center;
+  padding: 0.95rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.nav-profile-summary .nav-profile-avatar {
+  width: 36px;
+  height: 36px;
+}
+
+.nav-profile-summary strong {
+  display: block;
+  overflow: hidden;
+  color: #111827;
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-profile-summary p {
+  overflow: hidden;
+  margin: 0.15rem 0 0;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-profile-menu button {
+  width: 100%;
+  border: 0;
+  background: #fff;
+  color: #374151;
+  padding: 0.8rem 0.95rem;
+  text-align: left;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.nav-profile-menu button + button {
+  border-top: 1px solid #f1f5f9;
+}
+
+.nav-profile-menu button:hover {
+  background: #f8fafc;
+  color: #2563eb;
 }
 
 /* ── Hamburger button ── */
@@ -192,6 +307,38 @@
   flex-direction: column;
   gap: 0.625rem;
   padding: 1rem 1.5rem 1.25rem;
+}
+
+.nav-mobile-profile {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 0.8rem;
+}
+
+.nav-mobile-profile .nav-profile-avatar {
+  width: 36px;
+  height: 36px;
+}
+
+.nav-mobile-profile strong {
+  color: #111827;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.nav-mobile-profile p {
+  overflow: hidden;
+  margin: 0.1rem 0 0;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .nav-btn-start--full {

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import './Header.css'
@@ -7,8 +7,13 @@ function Header() {
   const navigate = useNavigate()
   const { user, isLoggedIn, logout } = useAuth()
   const [open, setOpen] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const profileRef = useRef(null)
 
-  const close = () => setOpen(false)
+  const close = () => {
+    setOpen(false)
+    setProfileOpen(false)
+  }
 
   const handleLogout = () => {
     logout()
@@ -20,6 +25,19 @@ function Header() {
     navigate(path)
     close()
   }
+
+  useEffect(() => {
+    if (!profileOpen) return undefined
+
+    const handlePointerDown = (event) => {
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setProfileOpen(false)
+      }
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    return () => document.removeEventListener('pointerdown', handlePointerDown)
+  }, [profileOpen])
 
   const links = [
     { to: '/jobs', label: '일자리' },
@@ -65,14 +83,34 @@ function Header() {
 
         <div className="nav-actions">
           {isLoggedIn ? (
-            <>
-              <span className="nav-user-name">{user.name}님</span>
-              <button className="nav-btn-login" onClick={handleLogout}>로그아웃</button>
-            </>
+            <div className="nav-profile" ref={profileRef}>
+              <button
+                className="nav-profile-trigger"
+                type="button"
+                onClick={() => setProfileOpen((value) => !value)}
+                aria-haspopup="menu"
+                aria-expanded={profileOpen}
+              >
+                <span className="nav-profile-avatar">{user.name?.slice(0, 1) || '회'}</span>
+                <span className="nav-profile-name">{user.name}님</span>
+              </button>
+              {profileOpen && (
+                <div className="nav-profile-menu" role="menu">
+                  <div className="nav-profile-summary">
+                    <span className="nav-profile-avatar">{user.name?.slice(0, 1) || '회'}</span>
+                    <div>
+                      <strong>{user.name}님</strong>
+                      <p>{user.email || '삼터 회원'}</p>
+                    </div>
+                  </div>
+                  <button type="button" role="menuitem" onClick={() => go('/mypage')}>마이페이지</button>
+                  <button type="button" role="menuitem" onClick={handleLogout}>로그아웃</button>
+                </div>
+              )}
+            </div>
           ) : (
-            <button className="nav-btn-login" onClick={() => navigate('/login')}>로그인</button>
+            <button className="nav-btn-start" onClick={() => navigate('/login')}>로그인 / 회원가입</button>
           )}
-          <button className="nav-btn-start" onClick={() => navigate('/planner')}>시작하기</button>
         </div>
 
         <button
@@ -102,15 +140,21 @@ function Header() {
             <div className="nav-mobile-actions">
               {isLoggedIn ? (
                 <>
-                  <span className="nav-user-name">{user.name}님</span>
+                  <div className="nav-mobile-profile">
+                    <span className="nav-profile-avatar">{user.name?.slice(0, 1) || '회'}</span>
+                    <div>
+                      <strong>{user.name}님</strong>
+                      <p>{user.email || '삼터 회원'}</p>
+                    </div>
+                  </div>
+                  <button className="nav-btn-login" onClick={() => go('/mypage')}>마이페이지</button>
                   <button className="nav-btn-login" onClick={handleLogout}>로그아웃</button>
                 </>
               ) : (
-                <button className="nav-btn-login" onClick={() => go('/login')}>로그인</button>
+                <button className="nav-btn-start nav-btn-start--full" onClick={() => go('/login')}>
+                  로그인 / 회원가입
+                </button>
               )}
-              <button className="nav-btn-start nav-btn-start--full" onClick={() => go('/planner')}>
-                시작하기
-              </button>
             </div>
           </div>
           <div className="nav-overlay" onClick={close} />
