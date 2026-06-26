@@ -44,6 +44,7 @@ function Header() {
     { to: '/events', label: '이벤트' },
     ...(isLoggedIn ? [{ to: '/my-planner', label: '내 플래너' }] : []),
     { to: '/community', label: '커뮤니티' },
+    ...(user?.role === 'ADMIN' ? [{ to: '/admin', label: '관리자' }] : []),
   ]
 
   return (

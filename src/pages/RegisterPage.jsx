@@ -17,7 +17,7 @@ function RegisterPage() {
     setLoading(true)
     try {
       const res = await api.post('/api/auth/register', form)
-      login(res.token, { userId: res.userId, email: res.email, name: res.name })
+      login(res.token, { userId: res.userId, email: res.email, name: res.name, role: res.role })
       navigate('/')
     } catch (err) {
       if (err.message.includes('409')) {

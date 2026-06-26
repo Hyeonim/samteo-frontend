@@ -34,7 +34,7 @@ function LoginPage() {
     setLoading(true)
     try {
       const res = await api.post('/api/auth/login', form)
-      login(res.token, { userId: res.userId, email: res.email, name: res.name })
+      login(res.token, { userId: res.userId, email: res.email, name: res.name, role: res.role })
       navigate('/')
     } catch {
       setError('이메일 또는 비밀번호가 올바르지 않습니다.')
