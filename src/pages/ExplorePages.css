@@ -3609,25 +3609,56 @@
 .community-card-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   padding: 12px 14px 6px;
 }
 
 .community-card-actions div {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 
 .community-card-actions button {
-  border: 0;
-  border-radius: 999px;
-  background: #f8fafc;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
   color: #0f172a;
-  padding: 7px 10px;
-  font-size: 12px;
-  font-weight: 900;
+  padding: 0;
   line-height: 1;
   cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease;
+}
+
+.community-card-actions button.active {
+  color: #ef4444;
+}
+
+.community-card-actions button:hover:not(:disabled) {
+  background: #f8fafc;
+  transform: translateY(-1px);
+}
+
+.community-card-actions svg {
+  width: 23px;
+  height: 23px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.community-card-actions svg .filled {
+  fill: currentColor;
+}
+
+.community-card-actions button:disabled {
+  opacity: 0.55;
+  cursor: default;
 }
 
 .community-card-copy {
@@ -3650,6 +3681,111 @@
   color: #334155 !important;
   font-size: 13px !important;
   font-weight: 900;
+}
+
+.community-comments {
+  border-top: 1px solid #e2e8f0;
+  padding: 12px 14px 14px;
+}
+
+.community-action-error,
+.community-comments-empty {
+  margin: 0 0 10px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.community-action-error {
+  color: #ef4444;
+}
+
+.community-comments-list {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.community-comment {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 9px;
+}
+
+.community-comment-avatar {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 50%;
+  background: #eef2ff;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.community-comment p {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 2px;
+}
+
+.community-comment p strong {
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.community-comment p span {
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.community-comment div div {
+  color: #334155;
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.community-comment-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.community-comment-form input {
+  min-width: 0;
+  border: 1px solid #dbe3ef;
+  border-radius: 999px;
+  padding: 10px 13px;
+  color: #0f172a;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.community-comment-form input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.community-comment-form button {
+  border: 0;
+  border-radius: 999px;
+  background: #2563eb;
+  color: #fff;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.community-comment-form button:disabled {
+  background: #cbd5e1;
+  cursor: default;
 }
 
 .community-tags {
@@ -3852,8 +3988,17 @@
 }
 
 .community-feed-card.compact .community-card-actions button {
-  padding: 7px 8px;
-  font-size: 11px;
+  width: 30px;
+  height: 30px;
+}
+
+.community-feed-card.compact .community-card-actions svg {
+  width: 20px;
+  height: 20px;
+}
+
+.community-feed-card.compact .community-comments {
+  display: none;
 }
 
 .community-empty {

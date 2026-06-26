@@ -22,12 +22,14 @@ const TEXT = {
   menu: '\uAC8C\uC2DC\uAE00 \uBA54\uB274',
   like: '\uC88B\uC544\uC694',
   comment: '\uB313\uAE00',
-  share: '\uACF5\uC720',
-  save: '\uC800\uC7A5',
   likeCount: '\uC88B\uC544\uC694',
   commentCount: '\uB313\uAE00',
   prevImage: '\uC774\uC804 \uC774\uBBF8\uC9C0',
   nextImage: '\uB2E4\uC74C \uC774\uBBF8\uC9C0',
+  commentPlaceholder: '\uB313\uAE00\uC744 \uB0A8\uACA8\uBCF4\uC138\uC694.',
+  commentSubmit: '\uB4F1\uB85D',
+  commentsEmpty: '\uC544\uC9C1 \uB313\uAE00\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.',
+  actionFailed: '\uCC98\uB9AC\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uB85C\uADF8\uC778 \uC0C1\uD0DC\uB97C \uD655\uC778\uD574\uC8FC\uC138\uC694.',
 }
 
 function toAssetUrl(url) {
@@ -74,6 +76,15 @@ function mapCommunityPost(post) {
   }
 }
 
+function mapCommunityComment(comment) {
+  return {
+    id: comment.id,
+    author: comment.authorName || '\uD68C\uC6D0',
+    content: comment.content || '',
+    elapsed: formatElapsed(comment.createdAt),
+  }
+}
+
 function renderCaption(text) {
   return text.split(/(\s+)/).map((part, index) => {
     if (part.startsWith('#') && part.length > 1) {
@@ -92,9 +103,35 @@ function ChevronIcon({ direction }) {
   )
 }
 
-function FeedCard({ post, compact }) {
+function HeartIcon({ filled }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M20.8 4.6c-2-2-5.2-2-7.2 0L12 6.2l-1.6-1.6c-2-2-5.2-2-7.2 0s-2 5.2 0 7.2L12 20.6l8.8-8.8c2-2 2-5.2 0-7.2Z"
+        className={filled ? 'filled' : ''}
+      />
+    </svg>
+  )
+}
+
+function CommentIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.6 8.6 0 0 1-3.9-.9L3 20.5l1.6-4.7A8.1 8.1 0 0 1 3 11.5 8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5Z" />
+    </svg>
+  )
+}
+
+function FeedCard({ post, compact, onPostUpdated, onCommentCreated }) {
   const hasImages = post.images.length > 0
   const [activeImageIndex, setActiveImageIndex] = useState(0)
+  const [commentsOpen, setCommentsOpen] = useState(false)
+  const [comments, setComments] = useState([])
+  const [commentsLoaded, setCommentsLoaded] = useState(false)
+  const [commentText, setCommentText] = useState('')
+  const [isLikeLoading, setIsLikeLoading] = useState(false)
+  const [isCommentLoading, setIsCommentLoading] = useState(false)
+  const [actionError, setActionError] = useState('')
   const hasMultipleImages = post.images.length > 1
 
   const showPrevImage = () => {
@@ -103,6 +140,67 @@ function FeedCard({ post, compact }) {
 
   const showNextImage = () => {
     setActiveImageIndex((index) => Math.min(post.images.length - 1, index + 1))
+  }
+
+  const toggleLike = async () => {
+    if (isLikeLoading) return
+
+    try {
+      setIsLikeLoading(true)
+      setActionError('')
+      const response = post.liked
+        ? await communityApi.unlikePost(post.id)
+        : await communityApi.likePost(post.id)
+      onPostUpdated(mapCommunityPost(response))
+    } catch {
+      setActionError(TEXT.actionFailed)
+    } finally {
+      setIsLikeLoading(false)
+    }
+  }
+
+  const loadComments = async () => {
+    if (commentsLoaded || isCommentLoading) return
+
+    try {
+      setIsCommentLoading(true)
+      setActionError('')
+      const response = await communityApi.getComments({ postId: post.id, page: 0, size: 30 })
+      setComments((response.comments || []).map(mapCommunityComment))
+      setCommentsLoaded(true)
+    } catch {
+      setActionError(TEXT.actionFailed)
+    } finally {
+      setIsCommentLoading(false)
+    }
+  }
+
+  const toggleComments = async () => {
+    const nextOpen = !commentsOpen
+    setCommentsOpen(nextOpen)
+    if (nextOpen) {
+      await loadComments()
+    }
+  }
+
+  const submitComment = async (event) => {
+    event.preventDefault()
+    const content = commentText.trim()
+    if (!content || isCommentLoading) return
+
+    try {
+      setIsCommentLoading(true)
+      setActionError('')
+      const response = await communityApi.createComment({ postId: post.id, content })
+      setComments((prev) => [...prev, mapCommunityComment(response)])
+      setCommentsLoaded(true)
+      setCommentText('')
+      onCommentCreated(post.id)
+    } catch {
+      setActionError(TEXT.actionFailed)
+    } finally {
+      setIsCommentLoading(false)
+    }
   }
 
   return (
@@ -165,11 +263,19 @@ function FeedCard({ post, compact }) {
 
       <div className="community-card-actions">
         <div>
-          <button type="button" aria-label={TEXT.like}>{TEXT.like}</button>
-          <button type="button" aria-label={TEXT.comment}>{TEXT.comment}</button>
-          <button type="button" aria-label={TEXT.share}>{TEXT.share}</button>
+          <button
+            type="button"
+            className={post.liked ? 'active' : ''}
+            onClick={toggleLike}
+            aria-label={TEXT.like}
+            disabled={isLikeLoading}
+          >
+            <HeartIcon filled={post.liked} />
+          </button>
+          <button type="button" onClick={toggleComments} aria-label={TEXT.comment}>
+            <CommentIcon />
+          </button>
         </div>
-        <button type="button" aria-label={TEXT.save}>{TEXT.save}</button>
       </div>
 
       <div className="community-card-copy">
@@ -178,6 +284,42 @@ function FeedCard({ post, compact }) {
         </p>
         <p><strong>{post.author}</strong> {renderCaption(post.caption)}</p>
       </div>
+
+      {commentsOpen && (
+        <section className="community-comments" aria-label={TEXT.comment}>
+          {actionError && <p className="community-action-error">{actionError}</p>}
+          <div className="community-comments-list">
+            {isCommentLoading && comments.length === 0 ? (
+              <p className="community-comments-empty">{TEXT.loading}</p>
+            ) : comments.length > 0 ? (
+              comments.map((comment) => (
+                <article className="community-comment" key={comment.id}>
+                  <div className="community-comment-avatar">{comment.author.slice(0, 1).toUpperCase()}</div>
+                  <div>
+                    <p>
+                      <strong>{comment.author}</strong>
+                      <span>{comment.elapsed}</span>
+                    </p>
+                    <div>{renderCaption(comment.content)}</div>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <p className="community-comments-empty">{TEXT.commentsEmpty}</p>
+            )}
+          </div>
+          <form className="community-comment-form" onSubmit={submitComment}>
+            <input
+              value={commentText}
+              onChange={(event) => setCommentText(event.target.value)}
+              placeholder={TEXT.commentPlaceholder}
+            />
+            <button type="submit" disabled={!commentText.trim() || isCommentLoading}>
+              {TEXT.commentSubmit}
+            </button>
+          </form>
+        </section>
+      )}
     </article>
   )
 }
@@ -229,6 +371,16 @@ export default function CommunityPage() {
     return () => observer.disconnect()
   }, [hasNext, isLoading, loadPosts, page])
 
+  const updatePost = useCallback((updatedPost) => {
+    setPosts((prev) => prev.map((post) => (post.id === updatedPost.id ? updatedPost : post)))
+  }, [])
+
+  const increaseCommentCount = useCallback((postId) => {
+    setPosts((prev) => prev.map((post) => (
+      post.id === postId ? { ...post, comments: post.comments + 1 } : post
+    )))
+  }, [])
+
   return (
     <main className="community-page">
       <div className="community-shell">
@@ -278,7 +430,13 @@ export default function CommunityPage() {
         {posts.length > 0 ? (
           <section className={`community-feed ${viewMode === 'grid' ? 'three-col' : 'single-col'}`} aria-label="community posts">
             {posts.map((post) => (
-              <FeedCard post={post} key={post.id} compact={viewMode === 'grid'} />
+              <FeedCard
+                post={post}
+                key={post.id}
+                compact={viewMode === 'grid'}
+                onPostUpdated={updatePost}
+                onCommentCreated={increaseCommentCount}
+              />
             ))}
           </section>
         ) : !isLoading && (
