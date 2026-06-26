@@ -83,6 +83,22 @@ function getProviderView(provider) {
       icon: 'E',
     }
   }
+  if (normalized === 'google') {
+    return {
+      label: '구글 로그인',
+      desc: '구글 계정으로 가입한 회원입니다.',
+      className: 'google',
+      icon: 'G',
+    }
+  }
+  if (normalized === 'naver') {
+    return {
+      label: '네이버 로그인',
+      desc: '네이버 계정으로 가입한 회원입니다.',
+      className: 'naver',
+      icon: 'N',
+    }
+  }
   return {
     label: provider || '가입 방식 미확인',
     desc: '가입 제공자 정보를 확인하고 있습니다.',

@@ -106,26 +106,69 @@
 
 .login-divider span { color: #9ca3af; white-space: nowrap; }
 
-.kakao-btn {
+.social-login-group {
+  display: grid;
+  width: 100%;
+  gap: 0.6rem;
+}
+
+.social-btn {
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.6rem;
-  background: #fee500;
-  color: #3c1e1e;
-  border: none;
+  border: 1.5px solid transparent;
   border-radius: 12px;
   padding: 0.875rem 1.5rem;
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s, transform 0.1s;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
 }
 
-.kakao-btn:hover { background: #fdd800; transform: translateY(-1px); }
-.kakao-btn:active { transform: translateY(0); }
-.kakao-icon { flex-shrink: 0; }
+.social-btn:hover { transform: translateY(-1px); }
+.social-btn:active { transform: translateY(0); }
+.social-btn.kakao {
+  background: #fee500;
+  color: #3c1e1e;
+}
+.social-btn.kakao:hover { background: #fdd800; }
+.social-btn.google {
+  background: #fff;
+  color: #1f2937;
+  border-color: #e5e7eb;
+}
+.social-btn.google:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+.social-btn.naver {
+  background: #03c75a;
+  color: #fff;
+}
+.social-btn.naver:hover { background: #02b351; }
+.social-icon { flex-shrink: 0; }
+.social-google-mark,
+.social-naver-mark {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 0.82rem;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+.social-google-mark {
+  border: 1px solid #e5e7eb;
+  color: #4285f4;
+  background: #fff;
+}
+.social-naver-mark {
+  color: #03c75a;
+  background: #fff;
+}
 
 .login-register-link {
   font-size: 0.87rem;

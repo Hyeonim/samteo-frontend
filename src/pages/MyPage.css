@@ -237,6 +237,17 @@
   color: #2563eb;
 }
 
+.mypage-provider-chip.google i {
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #4285f4;
+}
+
+.mypage-provider-chip.naver i {
+  background: #03c75a;
+  color: #fff;
+}
+
 .mypage-provider-chip.default i {
   background: #f1f5f9;
   color: #475569;

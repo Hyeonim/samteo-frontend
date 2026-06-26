@@ -20,6 +20,10 @@ jobs:
         echo "VITE_KAKAO_REST_API_KEY=${{ secrets.KAKAO_REST_API_KEY }}" >> .env
         echo "VITE_KAKAO_MAP_KEY=${{ secrets.KAKAO_MAP_KEY }}" >> .env
         echo "VITE_KAKAO_REDIRECT_URI=https://www.samteo.org/login/oauth2/code/kakao" >> .env
+        echo "VITE_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env
+        echo "VITE_GOOGLE_REDIRECT_URI=https://www.samteo.org/login/oauth2/code/google" >> .env
+        echo "VITE_NAVER_CLIENT_ID=${{ secrets.NAVER_CLIENT_ID }}" >> .env
+        echo "VITE_NAVER_REDIRECT_URI=https://www.samteo.org/login/oauth2/code/naver" >> .env
 
     - name: GitHub Container Registry(GHCR) 로그인
       uses: docker/login-action@v3
