@@ -9,6 +9,7 @@ import MyPlannerPage from './pages/MyPlannerPage'
 import EventsPage from './pages/EventsPage'
 import CommunityPage from './pages/CommunityPage'
 import CommunityCreatePage from './pages/CommunityCreatePage'
+import MyPage from './pages/MyPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import OAuthCallbackPage from './pages/OAuthCallbackPage'
@@ -29,6 +30,7 @@ function App() {
           <Route path="/my-planner" element={<MyPlannerPage />} />
           <Route path="/community" element={<CommunityPage />} />
           <Route path="/community/new" element={<CommunityCreatePage />} />
+          <Route path="/mypage" element={<MyPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/oauth/callback" element={<OAuthCallbackPage />} />

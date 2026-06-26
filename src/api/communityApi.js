@@ -8,6 +8,9 @@ export const communityApi = {
   getPosts: ({ page = 0, size = 9 } = {}) => (
     api.get(`/api/community/posts?page=${page}&size=${size}`).then(unwrap)
   ),
+  getMyPosts: ({ page = 0, size = 12 } = {}) => (
+    api.get(`/api/community/posts/me?page=${page}&size=${size}`).then(unwrap)
+  ),
   getPost: (postId) => api.get(`/api/community/posts/${postId}`).then(unwrap),
   createPost: ({ content, images }) => {
     const formData = new FormData()
@@ -15,6 +18,9 @@ export const communityApi = {
     images.forEach((image) => formData.append('images', image))
     return api.form('/api/community/posts', formData).then(unwrap)
   },
+  updatePost: ({ postId, content }) => (
+    api.put(`/api/community/posts/${postId}`, { content }).then(unwrap)
+  ),
   deletePost: (postId) => api.delete(`/api/community/posts/${postId}`),
   likePost: (postId) => api.post(`/api/community/posts/${postId}/likes`, {}).then(unwrap),
   unlikePost: (postId) => api.delete(`/api/community/posts/${postId}/likes`).then(unwrap),
