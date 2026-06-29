@@ -14,6 +14,9 @@ export const communityApi = {
   getPostsByUser: ({ userId, page = 0, size = 12 }) => (
     api.get(`/api/community/posts/users/${userId}?page=${page}&size=${size}`).then(unwrap)
   ),
+  getPostsByTag: ({ tag, page = 0, size = 9 }) => (
+    api.get(`/api/community/posts/tags/${encodeURIComponent(tag)}?page=${page}&size=${size}`).then(unwrap)
+  ),
   getPost: (postId) => api.get(`/api/community/posts/${postId}`).then(unwrap),
   createPost: ({ content, images }) => {
     const formData = new FormData()

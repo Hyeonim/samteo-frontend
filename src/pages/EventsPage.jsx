@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../api'
+import { communityApi } from '../api/communityApi'
 import { myPlannerApi } from '../api/myPlannerApi'
 import LoadingScreen from '../components/common/LoadingScreen'
+import { FeedCard, mapCommunityPost } from './CommunityPage'
 import { getStoredPlanners, saveStoredPlanner } from '../utils/plannerStorage'
 import { createWorkScheduleId } from '../utils/plannerSchedule'
 import { findScheduleConflict, scheduleConflictMessage } from '../utils/scheduleConflicts'
@@ -20,6 +22,14 @@ const CATEGORY_CONFIG = {
 }
 const PAGE_SIZE = 20
 const PAGE_GROUP_SIZE = 5
+
+function eventReviewTag(content) {
+  const normalizedTitle = String(content?.title ?? '')
+    .normalize('NFKC')
+    .replace(/[^\p{L}\p{N}_]/gu, '')
+    .slice(0, 100)
+  return normalizedTitle || `이벤트${content?.id ?? ''}`
+}
 
 function pageGroupStart(currentPage) {
   return Math.floor((currentPage - 1) / PAGE_GROUP_SIZE) * PAGE_GROUP_SIZE + 1
@@ -289,6 +299,10 @@ export default function EventsPage() {
   const [endTime, setEndTime] = useState('20:00')
   const [toast, setToast] = useState('')
   const [saving, setSaving] = useState(false)
+  const [reviewContent, setReviewContent] = useState(null)
+  const [reviewPosts, setReviewPosts] = useState([])
+  const [reviewsLoading, setReviewsLoading] = useState(false)
+  const [reviewsError, setReviewsError] = useState('')
   const toastTimerRef = useRef(null)
 
   useEffect(() => () => {
@@ -434,6 +448,50 @@ export default function EventsPage() {
         ? '상세 정보를 불러오지 못했습니다.'
         : '',
     })
+  }
+
+  const openReviewModal = async (content) => {
+    setReviewContent(content)
+    setReviewPosts([])
+    setReviewsError('')
+    setReviewsLoading(true)
+    try {
+      const response = await communityApi.getPostsByTag({ tag: eventReviewTag(content), size: 9 })
+      setReviewPosts((response.posts ?? []).map(mapCommunityPost))
+    } catch {
+      setReviewsError('후기를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.')
+    } finally {
+      setReviewsLoading(false)
+    }
+  }
+
+  const moveFromReviewsToDetail = () => {
+    const content = reviewContent
+    setReviewContent(null)
+    if (content) openDetailModal(content)
+  }
+
+  const writeEventReview = () => {
+    if (!reviewContent) return
+    navigate('/community/new', {
+      state: {
+        initialContent: `#${eventReviewTag(reviewContent)} `,
+        eventId: reviewContent.id,
+        eventTitle: reviewContent.title,
+      },
+    })
+  }
+
+  const updateReviewPost = (updatedPost) => {
+    setReviewPosts((posts) => posts.map((post) => (
+      post.id === updatedPost.id ? updatedPost : post
+    )))
+  }
+
+  const increaseReviewCommentCount = (postId) => {
+    setReviewPosts((posts) => posts.map((post) => (
+      post.id === postId ? { ...post, comments: post.comments + 1 } : post
+    )))
   }
 
   const addRegionFilter = (region) => {
@@ -657,8 +715,10 @@ export default function EventsPage() {
                   <h2>{content.title}</h2>
                   <p>{content.location ?? '지역 정보 없음'}</p>
                   <div className="event-meta"><span>{content.address ?? '상세 위치 미제공'}</span></div>
+                  <span className="event-review-tag">#{eventReviewTag(content)}</span>
                 </div>
                 <div className="event-card-actions">
+                  <button className="directory-btn" onClick={() => openReviewModal(content)}>후기</button>
                   <button className="directory-btn" onClick={() => openDetailModal(content)}>자세히 보기</button>
                   <button className="directory-btn primary" onClick={() => openAddModal(content)}>플래너에 담기</button>
                 </div>
@@ -699,6 +759,54 @@ export default function EventsPage() {
               다음
             </button>
           </nav>
+        )}
+
+        {reviewContent && (
+          <div className="planner-modal-backdrop" onClick={() => setReviewContent(null)}>
+            <section className="event-review-modal" onClick={(event) => event.stopPropagation()} aria-label={`${reviewContent.title} 후기`}>
+              <div className="planner-day-modal-head">
+                <div>
+                  <p>커뮤니티 후기</p>
+                  <h2>{reviewContent.title}</h2>
+                </div>
+                <button type="button" onClick={() => setReviewContent(null)} aria-label="닫기">x</button>
+              </div>
+
+              <div className="event-review-summary">
+                <span>#{eventReviewTag(reviewContent)}</span>
+                <p>이 태그로 공유된 실제 방문 후기를 모아봤어요.</p>
+              </div>
+
+              {reviewsLoading ? (
+                <LoadingScreen message="이벤트 후기를 불러오는 중입니다" description="커뮤니티 태그를 확인하고 있습니다." />
+              ) : reviewsError ? (
+                <div className="event-detail-error">{reviewsError}</div>
+              ) : reviewPosts.length === 0 ? (
+                <div className="event-review-empty">
+                  <strong>아직 등록된 후기가 없습니다.</strong>
+                  <p>첫 번째 방문 이야기를 커뮤니티에 남겨보세요.</p>
+                </div>
+              ) : (
+                <div className="event-review-grid">
+                  {reviewPosts.map((post) => (
+                    <FeedCard
+                      post={post}
+                      key={post.id}
+                      compact
+                      commentsInCompact
+                      onPostUpdated={updateReviewPost}
+                      onCommentCreated={increaseReviewCommentCount}
+                    />
+                  ))}
+                </div>
+              )}
+
+              <footer className="event-review-actions">
+                <button className="directory-btn" type="button" onClick={writeEventReview}>후기 작성</button>
+                <button className="directory-btn primary" type="button" onClick={moveFromReviewsToDetail}>이벤트 자세히 보기</button>
+              </footer>
+            </section>
+          </div>
         )}
 
         {detailContent && (

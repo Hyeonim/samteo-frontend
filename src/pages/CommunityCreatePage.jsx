@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { communityApi } from '../api/communityApi'
 import { useAuth } from '../context/AuthContext'
 import './ExplorePages.css'
@@ -55,9 +55,10 @@ function ChevronIcon({ direction }) {
 
 export default function CommunityCreatePage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuth()
   const authorName = user?.name || 'samteo_user'
-  const [caption, setCaption] = useState('')
+  const [caption, setCaption] = useState(() => location.state?.initialContent ?? '')
   const [images, setImages] = useState([])
   const [activeImageIndex, setActiveImageIndex] = useState(0)
   const [previewImageIndex, setPreviewImageIndex] = useState(0)

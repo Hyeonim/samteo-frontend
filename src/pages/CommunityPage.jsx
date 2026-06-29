@@ -57,7 +57,7 @@ function formatElapsed(value) {
   return created.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
 }
 
-function mapCommunityPost(post) {
+export function mapCommunityPost(post) {
   const images = (post.images || [])
     .slice()
     .sort((a, b) => a.sortOrder - b.sortOrder)
@@ -123,7 +123,7 @@ function CommentIcon() {
   )
 }
 
-function FeedCard({ post, compact, onPostUpdated, onCommentCreated }) {
+export function FeedCard({ post, compact, commentsInCompact = false, onPostUpdated, onCommentCreated }) {
   const navigate = useNavigate()
   const hasImages = post.images.length > 0
   const [activeImageIndex, setActiveImageIndex] = useState(0)
@@ -206,7 +206,7 @@ function FeedCard({ post, compact, onPostUpdated, onCommentCreated }) {
   }
 
   return (
-    <article className={`community-feed-card${compact ? ' compact' : ''}`}>
+    <article className={`community-feed-card${compact ? ' compact' : ''}${commentsInCompact ? ' comments-enabled' : ''}`}>
       <header className="community-card-head">
         <button
           className="community-author-profile"

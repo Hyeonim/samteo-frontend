@@ -4038,6 +4038,10 @@
   display: none;
 }
 
+.community-feed-card.compact.comments-enabled .community-comments {
+  display: block;
+}
+
 .community-empty {
   display: grid;
   min-height: 360px;
@@ -4633,5 +4637,110 @@
   .community-create-actions > div {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Event reviews connected to community hashtags */
+.event-review-tag {
+  display: inline-block;
+  max-width: 100%;
+  margin-top: 8px;
+  overflow: hidden;
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.event-review-modal {
+  display: grid;
+  gap: 18px;
+  width: min(980px, 100%);
+  max-height: min(90vh, 860px);
+  overflow-y: auto;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+  padding: 20px;
+}
+
+.event-review-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 8px;
+  background: #eff6ff;
+  padding: 12px 14px;
+}
+
+.event-review-summary span {
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.event-review-summary p {
+  margin: 0;
+  color: #475569;
+  font-size: 13px;
+}
+
+.event-review-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.event-review-grid .community-feed-card {
+  min-width: 0;
+  box-shadow: none;
+}
+
+.event-review-grid .community-photo {
+  min-height: 0;
+}
+
+.event-review-empty {
+  display: grid;
+  min-height: 220px;
+  place-items: center;
+  align-content: center;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  color: #64748b;
+  text-align: center;
+}
+
+.event-review-empty strong {
+  color: #1e293b;
+}
+
+.event-review-empty p {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+.event-review-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 16px;
+}
+
+@media (max-width: 760px) {
+  .event-review-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .event-review-summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .event-review-actions {
+    display: grid;
+    grid-template-columns: 1fr;
   }
 }
