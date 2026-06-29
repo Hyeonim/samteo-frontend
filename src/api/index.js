@@ -22,7 +22,14 @@ async function request(path, options = {}) {
       localStorage.removeItem('user')
       window.dispatchEvent(new Event('samteo:auth-expired'))
     }
-    const error = new Error(`HTTP ${res.status}`)
+    let errorMessage = `HTTP ${res.status}`
+    try {
+      const errorBody = await res.json()
+      errorMessage = errorBody?.message || errorMessage
+    } catch {
+      // Keep the HTTP status message when the response has no JSON body.
+    }
+    const error = new Error(errorMessage)
     error.status = res.status
     throw error
   }

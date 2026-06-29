@@ -21,7 +21,70 @@ const TEXT = {
   cancel: '\uCDE8\uC18C',
   required: '\uC774\uBBF8\uC9C0\uB098 \uAE00 \uC911 \uD558\uB098\uB294 \uC785\uB825\uD574\uC57C \uAC8C\uC2DC\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.',
   submitFailed: '\uAC8C\uC2DC\uAE00\uC744 \uC800\uC7A5\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uB85C\uADF8\uC778 \uC0C1\uD0DC\uC640 \uB124\uD2B8\uC6CC\uD06C\uB97C \uD655\uC778\uD574\uC8FC\uC138\uC694.',
+  imageProcessingFailed: '\uC774\uBBF8\uC9C0\uB97C \uCC98\uB9AC\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. JPG, PNG, WebP \uD30C\uC77C\uB85C \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.',
+  uploadTooLarge: '\uC774\uBBF8\uC9C0 \uC6A9\uB7C9\uC774 \uB108\uBB34 \uD07D\uB2C8\uB2E4. \uC774\uBBF8\uC9C0 \uC218\uB97C \uC904\uC774\uAC70\uB098 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.',
   count: '\uC7A5',
+}
+
+const MAX_IMAGE_EDGE = 2048
+const OUTPUT_IMAGE_TYPE = 'image/webp'
+const OUTPUT_IMAGE_QUALITY = 0.82
+
+function canvasToBlob(canvas, type, quality) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob)
+      else reject(new Error('Image compression failed.'))
+    }, type, quality)
+  })
+}
+
+async function loadImageSource(file) {
+  if ('createImageBitmap' in window) {
+    return createImageBitmap(file, { imageOrientation: 'from-image' })
+  }
+
+  const objectUrl = URL.createObjectURL(file)
+  try {
+    const image = new Image()
+    image.decoding = 'async'
+    image.src = objectUrl
+    await image.decode()
+    return image
+  } catch (error) {
+    URL.revokeObjectURL(objectUrl)
+    throw error
+  }
+}
+
+async function optimizeImage(file) {
+  const source = await loadImageSource(file)
+  const width = source.naturalWidth || source.width
+  const height = source.naturalHeight || source.height
+  const scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(width, height))
+  const targetWidth = Math.max(1, Math.round(width * scale))
+  const targetHeight = Math.max(1, Math.round(height * scale))
+  const canvas = document.createElement('canvas')
+  canvas.width = targetWidth
+  canvas.height = targetHeight
+  const context = canvas.getContext('2d', { alpha: true })
+
+  if (!context) {
+    source.close?.()
+    if (source.src?.startsWith('blob:')) URL.revokeObjectURL(source.src)
+    throw new Error('Canvas is not available.')
+  }
+
+  context.drawImage(source, 0, 0, targetWidth, targetHeight)
+  source.close?.()
+  if (source.src?.startsWith('blob:')) URL.revokeObjectURL(source.src)
+
+  const blob = await canvasToBlob(canvas, OUTPUT_IMAGE_TYPE, OUTPUT_IMAGE_QUALITY)
+  const baseName = file.name.replace(/\.[^.]+$/, '') || 'image'
+  return new File([blob], `${baseName}.webp`, {
+    type: OUTPUT_IMAGE_TYPE,
+    lastModified: Date.now(),
+  })
 }
 
 function readFileAsDataUrl(file) {
@@ -65,23 +128,34 @@ export default function CommunityCreatePage() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isOptimizing, setIsOptimizing] = useState(false)
 
   const handleImageChange = async (event) => {
     const files = Array.from(event.target.files || [])
     if (files.length === 0) return
 
-    const previews = await Promise.all(files.map(async (file) => ({
-      id: `${file.name}-${file.lastModified}-${crypto.randomUUID()}`,
-      file,
-      preview: await readFileAsDataUrl(file),
-    })))
-    setImages((prev) => {
-      const next = [...prev, ...previews]
-      setActiveImageIndex(prev.length)
-      return next
-    })
-    setError('')
-    event.target.value = ''
+    try {
+      setIsOptimizing(true)
+      setError('')
+      const previews = await Promise.all(files.map(async (file) => {
+        const optimizedFile = await optimizeImage(file)
+        return {
+          id: `${optimizedFile.name}-${optimizedFile.lastModified}-${crypto.randomUUID()}`,
+          file: optimizedFile,
+          preview: await readFileAsDataUrl(optimizedFile),
+        }
+      }))
+      setImages((prev) => {
+        const next = [...prev, ...previews]
+        setActiveImageIndex(prev.length)
+        return next
+      })
+    } catch {
+      setError(TEXT.imageProcessingFailed)
+    } finally {
+      setIsOptimizing(false)
+      event.target.value = ''
+    }
   }
 
   const removeActiveImage = () => {
@@ -129,8 +203,8 @@ export default function CommunityCreatePage() {
         images: images.map((image) => image.file),
       })
       navigate('/community')
-    } catch {
-      setError(TEXT.submitFailed)
+    } catch (submitError) {
+      setError(submitError.status === 413 ? TEXT.uploadTooLarge : TEXT.submitFailed)
     } finally {
       setIsSubmitting(false)
     }
@@ -227,7 +301,7 @@ export default function CommunityCreatePage() {
             <span>{caption.length}/600</span>
             <div>
               <button className="secondary" type="button" onClick={openPreview}>{TEXT.preview}</button>
-              <button type="submit" disabled={isSubmitting}>{TEXT.submit}</button>
+              <button type="submit" disabled={isSubmitting || isOptimizing}>{TEXT.submit}</button>
             </div>
           </div>
         </form>
