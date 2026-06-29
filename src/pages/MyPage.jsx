@@ -173,7 +173,7 @@ function MyPostCard({ post, onUpdated, onDeleted }) {
 export default function MyPage() {
   const navigate = useNavigate()
   const { user, isLoggedIn, sessionExpired, updateUser } = useAuth()
-  const [profile, setProfile] = useState({ email: '', name: '', provider: '' })
+  const [profile, setProfile] = useState({ email: '', name: '', provider: '', providers: [] })
   const [profileStats, setProfileStats] = useState({ postCount: 0, followerCount: 0, followingCount: 0 })
   const [posts, setPosts] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -182,6 +182,10 @@ export default function MyPage() {
 
   const initial = useMemo(() => (profile.name || user?.name || '회').slice(0, 1), [profile.name, user?.name])
   const providerView = useMemo(() => getProviderView(profile.provider), [profile.provider])
+  const providerViews = useMemo(() => {
+    const providers = profile.providers?.length ? profile.providers : [profile.provider]
+    return providers.filter(Boolean).map(getProviderView)
+  }, [profile.provider, profile.providers])
   const stats = useMemo(() => {
     return {
       postCount: profileStats.postCount || posts.length,
@@ -209,6 +213,7 @@ export default function MyPage() {
           email: me.email || '',
           name: me.name || '',
           provider: me.provider || '',
+          providers: me.providers || [],
         })
         setProfileStats({
           postCount: profileDetail.postCount || 0,
@@ -273,12 +278,16 @@ export default function MyPage() {
                 </div>
                 <div className="mypage-provider-line">
                   <span>{TEXT.provider}</span>
-                  <div className={`mypage-provider-chip ${providerView.className}`}>
-                    <i>{providerView.icon}</i>
-                    <div>
-                      <strong>{providerView.label}</strong>
-                      <small>{providerView.desc}</small>
-                    </div>
+                  <div className="mypage-provider-list">
+                    {providerViews.map((view) => (
+                      <div className={`mypage-provider-chip ${view.className}`} key={view.className}>
+                        <i>{view.icon}</i>
+                        <div>
+                          <strong>{view.label}</strong>
+                          <small>{view.desc}</small>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -295,7 +304,7 @@ export default function MyPage() {
               </div>
               <div>
                 <span>{TEXT.provider}</span>
-                <strong>{providerView.label}</strong>
+                <strong>{providerViews.map((view) => view.label).join(', ') || providerView.label}</strong>
               </div>
             </section>
 

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useLocation, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../api'
+import { userApi } from '../api/userApi'
 import './LoginPage.css'
 
 const KAKAO_CLIENT_ID = import.meta.env.VITE_KAKAO_CLIENT_ID
@@ -16,7 +17,7 @@ function LoginPage() {
   const location = useLocation()
   const { login } = useAuth()
   const [form, setForm] = useState({ email: '', password: '' })
-  const [error, setError] = useState('')
+  const [error, setError] = useState(location.state?.oauthLinkMessage || '')
   const [loading, setLoading] = useState(false)
 
   const handleKakaoLogin = () => {
@@ -72,6 +73,17 @@ function LoginPage() {
     try {
       const res = await api.post('/api/auth/login', form)
       login(res.token, { userId: res.userId, email: res.email, name: res.name, role: res.role })
+      const linkToken = sessionStorage.getItem('oauth_link_token')
+      if (linkToken) {
+        const linked = await userApi.linkOAuthIdentity(linkToken)
+        sessionStorage.removeItem('oauth_link_token')
+        login(linked.token, {
+          userId: linked.userId,
+          email: linked.email,
+          name: linked.name,
+          role: linked.role,
+        })
+      }
       const returnTo = location.state?.from || sessionStorage.getItem('auth_return_to') || '/'
       sessionStorage.removeItem('auth_return_to')
       navigate(returnTo, { replace: true })

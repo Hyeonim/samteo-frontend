@@ -7,6 +7,7 @@ function unwrap(response) {
 export const userApi = {
   getMe: () => api.get('/api/users/me').then(unwrap),
   updateMe: ({ email, name }) => api.put('/api/users/me', { email, name }).then(unwrap),
+  linkOAuthIdentity: (linkToken) => api.post('/api/users/me/auth-identities/link', { linkToken }),
   getProfile: (userId) => api.get(`/api/users/${userId}/profile`).then(unwrap),
   follow: (userId) => api.post(`/api/users/${userId}/follow`, {}).then(unwrap),
   unfollow: (userId) => api.delete(`/api/users/${userId}/follow`).then(unwrap),
