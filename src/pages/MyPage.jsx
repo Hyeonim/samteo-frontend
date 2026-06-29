@@ -14,7 +14,7 @@ const TEXT = {
   profileTitle: '회원정보',
   email: '이메일',
   name: '회원명',
-  provider: '가입 방식',
+  provider: '로그인 방식',
   writePost: '새 게시글 작성',
   postTitle: '내 커뮤니티 게시글',
   noPosts: '아직 작성한 커뮤니티 게시글이 없습니다.',
@@ -70,7 +70,7 @@ function getProviderView(provider) {
   if (normalized === 'kakao') {
     return {
       label: '카카오 로그인',
-      desc: '카카오 계정으로 가입한 회원입니다.',
+      desc: '카카오 계정으로 로그인했습니다.',
       className: 'kakao',
       icon: 'K',
     }
@@ -78,7 +78,7 @@ function getProviderView(provider) {
   if (normalized === 'local') {
     return {
       label: '이메일 로그인',
-      desc: '이메일과 비밀번호로 가입한 회원입니다.',
+      desc: '이메일과 비밀번호로 로그인했습니다.',
       className: 'local',
       icon: 'E',
     }
@@ -86,7 +86,7 @@ function getProviderView(provider) {
   if (normalized === 'google') {
     return {
       label: '구글 로그인',
-      desc: '구글 계정으로 가입한 회원입니다.',
+      desc: '구글 계정으로 로그인했습니다.',
       className: 'google',
       icon: 'G',
     }
@@ -94,14 +94,14 @@ function getProviderView(provider) {
   if (normalized === 'naver') {
     return {
       label: '네이버 로그인',
-      desc: '네이버 계정으로 가입한 회원입니다.',
+      desc: '네이버 계정으로 로그인했습니다.',
       className: 'naver',
       icon: 'N',
     }
   }
   return {
-    label: provider || '가입 방식 미확인',
-    desc: '가입 제공자 정보를 확인하고 있습니다.',
+    label: provider || '로그인 방식 미확인',
+    desc: '로그인 제공자 정보를 확인하고 있습니다.',
     className: 'default',
     icon: '?',
   }
