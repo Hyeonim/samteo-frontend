@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useLocation, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../api'
 import './LoginPage.css'
@@ -13,6 +13,7 @@ const NAVER_REDIRECT_URI = import.meta.env.VITE_NAVER_REDIRECT_URI || 'http://lo
 
 function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { login } = useAuth()
   const [form, setForm] = useState({ email: '', password: '' })
   const [error, setError] = useState('')
@@ -71,7 +72,9 @@ function LoginPage() {
     try {
       const res = await api.post('/api/auth/login', form)
       login(res.token, { userId: res.userId, email: res.email, name: res.name, role: res.role })
-      navigate('/')
+      const returnTo = location.state?.from || sessionStorage.getItem('auth_return_to') || '/'
+      sessionStorage.removeItem('auth_return_to')
+      navigate(returnTo, { replace: true })
     } catch {
       setError('이메일 또는 비밀번호가 올바르지 않습니다.')
     } finally {

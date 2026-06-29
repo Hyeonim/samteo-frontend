@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom'
 import LoadingScreen from '../common/LoadingScreen'
 import Header from './Header'
 import SamteoChatbot from '../chat/SamteoChatbot'
+import SessionExpiredModal from '../auth/SessionExpiredModal'
 
 function Layout() {
   const location = useLocation()
@@ -37,6 +38,7 @@ function Layout() {
       )}
       <Outlet />
       <SamteoChatbot />
+      <SessionExpiredModal />
     </>
   )
 }

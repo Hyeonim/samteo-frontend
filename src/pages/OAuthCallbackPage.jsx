@@ -19,7 +19,9 @@ function OAuthCallbackPage() {
       const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
       const payload = JSON.parse(decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')))
       login(token, { userId: payload.sub, email: payload.email, name: payload.name, role: payload.role })
-      navigate('/')
+      const returnTo = sessionStorage.getItem('auth_return_to') || '/'
+      sessionStorage.removeItem('auth_return_to')
+      navigate(returnTo, { replace: true })
     } catch {
       navigate('/login')
     }

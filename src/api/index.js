@@ -17,6 +17,11 @@ async function request(path, options = {}) {
     },
   })
   if (!res.ok) {
+    if (res.status === 401 && token) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      window.dispatchEvent(new Event('samteo:auth-expired'))
+    }
     const error = new Error(`HTTP ${res.status}`)
     error.status = res.status
     throw error

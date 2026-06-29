@@ -172,7 +172,7 @@ function MyPostCard({ post, onUpdated, onDeleted }) {
 
 export default function MyPage() {
   const navigate = useNavigate()
-  const { user, isLoggedIn, updateUser } = useAuth()
+  const { user, isLoggedIn, sessionExpired, updateUser } = useAuth()
   const [profile, setProfile] = useState({ email: '', name: '', provider: '' })
   const [profileStats, setProfileStats] = useState({ postCount: 0, followerCount: 0, followingCount: 0 })
   const [posts, setPosts] = useState([])
@@ -192,7 +192,7 @@ export default function MyPage() {
 
   useEffect(() => {
     if (!isLoggedIn) {
-      navigate('/login')
+      if (!sessionExpired) navigate('/login')
       return
     }
 
@@ -225,7 +225,7 @@ export default function MyPage() {
     }
 
     loadMyPage()
-  }, [isLoggedIn, navigate, updateUser])
+  }, [isLoggedIn, navigate, sessionExpired, updateUser])
 
   const showMessage = (nextMessage) => {
     setMessage(nextMessage)

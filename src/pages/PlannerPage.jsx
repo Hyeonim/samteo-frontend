@@ -253,9 +253,11 @@ export default function PlannerPage() {
       await myPlannerApi.create(plannerWithSchedule)
     } catch (error) {
       setSaving(false)
-      if (error.status === 401 || error.status === 403) {
-        alert('로그인이 필요합니다. 로그인 후 다시 저장해 주세요.')
-        navigate('/login', { state: { from: '/planner' } })
+      if (error.status === 401) {
+        return
+      }
+      if (error.status === 403) {
+        alert('플래너를 저장할 권한이 없습니다.')
         return
       }
       alert('플래너 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.')
