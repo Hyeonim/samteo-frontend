@@ -394,6 +394,15 @@ function toAdminAssetUrl(url) {
   return `${ADMIN_API_BASE_URL}${url}`
 }
 
+function AdminChevronIcon({ direction }) {
+  const points = direction === 'prev' ? '15 18 9 12 15 6' : '9 18 15 12 9 6'
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <polyline points={points} />
+    </svg>
+  )
+}
+
 function CommunityTab() {
   const [posts, setPosts] = useState([])
   const [page, setPage] = useState(0)
@@ -404,6 +413,8 @@ function CommunityTab() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [editTarget, setEditTarget] = useState(null)
+  const [previewTarget, setPreviewTarget] = useState(null)
+  const [previewImageIndex, setPreviewImageIndex] = useState(0)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [actionLoading, setActionLoading] = useState(false)
   const doLogout = useLogout()
@@ -540,6 +551,10 @@ function CommunityTab() {
                     </td>
                     <td>
                       <div className="adm-community-actions">
+                        <button className="adm-btn adm-btn--preview" type="button" onClick={() => {
+                          setPreviewTarget(post)
+                          setPreviewImageIndex(0)
+                        }}>미리보기</button>
                         <button className="adm-btn adm-btn--edit" type="button" onClick={() => setEditTarget({ ...post })}>수정</button>
                         <button className="adm-btn adm-btn--delete" type="button" onClick={() => setDeleteTarget(post)}>삭제</button>
                       </div>
@@ -577,6 +592,71 @@ function CommunityTab() {
                   {actionLoading ? '저장 중...' : '저장'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {previewTarget && (
+        <div className="adm-modal-overlay" onClick={() => setPreviewTarget(null)}>
+          <div className="adm-modal adm-community-preview-modal" onClick={event => event.stopPropagation()}>
+            <div className="adm-community-preview-head">
+              <div className="adm-community-preview-avatar">{previewTarget.authorName?.slice(0, 1) || '?'}</div>
+              <div>
+                <strong>{previewTarget.authorName}</strong>
+                <span>{previewTarget.createdAt ? new Date(previewTarget.createdAt).toLocaleString('ko-KR') : ''}</span>
+              </div>
+              <button type="button" onClick={() => setPreviewTarget(null)} aria-label="닫기">×</button>
+            </div>
+
+            {(previewTarget.imageUrls || []).length > 0 && (
+              <div className="adm-community-preview-media">
+                <img src={toAdminAssetUrl(previewTarget.imageUrls[previewImageIndex])} alt="" />
+                {previewTarget.imageUrls.length > 1 && (
+                  <>
+                    <button
+                      className="adm-community-preview-nav prev"
+                      type="button"
+                      aria-label="이전 이미지"
+                      disabled={previewImageIndex === 0}
+                      onClick={() => setPreviewImageIndex(index => Math.max(0, index - 1))}
+                    >
+                      <AdminChevronIcon direction="prev" />
+                    </button>
+                    <button
+                      className="adm-community-preview-nav next"
+                      type="button"
+                      aria-label="다음 이미지"
+                      disabled={previewImageIndex === previewTarget.imageUrls.length - 1}
+                      onClick={() => setPreviewImageIndex(index => Math.min(previewTarget.imageUrls.length - 1, index + 1))}
+                    >
+                      <AdminChevronIcon direction="next" />
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {(previewTarget.imageUrls || []).length > 1 && (
+              <div className="adm-community-preview-dots" aria-label="이미지 목록">
+                {previewTarget.imageUrls.map((url, index) => (
+                  <button
+                    type="button"
+                    className={previewImageIndex === index ? 'active' : ''}
+                    onClick={() => setPreviewImageIndex(index)}
+                    aria-label={`${index + 1}번째 이미지`}
+                    key={`${url}-${index}`}
+                  />
+                ))}
+              </div>
+            )}
+
+            <div className="adm-community-preview-copy">
+              <div className="adm-community-preview-stats">
+                <span>♥ 좋아요 {previewTarget.likeCount}</span>
+                <span>댓글 {previewTarget.commentCount}</span>
+              </div>
+              <p><strong>{previewTarget.authorName}</strong> {previewTarget.content || '이미지 게시글'}</p>
             </div>
           </div>
         </div>

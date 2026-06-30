@@ -506,6 +506,16 @@
   border-color: #bfdbfe;
 }
 
+.adm-btn--preview {
+  background: #f8fafc;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+.adm-btn--preview:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
 .adm-btn--edit:hover:not(:disabled) {
   background: #dbeafe;
 }
@@ -667,6 +677,155 @@
 .adm-community-edit-foot > span {
   color: #94a3b8;
   font-size: 12px;
+}
+
+.adm-community-preview-modal {
+  width: min(620px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 0;
+  overflow: auto;
+}
+
+.adm-community-preview-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.adm-community-preview-avatar {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  place-items: center;
+  border-radius: 50%;
+  background: #eef2ff;
+  color: #4f46e5;
+  font-weight: 700;
+}
+
+.adm-community-preview-head > div:nth-child(2) {
+  min-width: 0;
+  flex: 1;
+}
+
+.adm-community-preview-head strong,
+.adm-community-preview-head span {
+  display: block;
+}
+
+.adm-community-preview-head span {
+  margin-top: 2px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.adm-community-preview-head > button {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 22px;
+}
+
+.adm-community-preview-media {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 1 / 1;
+  background: #0f172a;
+}
+
+.adm-community-preview-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.adm-community-preview-nav {
+  position: absolute;
+  top: 50%;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  place-items: center;
+  transform: translateY(-50%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.72);
+  color: #334155;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+
+.adm-community-preview-nav.prev {
+  left: 14px;
+}
+
+.adm-community-preview-nav.next {
+  right: 14px;
+}
+
+.adm-community-preview-nav:disabled {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.adm-community-preview-nav svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.adm-community-preview-dots {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  padding: 10px 16px 0;
+}
+
+.adm-community-preview-dots button {
+  width: 6px;
+  height: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #cbd5e1;
+  cursor: pointer;
+}
+
+.adm-community-preview-dots button.active {
+  width: 16px;
+  border-radius: 6px;
+  background: #4f46e5;
+}
+
+.adm-community-preview-copy {
+  padding: 16px 18px 20px;
+}
+
+.adm-community-preview-stats {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 12px;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.adm-community-preview-copy p {
+  margin: 0;
+  color: #334155;
+  line-height: 1.65;
+  white-space: pre-wrap;
 }
 
 /* Confirm modal */
