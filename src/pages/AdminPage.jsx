@@ -20,6 +20,7 @@ function AdminPage() {
     { key: 'users',      icon: '👥', label: '회원 관리' },
     { key: 'jobs',       icon: '💼', label: '공고 관리' },
     { key: 'planners',   icon: '📋', label: '플래너 현황' },
+    { key: 'community',  icon: '💬', label: '커뮤니티 관리' },
   ]
 
   return (
@@ -45,6 +46,7 @@ function AdminPage() {
         {tab === 'users'     && <UsersTab currentUserId={user.userId} />}
         {tab === 'jobs'      && <JobsTab />}
         {tab === 'planners'  && <PlannersTab />}
+        {tab === 'community' && <CommunityTab />}
       </main>
     </div>
   )
@@ -377,6 +379,216 @@ function PlannersTab() {
           </div>
           <Pagination page={page} totalPages={totalPages} setPage={setPage} />
         </>
+      )}
+    </div>
+  )
+}
+
+// ── 커뮤니티 관리 ─────────────────────────────────────────────────────────────
+
+const ADMIN_API_BASE_URL = import.meta.env.VITE_API_URL || ''
+
+function toAdminAssetUrl(url) {
+  if (!url) return ''
+  if (/^(https?:|data:|blob:)/.test(url)) return url
+  return `${ADMIN_API_BASE_URL}${url}`
+}
+
+function CommunityTab() {
+  const [posts, setPosts] = useState([])
+  const [page, setPage] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
+  const [totalElements, setTotalElements] = useState(0)
+  const [keyword, setKeyword] = useState('')
+  const [search, setSearch] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [editTarget, setEditTarget] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [actionLoading, setActionLoading] = useState(false)
+  const doLogout = useLogout()
+
+  const load = useCallback(() => {
+    setLoading(true)
+    setError('')
+    const query = search ? `&keyword=${encodeURIComponent(search)}` : ''
+    api.get(`/api/admin/community/posts?page=${page}&size=20${query}`)
+      .then(res => {
+        setPosts(res.data.content)
+        setTotalPages(res.data.totalPages)
+        setTotalElements(res.data.totalElements)
+      })
+      .catch(err => setError(err.status === 403 ? '403' : '게시글 목록을 불러오지 못했습니다.'))
+      .finally(() => setLoading(false))
+  }, [page, search])
+
+  useEffect(() => { load() }, [load])
+
+  const handleSearch = event => {
+    event.preventDefault()
+    setPage(0)
+    setSearch(keyword.trim())
+  }
+
+  const saveEdit = async () => {
+    if (!editTarget || actionLoading) return
+    setActionLoading(true)
+    try {
+      await api.put(`/api/admin/community/posts/${editTarget.postId}`, { content: editTarget.content })
+      setEditTarget(null)
+      load()
+    } catch (requestError) {
+      setError(requestError.message || '게시글을 수정하지 못했습니다.')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const deletePost = async () => {
+    if (!deleteTarget || actionLoading) return
+    setActionLoading(true)
+    try {
+      await api.delete(`/api/admin/community/posts/${deleteTarget.postId}`)
+      setDeleteTarget(null)
+      load()
+    } catch (requestError) {
+      setError(requestError.message || '게시글을 삭제하지 못했습니다.')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  if (error === '403') return <AuthError onLogout={doLogout} />
+
+  return (
+    <div className="adm-section">
+      <div className="adm-section__header">
+        <h2 className="adm-section__title">커뮤니티 관리</h2>
+        <span className="adm-section__count">총 {totalElements.toLocaleString()}건</span>
+      </div>
+      <p className="adm-section__desc">
+        작성자와 게시물 내용을 확인하고, 운영 정책에 따라 수정하거나 삭제합니다.
+      </p>
+
+      <form className="adm-search-bar" onSubmit={handleSearch}>
+        <input
+          className="adm-search-input"
+          value={keyword}
+          onChange={event => setKeyword(event.target.value)}
+          placeholder="본문, 회원명, 이메일 검색"
+        />
+        <button className="adm-search-btn" type="submit">검색</button>
+        {search && (
+          <button className="adm-search-reset" type="button" onClick={() => {
+            setKeyword('')
+            setSearch('')
+            setPage(0)
+          }}>
+            초기화
+          </button>
+        )}
+      </form>
+
+      {error && <p className="adm-error">{error}</p>}
+      {loading ? <p className="adm-loading">불러오는 중...</p> : (
+        <>
+          <div className="adm-table-wrap">
+            <table className="adm-table adm-community-table">
+              <thead>
+                <tr>
+                  <th>미리보기</th>
+                  <th>게시글</th>
+                  <th>작성자</th>
+                  <th>반응</th>
+                  <th>작성일</th>
+                  <th>관리</th>
+                </tr>
+              </thead>
+              <tbody>
+                {posts.length === 0 ? (
+                  <tr><td colSpan={6} className="adm-td-empty">조회된 게시글이 없습니다.</td></tr>
+                ) : posts.map(post => (
+                  <tr key={post.postId}>
+                    <td>
+                      <div className="adm-community-thumb">
+                        {post.thumbnailUrl ? (
+                          <img src={toAdminAssetUrl(post.thumbnailUrl)} alt="" />
+                        ) : (
+                          <span>글</span>
+                        )}
+                        {post.imageCount > 1 && <b>+{post.imageCount - 1}</b>}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="adm-community-content" title={post.content || ''}>
+                        {post.content || '이미지 게시글'}
+                      </div>
+                      <small className="adm-community-id">#{post.postId}</small>
+                    </td>
+                    <td>
+                      <strong className="adm-community-author">{post.authorName}</strong>
+                      <small>{post.authorEmail}</small>
+                    </td>
+                    <td className="adm-community-reactions">
+                      <span>♥ {post.likeCount}</span>
+                      <span>댓글 {post.commentCount}</span>
+                    </td>
+                    <td className="adm-td-date">
+                      {post.createdAt ? new Date(post.createdAt).toLocaleString('ko-KR', {
+                        year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit',
+                      }) : '-'}
+                    </td>
+                    <td>
+                      <div className="adm-community-actions">
+                        <button className="adm-btn adm-btn--edit" type="button" onClick={() => setEditTarget({ ...post })}>수정</button>
+                        <button className="adm-btn adm-btn--delete" type="button" onClick={() => setDeleteTarget(post)}>삭제</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <Pagination page={page} totalPages={totalPages} setPage={setPage} />
+        </>
+      )}
+
+      {editTarget && (
+        <div className="adm-modal-overlay" onClick={() => setEditTarget(null)}>
+          <div className="adm-modal adm-community-edit-modal" onClick={event => event.stopPropagation()}>
+            <div className="adm-community-edit-head">
+              <div>
+                <strong>게시글 수정</strong>
+                <span>{editTarget.authorName} · #{editTarget.postId}</span>
+              </div>
+              <button type="button" onClick={() => setEditTarget(null)} aria-label="닫기">×</button>
+            </div>
+            <textarea
+              className="adm-community-editor"
+              value={editTarget.content || ''}
+              maxLength={600}
+              onChange={event => setEditTarget(current => ({ ...current, content: event.target.value }))}
+            />
+            <div className="adm-community-edit-foot">
+              <span>{(editTarget.content || '').length}/600</span>
+              <div className="adm-modal__actions">
+                <button className="adm-btn adm-btn--cancel" type="button" onClick={() => setEditTarget(null)} disabled={actionLoading}>취소</button>
+                <button className="adm-btn adm-btn--save" type="button" onClick={saveEdit} disabled={actionLoading}>
+                  {actionLoading ? '저장 중...' : '저장'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <ConfirmModal
+          message={`#${deleteTarget.postId} 게시글을 삭제하시겠습니까?`}
+          onConfirm={deletePost}
+          onCancel={() => setDeleteTarget(null)}
+          loading={actionLoading}
+        />
       )}
     </div>
   )
