@@ -75,41 +75,143 @@ function useLogout() {
 
 function DashboardTab() {
   const [stats, setStats] = useState(null)
+  const [days, setDays] = useState(14)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const doLogout = useLogout()
 
   useEffect(() => {
-    api.get('/api/admin/stats')
+    setLoading(true)
+    setError('')
+    api.get(`/api/admin/stats?days=${days}`)
       .then(res => setStats(res.data))
       .catch(err => setError(err.status === 403 ? '403' : '오류가 발생했습니다.'))
       .finally(() => setLoading(false))
-  }, [])
+  }, [days])
 
   if (error === '403') return <AuthError onLogout={doLogout} />
 
+  const dailyStats = stats?.dailyStats || []
+  const sumMetric = key => dailyStats.reduce((sum, item) => sum + Number(item[key] || 0), 0)
   const cards = stats ? [
-    { label: '전체 회원',    value: stats.totalUsers,          color: '#7C3AED', icon: '👤' },
-    { label: '생성된 플래너', value: stats.totalPlanners,       color: '#2563EB', icon: '📋' },
-    { label: '단기 공고',    value: stats.totalJobs,           color: '#059669', icon: '💼' },
-    { label: 'TourAPI 숙소', value: stats.totalAccommodations, color: '#D97706', icon: '🏠' },
+    { key: 'users', label: '전체 회원', value: stats.totalUsers, period: sumMetric('users'), color: '#7c3aed', icon: '👤' },
+    { key: 'planners', label: '생성된 플래너', value: stats.totalPlanners, period: sumMetric('planners'), color: '#2563eb', icon: '📋' },
+    { key: 'communityPosts', label: '커뮤니티 게시글', value: stats.totalCommunityPosts, period: sumMetric('communityPosts'), color: '#059669', icon: '💬' },
   ] : []
+  const maxDailyValue = Math.max(1, ...dailyStats.flatMap(item => [
+    Number(item.users || 0),
+    Number(item.planners || 0),
+    Number(item.communityPosts || 0),
+  ]))
+  const chartMetrics = [
+    { key: 'users', label: '회원 가입', color: '#7c3aed' },
+    { key: 'planners', label: '플래너 생성', color: '#2563eb' },
+    { key: 'communityPosts', label: '게시글 작성', color: '#059669' },
+  ]
 
   return (
     <div className="adm-section">
-      <h2 className="adm-section__title">대시보드</h2>
+      <div className="adm-dashboard-head">
+        <div>
+          <h2 className="adm-section__title">대시보드</h2>
+          <p>서비스의 누적 현황과 최근 활동 흐름을 확인합니다.</p>
+        </div>
+        <div className="adm-dashboard-range" aria-label="조회 기간">
+          {[7, 14, 30].map(option => (
+            <button
+              type="button"
+              className={days === option ? 'active' : ''}
+              onClick={() => setDays(option)}
+              key={option}
+            >
+              {option}일
+            </button>
+          ))}
+        </div>
+      </div>
       {loading ? <p className="adm-loading">불러오는 중...</p> : error ? (
         <p className="adm-error">{error}</p>
       ) : (
-        <div className="adm-stats-grid">
-          {cards.map(card => (
-            <div key={card.label} className="adm-stat-card" style={{ '--card-color': card.color }}>
-              <div className="adm-stat-card__icon">{card.icon}</div>
-              <div className="adm-stat-card__value">{card.value.toLocaleString()}</div>
-              <div className="adm-stat-card__label">{card.label}</div>
+        <>
+          <div className="adm-stats-grid adm-stats-grid--primary">
+            {cards.map(card => (
+              <div key={card.key} className="adm-stat-card" style={{ '--card-color': card.color }}>
+                <div className="adm-stat-card__top">
+                  <span>{card.label}</span>
+                  <i>{card.icon}</i>
+                </div>
+                <div className="adm-stat-card__value">{Number(card.value || 0).toLocaleString()}</div>
+                <div className="adm-stat-card__change">
+                  <strong>+{card.period.toLocaleString()}</strong>
+                  <span>최근 {days}일</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <section className="adm-chart-panel">
+            <div className="adm-chart-head">
+              <div>
+                <h3>일자별 서비스 활동</h3>
+                <p>회원 가입, 플래너 생성, 커뮤니티 게시글 작성 수를 비교합니다.</p>
+              </div>
+              <div className="adm-chart-legend">
+                {chartMetrics.map(metric => (
+                  <span key={metric.key}><i style={{ background: metric.color }} />{metric.label}</span>
+                ))}
+              </div>
             </div>
-          ))}
-        </div>
+
+            <div className="adm-chart-scroll">
+              <div className="adm-chart-body" style={{ minWidth: `${Math.max(720, dailyStats.length * 34)}px` }}>
+                <div className="adm-chart-yaxis">
+                  <span>{maxDailyValue}</span>
+                  <span>{Math.ceil(maxDailyValue / 2)}</span>
+                  <span>0</span>
+                </div>
+                <div className="adm-chart-plot">
+                  <div className="adm-chart-grid-line top" />
+                  <div className="adm-chart-grid-line middle" />
+                  <div className="adm-chart-grid-line bottom" />
+                  <div
+                    className="adm-chart-columns"
+                    style={{ gridTemplateColumns: `repeat(${dailyStats.length}, minmax(20px, 1fr))` }}
+                  >
+                    {dailyStats.map((item, index) => {
+                      const date = new Date(`${item.date}T00:00:00`)
+                      const showLabel = days <= 14 || index % 5 === 0 || index === dailyStats.length - 1
+                      return (
+                        <div className="adm-chart-day" key={item.date}>
+                          <div className="adm-chart-bars">
+                            {chartMetrics.map(metric => {
+                              const value = Number(item[metric.key] || 0)
+                              return (
+                                <i
+                                  key={metric.key}
+                                  title={`${item.date} ${metric.label} ${value}건`}
+                                  style={{
+                                    '--bar-color': metric.color,
+                                    height: `${value === 0 ? 2 : Math.max(5, (value / maxDailyValue) * 100)}%`,
+                                  }}
+                                />
+                              )
+                            })}
+                          </div>
+                          <span>{showLabel ? `${date.getMonth() + 1}.${date.getDate()}` : ''}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="adm-dashboard-secondary">
+            <div><span>등록된 단기 공고</span><strong>{Number(stats.totalJobs || 0).toLocaleString()}</strong></div>
+            <div><span>조회 가능한 숙소</span><strong>{Number(stats.totalAccommodations || 0).toLocaleString()}</strong></div>
+          </section>
+        </>
       )}
     </div>
   )
