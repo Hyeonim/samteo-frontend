@@ -160,17 +160,6 @@ function HomePage() {
         </div>
       </section>
 
-      {/* CTA Banner */}
-      {!isLoggedIn && (
-        <section className="cta-banner">
-          <h2 className="cta-banner__title">지금 바로 시작해보세요</h2>
-          <p className="cta-banner__desc">카카오 계정으로 3초 만에 가입할 수 있어요.</p>
-          <button className="btn-primary" onClick={() => navigate('/login')}>
-            무료로 시작하기
-          </button>
-        </section>
-      )}
-
       {/* Data Attribution */}
       <section className="data-attr">
         <div className="data-attr__inner">

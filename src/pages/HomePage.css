@@ -209,36 +209,6 @@
   margin: 0;
 }
 
-/* ── CTA Banner ── */
-.cta-banner {
-  background: linear-gradient(135deg, var(--samteo-blue), var(--samteo-teal) 58%, var(--samteo-green));
-  padding: 5rem 2rem;
-  text-align: center;
-  color: white;
-}
-
-.cta-banner__title {
-  font-size: 1.75rem;
-  font-weight: 800;
-  margin: 0 0 0.75rem;
-}
-
-.cta-banner__desc {
-  font-size: 1rem;
-  opacity: 0.85;
-  margin: 0 0 2rem;
-}
-
-.cta-banner .btn-primary {
-  background: white;
-  color: var(--samteo-blue);
-  box-shadow: 0 4px 14px rgba(0,0,0,0.15);
-}
-
-.cta-banner .btn-primary:hover {
-  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
-}
-
 /* ── Data Attribution ── */
 .data-attr {
   background: #f9fafb;
@@ -321,14 +291,6 @@
     margin-bottom: 2rem;
   }
 
-  .cta-banner {
-    padding: 3.5rem 1.25rem;
-  }
-
-  .cta-banner__title {
-    font-size: 1.4rem;
-  }
-
   .data-attr {
     padding: 2rem 1.25rem;
   }
@@ -365,7 +327,4 @@
     text-align: center;
   }
 
-  .cta-banner {
-    padding: 3rem 1rem;
-  }
 }
