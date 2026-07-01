@@ -128,22 +128,25 @@ function Header() {
 
   const markAllNotifications = async () => {
     if (unreadCount < 1) return
+    const previousNotifications = notifications
+    setNotifications((items) => items.map((item) => ({ ...item, read: true })))
     try {
       await notificationApi.markAllAsRead()
-      setNotifications((items) => items.map((item) => ({ ...item, read: true })))
     } catch {
-      // Keep the current list when the request fails.
+      setNotifications(previousNotifications)
     }
   }
 
   const openNotification = async (notification) => {
     if (!notification.read) {
+      const previousNotifications = notifications
+      setNotifications((items) => items.map((item) => (
+        item.notificationId === notification.notificationId ? { ...item, read: true } : item
+      )))
       try {
         await notificationApi.markAsRead(notification.notificationId)
-        setNotifications((items) => items.map((item) => (
-          item.notificationId === notification.notificationId ? { ...item, read: true } : item
-        )))
       } catch {
+        setNotifications(previousNotifications)
         return
       }
     }
