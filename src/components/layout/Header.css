@@ -209,7 +209,7 @@
   padding: 13px 14px;
   border: 0;
   border-bottom: 1px solid #edf2f3;
-  background: #f4f6f7;
+  background: #fff;
   color: #334155;
   text-align: left;
   cursor: pointer;
@@ -220,7 +220,7 @@
 }
 
 .nav-notification-item:hover {
-  background: #eceff1;
+  background: #f8fbfb;
 }
 
 .nav-notification-item.unread {

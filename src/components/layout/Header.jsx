@@ -48,7 +48,6 @@ function Header() {
   const [profileOpen, setProfileOpen] = useState(false)
   const [notificationOpen, setNotificationOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
-  const [unreadCount, setUnreadCount] = useState(0)
   const [notificationLoading, setNotificationLoading] = useState(false)
   const profileRef = useRef(null)
   const notificationRef = useRef(null)
@@ -76,7 +75,6 @@ function Header() {
     try {
       const response = await notificationApi.getNotifications()
       setNotifications(response?.notifications || [])
-      setUnreadCount(Number(response?.unreadCount || 0))
     } catch {
       // Authentication expiry is handled by the shared API client.
     } finally {
@@ -117,6 +115,11 @@ function Header() {
     return () => document.removeEventListener('pointerdown', handlePointerDown)
   }, [profileOpen, notificationOpen])
 
+  const unreadCount = notifications.reduce(
+    (count, notification) => count + (notification.read ? 0 : 1),
+    0
+  )
+
   const toggleNotifications = () => {
     setProfileOpen(false)
     setNotificationOpen((value) => !value)
@@ -128,7 +131,6 @@ function Header() {
     try {
       await notificationApi.markAllAsRead()
       setNotifications((items) => items.map((item) => ({ ...item, read: true })))
-      setUnreadCount(0)
     } catch {
       // Keep the current list when the request fails.
     }
@@ -141,7 +143,6 @@ function Header() {
         setNotifications((items) => items.map((item) => (
           item.notificationId === notification.notificationId ? { ...item, read: true } : item
         )))
-        setUnreadCount((count) => Math.max(0, count - 1))
       } catch {
         return
       }
