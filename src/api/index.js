@@ -33,6 +33,9 @@ async function request(path, options = {}) {
     error.status = res.status
     throw error
   }
+  if (options.method && options.method !== 'GET') {
+    window.dispatchEvent(new Event('samteo:notifications-refresh'))
+  }
   if (res.status === 204) return null
   return res.json()
 }
