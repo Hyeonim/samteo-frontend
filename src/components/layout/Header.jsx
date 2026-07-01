@@ -211,7 +211,7 @@ function Header() {
                           onClick={markAllNotifications}
                           disabled={unreadCount < 1}
                         >
-                          모두 확인
+                          모두 읽음
                         </button>
                       </header>
                       <div className="nav-notification-list">
@@ -221,7 +221,7 @@ function Header() {
                           <p className="nav-notification-empty">최근 24시간 동안 새 알림이 없습니다.</p>
                         ) : notifications.map((notification) => (
                           <button
-                            className={`nav-notification-item${notification.read ? '' : ' unread'}`}
+                            className={`nav-notification-item ${notification.read ? 'read' : 'unread'}`}
                             type="button"
                             key={notification.notificationId}
                             onClick={() => openNotification(notification)}
