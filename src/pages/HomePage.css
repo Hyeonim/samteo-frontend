@@ -1,4 +1,7 @@
 .home {
+  --samteo-blue: #2078c8;
+  --samteo-teal: #14a6aa;
+  --samteo-green: #70bd3b;
   display: flex;
   flex-direction: column;
 }
@@ -11,7 +14,7 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background: linear-gradient(135deg, #faf8ff 0%, #eff6ff 50%, #ecfdf5 100%);
+  background: linear-gradient(135deg, #f4fbff 0%, #effafa 50%, #f4fbea 100%);
   padding: 4rem 2rem;
 }
 
@@ -44,7 +47,7 @@
 }
 
 .hero__title--grad {
-  background: linear-gradient(90deg, #7c3aed, #2563eb, #059669);
+  background: linear-gradient(90deg, var(--samteo-blue), var(--samteo-teal), var(--samteo-green));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -68,7 +71,7 @@
 .hero__welcome {
   font-size: 1rem;
   font-weight: 600;
-  color: #7c3aed;
+  color: var(--samteo-teal);
   margin-right: 0.25rem;
 }
 
@@ -84,25 +87,25 @@
 
 .hero__orb--1 {
   width: 400px; height: 400px;
-  background: #7c3aed;
+  background: var(--samteo-blue);
   top: -10%; left: -8%;
 }
 
 .hero__orb--2 {
   width: 350px; height: 350px;
-  background: #2563eb;
+  background: var(--samteo-teal);
   bottom: -5%; right: 5%;
 }
 
 .hero__orb--3 {
   width: 250px; height: 250px;
-  background: #059669;
+  background: var(--samteo-green);
   top: 30%; right: 20%;
 }
 
 /* ── Buttons ── */
 .btn-primary {
-  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  background: linear-gradient(135deg, var(--samteo-blue), var(--samteo-teal));
   color: white;
   border: none;
   border-radius: 12px;
@@ -111,13 +114,13 @@
   font-weight: 700;
   cursor: pointer;
   transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
-  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.3);
+  box-shadow: 0 4px 14px rgba(20, 166, 170, 0.28);
 }
 
 .btn-primary:hover {
   opacity: 0.92;
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
+  box-shadow: 0 6px 20px rgba(20, 166, 170, 0.36);
 }
 
 .btn-secondary {
@@ -133,8 +136,8 @@
 }
 
 .btn-secondary:hover {
-  border-color: #7c3aed;
-  color: #7c3aed;
+  border-color: var(--samteo-teal);
+  color: var(--samteo-teal);
   transform: translateY(-2px);
 }
 
@@ -208,7 +211,7 @@
 
 /* ── CTA Banner ── */
 .cta-banner {
-  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  background: linear-gradient(135deg, var(--samteo-blue), var(--samteo-teal) 58%, var(--samteo-green));
   padding: 5rem 2rem;
   text-align: center;
   color: white;
@@ -228,7 +231,7 @@
 
 .cta-banner .btn-primary {
   background: white;
-  color: #7c3aed;
+  color: var(--samteo-blue);
   box-shadow: 0 4px 14px rgba(0,0,0,0.15);
 }
 
@@ -255,8 +258,8 @@
 
 .data-attr__label {
   display: inline-block;
-  background: #ede9fe;
-  color: #6d28d9;
+  background: #e4f7f4;
+  color: #0d7f83;
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.08em;

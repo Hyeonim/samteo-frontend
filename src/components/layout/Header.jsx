@@ -51,19 +51,7 @@ function Header() {
     <>
       <nav className="nav">
         <Link to="/" className="nav-logo" onClick={close}>
-          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-            <rect width="40" height="40" rx="12" fill="url(#navGrad)" />
-            <defs>
-              <linearGradient id="navGrad" x1="0" y1="0" x2="40" y2="40">
-                <stop offset="0%" stopColor="#7C3AED" />
-                <stop offset="50%" stopColor="#2563EB" />
-                <stop offset="100%" stopColor="#059669" />
-              </linearGradient>
-            </defs>
-            <rect x="8" y="10" width="24" height="5" rx="2.5" fill="white" opacity="0.95" />
-            <rect x="8" y="18" width="24" height="5" rx="2.5" fill="white" opacity="0.85" />
-            <rect x="8" y="26" width="24" height="5" rx="2.5" fill="white" opacity="0.75" />
-          </svg>
+          <img className="nav-logo__mark" src="/samteo-favicon.png" alt="" />
           <div className="nav-logo__text">
             <div className="nav-logo__name">삼터</div>
             <div className="nav-logo__sub">쉼터 · 일터 · 놀터</div>

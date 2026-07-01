@@ -19,6 +19,13 @@
   flex-shrink: 0;
 }
 
+.nav-logo__mark {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
 .nav-logo__text {
   display: flex;
   flex-direction: column;
@@ -27,7 +34,7 @@
 .nav-logo__name {
   font-size: 1.1rem;
   font-weight: 800;
-  background: linear-gradient(90deg, #7c3aed, #2563eb, #059669);
+  background: linear-gradient(90deg, #2078c8, #14a6aa, #70bd3b);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -55,11 +62,11 @@
 }
 
 .nav-links a:hover {
-  color: #7c3aed;
+  color: #14a6aa;
 }
 
 .nav-links a.active {
-  color: #2563eb;
+  color: #2078c8;
   font-weight: 800;
 }
 
@@ -82,12 +89,12 @@
 }
 
 .nav-btn-login:hover {
-  border-color: #7c3aed;
-  color: #7c3aed;
+  border-color: #14a6aa;
+  color: #0d7f83;
 }
 
 .nav-btn-start {
-  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  background: linear-gradient(135deg, #2078c8, #14a6aa);
   border: none;
   border-radius: 8px;
   padding: 0.5rem 1.1rem;
@@ -131,9 +138,9 @@
 
 .nav-profile-trigger:hover,
 .nav-profile-trigger[aria-expanded="true"] {
-  border-color: #7c3aed;
-  color: #5b21b6;
-  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.12);
+  border-color: #14a6aa;
+  color: #0d7f83;
+  box-shadow: 0 8px 20px rgba(20, 166, 170, 0.12);
 }
 
 .nav-profile-avatar {
@@ -142,7 +149,7 @@
   height: 32px;
   place-items: center;
   border-radius: 50%;
-  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  background: linear-gradient(135deg, #2078c8, #14a6aa);
   color: #fff;
   font-size: 0.82rem;
   font-weight: 900;
@@ -294,11 +301,11 @@
 
 .nav-mobile-link:hover {
   background: #f9fafb;
-  color: #7c3aed;
+  color: #14a6aa;
 }
 
 .nav-mobile-link.active {
-  color: #2563eb;
+  color: #2078c8;
   font-weight: 700;
 }
 

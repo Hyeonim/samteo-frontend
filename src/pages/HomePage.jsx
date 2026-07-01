@@ -25,7 +25,7 @@ const FEATURES = [
     label: '쉼터',
     title: '나만의 안식처 찾기',
     desc: '지역별 숙소, 게스트하우스, 공유주택 정보를 한눈에 확인하세요.',
-    color: '#7c3aed',
+    color: '#2078c8',
   },
   {
     icon: '💼',
