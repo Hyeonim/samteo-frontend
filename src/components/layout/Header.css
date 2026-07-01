@@ -197,13 +197,30 @@
 }
 
 .nav-notification-list {
-  max-height: min(480px, calc(100vh - 150px));
+  max-height: 282px;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: #b7c7cb transparent;
+  scrollbar-width: thin;
+}
+
+.nav-notification-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.nav-notification-list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #b7c7cb;
+}
+
+.nav-notification-list::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .nav-notification-item {
   display: grid;
   width: 100%;
+  height: 94px;
   grid-template-columns: 38px minmax(0, 1fr);
   gap: 10px;
   padding: 13px 14px;
@@ -311,7 +328,7 @@
   font-size: 12px;
   line-height: 1.45;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
 }
 
 .nav-notification-copy time {
