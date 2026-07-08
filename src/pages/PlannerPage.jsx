@@ -6,6 +6,7 @@ import Step2Jobs from '../components/wizard/Step2Jobs'
 import Step3Accommodation from '../components/wizard/Step3Accommodation'
 import Step4Budget from '../components/wizard/Step4Budget'
 import Step5Planner from '../components/wizard/Step5Planner'
+import CandidateSelectModal from '../components/wizard/CandidateSelectModal'
 import OnboardingGuideModal from '../components/OnboardingGuideModal'
 import { myPlannerApi } from '../api/myPlannerApi'
 import { createJobSchedule, createPlannerId } from '../utils/plannerSchedule'
@@ -103,6 +104,8 @@ export default function PlannerPage() {
   const [selectedHotelsByJobId, setSelectedHotelsByJobId] = useState({})
   const [draftPlannerId] = useState(() => createPlannerId())
   const [saving, setSaving] = useState(false)
+  const [showCandidateModal, setShowCandidateModal] = useState(false)
+  const [pendingCandidateId, setPendingCandidateId] = useState(null)
   const [showStepGuide, setShowStepGuide] = useState(Boolean(location.state?.showGuide))
   const [guideInitialIndex, setGuideInitialIndex] = useState(STEP_GUIDE_INDEX[currentStep] ?? 1)
 
@@ -191,8 +194,9 @@ export default function PlannerPage() {
     setShowStepGuide(true)
   }
 
-  const buildPlannerDraft = useCallback((createdAt = new Date().toISOString()) => {
-    const primaryJob = selectedJobs.find((job) => job.id === activeJobId) ?? selectedJobs[0]
+  const buildPlannerDraft = useCallback((createdAt = new Date().toISOString(), jobIdOverride = null) => {
+    const targetJobId = jobIdOverride ?? activeJobId
+    const primaryJob = selectedJobs.find((job) => job.id === targetJobId) ?? selectedJobs[0]
     const selectedHotel = selectedHotelsByJobId[primaryJob?.id] ?? DEFAULT_HOTEL
     const totalSalary = Number(primaryJob?.salary ?? primaryJob?.monthlySalary ?? 0)
     const accommodationCost = Number(selectedHotel.price ?? selectedHotel.monthlyPrice ?? 0)
@@ -234,7 +238,7 @@ export default function PlannerPage() {
     return { ...planner, schedule: createJobSchedule(planner) }
   }, [buildPlannerDraft])
 
-  async function completePlanner() {
+  function openCandidateModal() {
     if (selectedJobs.length === 0) {
       alert('일자리를 하나 이상 선택해 주세요.')
       setCurrentStep(2)
@@ -245,9 +249,15 @@ export default function PlannerPage() {
       setCurrentStep(2)
       return
     }
+    setPendingCandidateId(activeJobId ?? selectedJobs[0]?.id ?? null)
+    setShowCandidateModal(true)
+  }
+
+  async function completePlanner(chosenJobId) {
+    const targetJobId = chosenJobId ?? activeJobId
 
     setSaving(true)
-    const planner = buildPlannerDraft()
+    const planner = buildPlannerDraft(new Date().toISOString(), targetJobId)
     const plannerWithSchedule = { ...planner, schedule: createJobSchedule(planner) }
     try {
       await myPlannerApi.create(plannerWithSchedule)
@@ -262,6 +272,7 @@ export default function PlannerPage() {
       return
     }
     setSaving(false)
+    setShowCandidateModal(false)
     navigate('/my-planner')
   }
 
@@ -314,6 +325,17 @@ export default function PlannerPage() {
           onClose={() => setShowStepGuide(false)}
         />
       )}
+      {showCandidateModal && (
+        <CandidateSelectModal
+          jobs={selectedJobs}
+          hotelsByJobId={selectedHotelsByJobId}
+          selectedId={pendingCandidateId}
+          onSelect={setPendingCandidateId}
+          onConfirm={() => completePlanner(pendingCandidateId)}
+          onClose={() => setShowCandidateModal(false)}
+          saving={saving}
+        />
+      )}
       <div className="wizard-inner">
         <div className="wizard-guide-bar">
           <button className="wizard-guide-button" type="button" onClick={openStepGuide}>
@@ -332,7 +354,7 @@ export default function PlannerPage() {
           <div className="step-counter">{currentStep} / {TOTAL} 단계</div>
           <button
             className="btn-next"
-            onClick={isLastStep ? completePlanner : () => moveStep(1)}
+            onClick={isLastStep ? openCandidateModal : () => moveStep(1)}
             disabled={saving}
           >
             {isLastStep ? (saving ? '저장 중...' : '플래너 저장하고 결과 보기') : '다음 단계'}
