@@ -13,7 +13,8 @@ import { createJobSchedule, createPlannerId } from '../utils/plannerSchedule'
 import './PlannerPage.css'
 
 const TOTAL = 5
-const FIXED_EXPENSES = 380000
+const DEFAULT_FOOD_EXPENSE = 300000
+const DEFAULT_TRANSPORT_EXPENSE = 80000
 const MAX_COMPARISON_JOBS = 3
 const STEP_GUIDE_INDEX = {
   1: 1,
@@ -103,6 +104,8 @@ export default function PlannerPage() {
   const [activeJobId, setActiveJobId] = useState(seedJob?.id ?? null)
   const [selectedHotelsByJobId, setSelectedHotelsByJobId] = useState({})
   const [draftPlannerId] = useState(() => createPlannerId())
+  const [foodExpense, setFoodExpense] = useState(DEFAULT_FOOD_EXPENSE)
+  const [transportExpense, setTransportExpense] = useState(DEFAULT_TRANSPORT_EXPENSE)
   const [saving, setSaving] = useState(false)
   const [showCandidateModal, setShowCandidateModal] = useState(false)
   const [pendingCandidateId, setPendingCandidateId] = useState(null)
@@ -200,6 +203,7 @@ export default function PlannerPage() {
     const selectedHotel = selectedHotelsByJobId[primaryJob?.id] ?? DEFAULT_HOTEL
     const totalSalary = Number(primaryJob?.salary ?? primaryJob?.monthlySalary ?? 0)
     const accommodationCost = Number(selectedHotel.price ?? selectedHotel.monthlyPrice ?? 0)
+    const fixedExpense = Number(foodExpense) + Number(transportExpense)
     return {
       id: draftPlannerId,
       title: `${selectedRegionName ?? selectedCityName} 체류 플래너`,
@@ -226,12 +230,14 @@ export default function PlannerPage() {
       },
       totalSalary,
       accommodationCost,
-      fixedExpense: FIXED_EXPENSES,
-      disposableIncome: Math.max(0, totalSalary - accommodationCost - FIXED_EXPENSES),
+      foodExpense: Number(foodExpense),
+      transportExpense: Number(transportExpense),
+      fixedExpense,
+      disposableIncome: Math.max(0, totalSalary - accommodationCost - fixedExpense),
       createdAt,
       memo: '',
     }
-  }, [activeJobId, draftPlannerId, plannerType, selectedCity, selectedCityName, selectedHotelsByJobId, selectedJobs, selectedRegion, selectedRegionName])
+  }, [activeJobId, draftPlannerId, foodExpense, plannerType, selectedCity, selectedCityName, selectedHotelsByJobId, selectedJobs, selectedRegion, selectedRegionName, transportExpense])
 
   const previewPlanner = useMemo(() => {
     const planner = buildPlannerDraft()
@@ -308,6 +314,12 @@ export default function PlannerPage() {
       activeJobId={activeJobId}
       onActiveJobChange={setActiveJobId}
       selectedHotelsByJobId={selectedHotelsByJobId}
+      foodExpense={foodExpense}
+      transportExpense={transportExpense}
+      onFoodExpenseChange={setFoodExpense}
+      onTransportExpenseChange={setTransportExpense}
+      defaultFoodExpense={DEFAULT_FOOD_EXPENSE}
+      defaultTransportExpense={DEFAULT_TRANSPORT_EXPENSE}
     />,
     <Step5Planner
       key={5}

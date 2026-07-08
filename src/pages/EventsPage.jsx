@@ -11,6 +11,7 @@ import { findScheduleConflict, scheduleConflictMessage } from '../utils/schedule
 import './ExplorePages.css'
 
 const CATEGORIES = [
+  { id: 'all', label: '전체' },
   { id: 'festivals', label: '축제' },
   { id: 'attractions', label: '관광지' },
   { id: 'restaurants', label: '식당' },
@@ -281,6 +282,7 @@ export default function EventsPage() {
   const [festivals, setFestivals] = useState([])
   const [attractions, setAttractions] = useState([])
   const [restaurants, setRestaurants] = useState([])
+  const [allContents, setAllContents] = useState([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [hasNextPage, setHasNextPage] = useState(false)
@@ -299,6 +301,7 @@ export default function EventsPage() {
   const [endTime, setEndTime] = useState('20:00')
   const [toast, setToast] = useState('')
   const [saving, setSaving] = useState(false)
+  const [goToPlannerPrompt, setGoToPlannerPrompt] = useState(null)
   const [reviewContent, setReviewContent] = useState(null)
   const [reviewPosts, setReviewPosts] = useState([])
   const [reviewsLoading, setReviewsLoading] = useState(false)
@@ -334,6 +337,34 @@ export default function EventsPage() {
 
   useEffect(() => {
     setLoading(true)
+    if (category === 'all') {
+      Promise.all(
+        Object.values(CATEGORY_CONFIG).map((config) => (
+          api.get(`${config.endpoint}?numOfRows=${PAGE_SIZE}&pageNo=${page}`)
+            .then((result) => unwrap(result))
+            .catch(() => [])
+        ))
+      )
+        .then((resultsPerSource) => {
+          const unique = new Map()
+          resultsPerSource.forEach((rawItems) => {
+            rawItems.slice(0, PAGE_SIZE).map(sanitizeFestival).forEach((item) => {
+              const key = item.id ?? `${item.title}-${item.location}-${item.address}`
+              unique.set(key, item)
+            })
+          })
+          setAllContents([...unique.values()])
+          const anyHasMore = resultsPerSource.some((rawItems) => rawItems.length >= PAGE_SIZE)
+          setHasNextPage(anyHasMore)
+          if (!anyHasMore) setLastPage(page)
+        })
+        .catch(() => {
+          setAllContents([])
+          setHasNextPage(false)
+        })
+        .finally(() => setLoading(false))
+      return
+    }
     const endpoint = CATEGORY_CONFIG[category].endpoint
     api.get(`${endpoint}?numOfRows=${PAGE_SIZE}&pageNo=${page}`)
       .then((result) => {
@@ -360,12 +391,14 @@ export default function EventsPage() {
       .finally(() => setLoading(false))
   }, [category, page])
 
-  const activeContents = category === 'attractions'
-    ? attractions
-    : category === 'restaurants'
-      ? restaurants
-      : festivals
-  const activeCategoryLabel = CATEGORY_CONFIG[category].label
+  const activeContents = category === 'all'
+    ? allContents
+    : category === 'attractions'
+      ? attractions
+      : category === 'restaurants'
+        ? restaurants
+        : festivals
+  const activeCategoryLabel = category === 'all' ? '전체' : CATEGORY_CONFIG[category].label
 
   const selectedPlanner = useMemo(
     () => planners.find((planner) => String(planner.id) === String(selectedPlannerId)) ?? null,
@@ -556,6 +589,7 @@ export default function EventsPage() {
       setSelectedPlannerId(String(saved.id))
       setSelectedFestival(null)
       showToast('플래너에 성공적으로 담겼습니다!')
+      setGoToPlannerPrompt(saved)
     } catch {
       showToast('플래너에 담지 못했습니다. 잠시 후 다시 시도해 주세요.')
     } finally {
@@ -951,6 +985,23 @@ export default function EventsPage() {
             <span>✓</span>
             <strong>{toast}</strong>
             <button type="button" onClick={() => setToast('')} aria-label="알림 닫기">확인</button>
+          </div>
+        )}
+        {goToPlannerPrompt && (
+          <div className="planner-modal-backdrop" onClick={() => setGoToPlannerPrompt(null)}>
+            <section className="planner-confirm-modal" onClick={(event) => event.stopPropagation()}>
+              <h2>플래너에 담았어요!</h2>
+              <p><strong>{goToPlannerPrompt.title}</strong> 플래너를 보러 가시겠습니까?</p>
+              <div className="confirm-actions">
+                <button className="directory-btn" onClick={() => setGoToPlannerPrompt(null)}>아니오</button>
+                <button
+                  className="directory-btn primary"
+                  onClick={() => navigate('/my-planner', { state: { plannerId: goToPlannerPrompt.id } })}
+                >
+                  예, 보러 가기
+                </button>
+              </div>
+            </section>
           </div>
         )}
       </div>

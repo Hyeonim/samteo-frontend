@@ -1,7 +1,6 @@
 import { useMemo, useRef } from 'react'
 import CandidatePairChip from './CandidatePairChip'
 
-const FIXED_EXPENSES = 380000
 const CALENDAR_DAYS = [
   { label: '일', value: 6, weekend: 'sun' },
   { label: '월', value: 0 },
@@ -61,7 +60,8 @@ export default function Step5Planner({
   const selectedHotel = selectedHotelsByJobId[activeJob?.id] ?? { name: '', price: null }
   const rawAccommodationCost = selectedHotel.price ?? selectedHotel.monthlyPrice
   const accommodationCost = Number(rawAccommodationCost ?? 0)
-  const total = activeJob ? Math.max(0, Number(activeJob.salary ?? 0) - accommodationCost - FIXED_EXPENSES) : 0
+  const fixedExpense = Number(plannerPreview?.fixedExpense ?? 0)
+  const total = activeJob ? Math.max(0, Number(plannerPreview?.disposableIncome ?? (Number(activeJob.salary ?? 0) - accommodationCost - fixedExpense))) : 0
   const monthPreview = useMemo(
     () => createMonthPreview(plannerPreview?.schedule ?? []),
     [plannerPreview?.schedule]
@@ -213,8 +213,8 @@ export default function Step5Planner({
                     <div className="ps-val" style={{ color: '#ef4444' }}>{rawAccommodationCost == null ? '미제공' : `-${accommodationCost.toLocaleString()}원`}</div>
                   </div>
                   <div className="ps-row">
-                    <div className="ps-lbl">생활 고정비</div>
-                    <div className="ps-val" style={{ color: '#ef4444' }}>-{FIXED_EXPENSES.toLocaleString()}원</div>
+                    <div className="ps-lbl">생활 고정비 (식비·교통비)</div>
+                    <div className="ps-val" style={{ color: '#ef4444' }}>-{fixedExpense.toLocaleString()}원</div>
                   </div>
                   <div className="ps-total">
                     <div className="pt-lbl">예상 월 잔액</div>

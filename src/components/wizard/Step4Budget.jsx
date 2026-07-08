@@ -1,26 +1,30 @@
 import { useRef } from 'react'
 import CandidatePairChip from './CandidatePairChip'
 
-const FIXED_EXPENSES = 380000
-const FOOD = 300000
-const TRANSPORT = 80000
-
 export default function Step4Budget({
   selectedJobs,
   activeJobId,
   onActiveJobChange,
   selectedHotelsByJobId,
+  foodExpense,
+  transportExpense,
+  onFoodExpenseChange,
+  onTransportExpenseChange,
+  defaultFoodExpense,
+  defaultTransportExpense,
 }) {
   const sliderRef = useRef(null)
 
   const activeJob = selectedJobs.find((j) => j.id === activeJobId) ?? selectedJobs[0] ?? null
   const selectedHotel = selectedHotelsByJobId[activeJob?.id] ?? { name: '', price: null }
   const accommodationPrice = selectedHotel.price == null ? null : Number(selectedHotel.price)
-  const total = activeJob ? Math.max(0, activeJob.salary - (accommodationPrice ?? 0) - FIXED_EXPENSES) : 0
+  const food = Number(foodExpense) || 0
+  const transport = Number(transportExpense) || 0
+  const total = activeJob ? Math.max(0, activeJob.salary - (accommodationPrice ?? 0) - food - transport) : 0
   const chartData = activeJob
     ? Array.from({ length: 6 }, (_, index) => {
       const month = `${index + 1}개월`
-      const expense = (accommodationPrice ?? 0) + FIXED_EXPENSES
+      const expense = (accommodationPrice ?? 0) + food + transport
       return {
         month,
         income: Math.max(24, Math.round(Number(activeJob.salary ?? 0) / 30000)),
@@ -29,6 +33,13 @@ export default function Step4Budget({
       }
     })
     : []
+
+  function handleExpenseChange(setter) {
+    return (event) => {
+      const value = Number(event.target.value)
+      setter(Number.isFinite(value) && value >= 0 ? value : 0)
+    }
+  }
 
   function scrollSlider(dir) {
     sliderRef.current?.scrollBy({ left: dir * 250, behavior: 'smooth' })
@@ -102,13 +113,57 @@ export default function Step4Budget({
               <div className="slabel">🏠 숙박비</div>
               <div className="svalue sv-red">{accommodationPrice == null ? '미제공' : `-₩${accommodationPrice.toLocaleString()}`}</div>
             </div>
-            <div className="srow">
-              <div className="slabel">🍽️ 식비 (30일)</div>
-              <div className="svalue sv-red">-₩{FOOD.toLocaleString()}</div>
+            <div className="srow editable-row">
+              <div className="slabel">🍽️ 식비 (30일) <span className="editable-badge">✏️ 직접 입력</span></div>
+              <div className="editable-value-group">
+                <div className="svalue sv-red editable-value">
+                  <span>-₩</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="10000"
+                    inputMode="numeric"
+                    aria-label="식비 직접 입력"
+                    value={food}
+                    onChange={handleExpenseChange(onFoodExpenseChange)}
+                  />
+                </div>
+                {food !== defaultFoodExpense && (
+                  <button
+                    type="button"
+                    className="expense-reset-btn"
+                    onClick={() => onFoodExpenseChange(defaultFoodExpense)}
+                  >
+                    ↺ 기본값({Number(defaultFoodExpense).toLocaleString()})
+                  </button>
+                )}
+              </div>
             </div>
-            <div className="srow">
-              <div className="slabel">🚌 교통비</div>
-              <div className="svalue sv-red">-₩{TRANSPORT.toLocaleString()}</div>
+            <div className="srow editable-row">
+              <div className="slabel">🚌 교통비 <span className="editable-badge">✏️ 직접 입력</span></div>
+              <div className="editable-value-group">
+                <div className="svalue sv-red editable-value">
+                  <span>-₩</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="10000"
+                    inputMode="numeric"
+                    aria-label="교통비 직접 입력"
+                    value={transport}
+                    onChange={handleExpenseChange(onTransportExpenseChange)}
+                  />
+                </div>
+                {transport !== defaultTransportExpense && (
+                  <button
+                    type="button"
+                    className="expense-reset-btn"
+                    onClick={() => onTransportExpenseChange(defaultTransportExpense)}
+                  >
+                    ↺ 기본값({Number(defaultTransportExpense).toLocaleString()})
+                  </button>
+                )}
+              </div>
             </div>
             <div className="stotal">
               <div className="t-lbl">예상 월 실수령액</div>
