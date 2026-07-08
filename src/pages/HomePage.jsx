@@ -25,7 +25,7 @@ const FEATURES = [
     label: '쉼터',
     title: '나만의 안식처 찾기',
     desc: '지역별 숙소, 게스트하우스, 공유주택 정보를 한눈에 확인하세요.',
-    color: '#7c3aed',
+    color: '#2078c8',
   },
   {
     icon: '💼',
@@ -159,17 +159,6 @@ function HomePage() {
           ))}
         </div>
       </section>
-
-      {/* CTA Banner */}
-      {!isLoggedIn && (
-        <section className="cta-banner">
-          <h2 className="cta-banner__title">지금 바로 시작해보세요</h2>
-          <p className="cta-banner__desc">카카오 계정으로 3초 만에 가입할 수 있어요.</p>
-          <button className="btn-primary" onClick={() => navigate('/login')}>
-            무료로 시작하기
-          </button>
-        </section>
-      )}
 
       {/* Data Attribution */}
       <section className="data-attr">

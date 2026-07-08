@@ -57,7 +57,7 @@ function formatElapsed(value) {
   return created.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
 }
 
-function mapCommunityPost(post) {
+export function mapCommunityPost(post) {
   const images = (post.images || [])
     .slice()
     .sort((a, b) => a.sortOrder - b.sortOrder)
@@ -65,6 +65,7 @@ function mapCommunityPost(post) {
 
   return {
     id: post.id,
+    authorId: post.authorId,
     author: post.authorName || '\uD68C\uC6D0',
     elapsed: formatElapsed(post.createdAt),
     caption: post.content || '',
@@ -122,7 +123,8 @@ function CommentIcon() {
   )
 }
 
-function FeedCard({ post, compact, onPostUpdated, onCommentCreated }) {
+export function FeedCard({ post, compact, commentsInCompact = false, onPostUpdated, onCommentCreated }) {
+  const navigate = useNavigate()
   const hasImages = post.images.length > 0
   const [activeImageIndex, setActiveImageIndex] = useState(0)
   const [commentsOpen, setCommentsOpen] = useState(false)
@@ -204,12 +206,19 @@ function FeedCard({ post, compact, onPostUpdated, onCommentCreated }) {
   }
 
   return (
-    <article className={`community-feed-card${compact ? ' compact' : ''}`}>
+    <article className={`community-feed-card${compact ? ' compact' : ''}${commentsInCompact ? ' comments-enabled' : ''}`}>
       <header className="community-card-head">
-        <div className="community-avatar">{post.author.slice(0, 1).toUpperCase()}</div>
+        <button
+          className="community-author-profile"
+          type="button"
+          onClick={() => navigate(`/users/${post.authorId}`)}
+          aria-label={`${post.author} 프로필 보기`}
+        >
+          <span className="community-avatar">{post.author.slice(0, 1).toUpperCase()}</span>
+        </button>
         <div>
           <div className="community-author-row">
-            <strong>{post.author}</strong>
+            <button type="button" onClick={() => navigate(`/users/${post.authorId}`)}>{post.author}</button>
             <span>{post.elapsed}</span>
           </div>
           <p>{post.imageCountText}</p>

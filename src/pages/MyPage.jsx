@@ -14,7 +14,7 @@ const TEXT = {
   profileTitle: '회원정보',
   email: '이메일',
   name: '회원명',
-  provider: '가입 방식',
+  provider: '로그인 방식',
   writePost: '새 게시글 작성',
   postTitle: '내 커뮤니티 게시글',
   noPosts: '아직 작성한 커뮤니티 게시글이 없습니다.',
@@ -70,7 +70,7 @@ function getProviderView(provider) {
   if (normalized === 'kakao') {
     return {
       label: '카카오 로그인',
-      desc: '카카오 계정으로 가입한 회원입니다.',
+      desc: '카카오 계정으로 로그인했습니다.',
       className: 'kakao',
       icon: 'K',
     }
@@ -78,14 +78,30 @@ function getProviderView(provider) {
   if (normalized === 'local') {
     return {
       label: '이메일 로그인',
-      desc: '이메일과 비밀번호로 가입한 회원입니다.',
+      desc: '이메일과 비밀번호로 로그인했습니다.',
       className: 'local',
       icon: 'E',
     }
   }
+  if (normalized === 'google') {
+    return {
+      label: '구글 로그인',
+      desc: '구글 계정으로 로그인했습니다.',
+      className: 'google',
+      icon: 'G',
+    }
+  }
+  if (normalized === 'naver') {
+    return {
+      label: '네이버 로그인',
+      desc: '네이버 계정으로 로그인했습니다.',
+      className: 'naver',
+      icon: 'N',
+    }
+  }
   return {
-    label: provider || '가입 방식 미확인',
-    desc: '가입 제공자 정보를 확인하고 있습니다.',
+    label: provider || '로그인 방식 미확인',
+    desc: '로그인 제공자 정보를 확인하고 있습니다.',
     className: 'default',
     icon: '?',
   }
@@ -156,8 +172,9 @@ function MyPostCard({ post, onUpdated, onDeleted }) {
 
 export default function MyPage() {
   const navigate = useNavigate()
-  const { user, isLoggedIn, updateUser } = useAuth()
-  const [profile, setProfile] = useState({ email: '', name: '', provider: '' })
+  const { user, isLoggedIn, sessionExpired, updateUser } = useAuth()
+  const [profile, setProfile] = useState({ email: '', name: '', provider: '', providers: [] })
+  const [profileStats, setProfileStats] = useState({ postCount: 0, followerCount: 0, followingCount: 0 })
   const [posts, setPosts] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [message, setMessage] = useState('')
@@ -165,15 +182,21 @@ export default function MyPage() {
 
   const initial = useMemo(() => (profile.name || user?.name || '회').slice(0, 1), [profile.name, user?.name])
   const providerView = useMemo(() => getProviderView(profile.provider), [profile.provider])
+  const providerViews = useMemo(() => {
+    const providers = profile.providers?.length ? profile.providers : [profile.provider]
+    return providers.filter(Boolean).map(getProviderView)
+  }, [profile.provider, profile.providers])
   const stats = useMemo(() => {
-    const likeCount = posts.reduce((sum, post) => sum + post.likeCount, 0)
-    const commentCount = posts.reduce((sum, post) => sum + post.commentCount, 0)
-    return { postCount: posts.length, likeCount, commentCount }
-  }, [posts])
+    return {
+      postCount: profileStats.postCount || posts.length,
+      followerCount: profileStats.followerCount || 0,
+      followingCount: profileStats.followingCount || 0,
+    }
+  }, [posts.length, profileStats])
 
   useEffect(() => {
     if (!isLoggedIn) {
-      navigate('/login')
+      if (!sessionExpired) navigate('/login')
       return
     }
 
@@ -181,14 +204,21 @@ export default function MyPage() {
       try {
         setIsLoading(true)
         setError('')
-        const [me, postPage] = await Promise.all([
-          userApi.getMe(),
+        const me = await userApi.getMe()
+        const [profileDetail, postPage] = await Promise.all([
+          userApi.getProfile(me.userId),
           communityApi.getMyPosts({ page: 0, size: 30 }),
         ])
         setProfile({
           email: me.email || '',
           name: me.name || '',
           provider: me.provider || '',
+          providers: me.providers || [],
+        })
+        setProfileStats({
+          postCount: profileDetail.postCount || 0,
+          followerCount: profileDetail.followerCount || 0,
+          followingCount: profileDetail.followingCount || 0,
         })
         updateUser(me)
         setPosts((postPage.posts || []).map(normalizePost))
@@ -200,7 +230,7 @@ export default function MyPage() {
     }
 
     loadMyPage()
-  }, [isLoggedIn, navigate, updateUser])
+  }, [isLoggedIn, navigate, sessionExpired, updateUser])
 
   const showMessage = (nextMessage) => {
     setMessage(nextMessage)
@@ -243,17 +273,21 @@ export default function MyPage() {
                 <p>{profile.email}</p>
                 <div className="mypage-stats" aria-label="community stats">
                   <div><strong>{stats.postCount}</strong><span>게시글</span></div>
-                  <div><strong>{stats.likeCount}</strong><span>좋아요</span></div>
-                  <div><strong>{stats.commentCount}</strong><span>댓글</span></div>
+                  <div><strong>{stats.followingCount}</strong><span>팔로우</span></div>
+                  <div><strong>{stats.followerCount}</strong><span>팔로워</span></div>
                 </div>
                 <div className="mypage-provider-line">
                   <span>{TEXT.provider}</span>
-                  <div className={`mypage-provider-chip ${providerView.className}`}>
-                    <i>{providerView.icon}</i>
-                    <div>
-                      <strong>{providerView.label}</strong>
-                      <small>{providerView.desc}</small>
-                    </div>
+                  <div className="mypage-provider-list">
+                    {providerViews.map((view) => (
+                      <div className={`mypage-provider-chip ${view.className}`} key={view.className}>
+                        <i>{view.icon}</i>
+                        <div>
+                          <strong>{view.label}</strong>
+                          <small>{view.desc}</small>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -270,7 +304,7 @@ export default function MyPage() {
               </div>
               <div>
                 <span>{TEXT.provider}</span>
-                <strong>{providerView.label}</strong>
+                <strong>{providerViews.map((view) => view.label).join(', ') || providerView.label}</strong>
               </div>
             </section>
 

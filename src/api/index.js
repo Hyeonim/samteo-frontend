@@ -17,9 +17,24 @@ async function request(path, options = {}) {
     },
   })
   if (!res.ok) {
-    const error = new Error(`HTTP ${res.status}`)
+    if (res.status === 401 && token) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      window.dispatchEvent(new Event('samteo:auth-expired'))
+    }
+    let errorMessage = `HTTP ${res.status}`
+    try {
+      const errorBody = await res.json()
+      errorMessage = errorBody?.message || errorMessage
+    } catch {
+      // Keep the HTTP status message when the response has no JSON body.
+    }
+    const error = new Error(errorMessage)
     error.status = res.status
     throw error
+  }
+  if (options.method && options.method !== 'GET' && !path.startsWith('/api/notifications')) {
+    window.dispatchEvent(new Event('samteo:notifications-refresh'))
   }
   if (res.status === 204) return null
   return res.json()
