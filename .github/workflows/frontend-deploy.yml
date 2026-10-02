@@ -3,6 +3,7 @@ name: Frontend CI/CD
 on:
   push:
     branches: [ "main" ] # 본인이 사용하는 메인 브랜치 이름 (master일 경우 master로 변경)
+  workflow_dispatch:
 
 jobs:
   deploy:
